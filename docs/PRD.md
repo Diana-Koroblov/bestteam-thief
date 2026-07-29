@@ -361,4 +361,4 @@ The project is complete when all of the following are observed — not intended,
 | Q2 | Partner's GitHub handle for repo collaboration | Diana | M0 |
 | Q3 | Which Ollama model on the partner's machine (size vs. latency under the 30 s step deadline) | Partner | M4 |
 | Q4 | Which 6–8 opponent teams, and on what dates | Both | **Start now** |
-| Q5 | ngrok reserved domain available, or dynamic URLs re-exchanged per match? | Partner | M5 |
+| ~~Q5~~ | ~~ngrok reserved domain or dynamic URLs?~~ **Answered:** static. Every free ngrok account now gets a permanent `*.ngrok-free.dev` dev domain — no paid plan, no per-match URL exchange. See `SETUP.md` 0.2.5. | — | done |

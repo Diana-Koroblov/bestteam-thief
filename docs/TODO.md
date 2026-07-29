@@ -18,7 +18,8 @@ Split strategies: extract helper functions · extract a mixin · 50/50 logical h
 extract constants to `constants.py` · extract models to their own module.
 
 ```
-uv run python scripts/check_file_size.py     # fails loudly, lists offenders
+uv run python scripts/ship.py -m "..."       # gates + commit + publish, fail-fast
+uv run python scripts/check_file_size.py     # the size gate on its own
 uv run pytest tests/test_file_size.py        # same check, inside the suite
 ```
 
@@ -42,7 +43,9 @@ working; ≥4 league matches booked; 10 per-algorithm PRDs written; CI green.
 - [x] 0.1.4 [D] - Create `.gitignore` excluding `.env`, `credentials.json`, `token.json`, `*.pem`, `*.key`, `client_secret*.json` | DoD: `git status` shows no secrets before the first commit. (M#39, M#40)
 - [x] 0.1.5 [D] - Create `.env-example` with placeholders for `GMAIL_CREDENTIALS_PATH`, `GMAIL_TOKEN_PATH`, `GROQ_API_KEY`, `OLLAMA_BASE_URL`, `NGROK_AUTHTOKEN` | DoD: Committed; real `.env` absent from the repo. (X §7.4)
 - [X] 0.1.6 [D] - Add Itay as collaborator on both repos | DoD: Itay can push to both.
-- [ ] 0.1.11 🧑 [D] - Grant the `workflow` token scope so `.github/workflows/` can be pushed | DoD: `gh auth refresh -h github.com -s workflow` (or an SSH remote, or a PAT with `workflow`); `publish.py` completes without a rejected push.
+- [X] 0.1.11 🧑 [D] - Grant the `workflow` token scope so `.github/workflows/` can be pushed | DoD: `gh auth refresh -h github.com -s workflow` (or an SSH remote, or a PAT with `workflow`); `publish.py` completes without a rejected push.
+- [x] 0.1.13 [D] - Add `scripts/ship.py` — one command for gates + commit + publish | DoD: **Verified** — a lint error halts at step 2/6 and a failing test at step 5/6, both with nothing committed or pushed; the happy path lands on both remotes. Staging runs *before* the secret scan so brand-new files are covered. Output streams live.
+- [x] 0.1.14 [D] - Add `core/shared/env.py` — the single place `.env` is loaded | DoD: `require()` raises an actionable error naming the SETUP step; `redact()` never prints a full secret; `optional()` returns a default. 13 unit tests. No module reads `os.environ` directly, so behaviour is identical in VS Code, plain PowerShell, on Itay's machine and in CI.
 - [x] 0.1.12 [D] - Add `.gitattributes` pinning LF | DoD: Prevents a CRLF/LF mismatch from breaking the byte-identical shared-config handshake between teams on different operating systems. See CONTRADICTIONS C-004. (M#11)
 - [x] 0.1.7 [D] - Write `scripts/check_file_size.py` | DoD: Bloating a file to 151 LOC makes it exit 1; removing one line makes it exit 0. **Verified both directions.** Logic lives in `core/shared/loc_counter.py`; the script is a thin CLI.
   - [x] 0.1.7.a [D] - Walk `core/`, `police/`, `thief/`, `tests/`, `scripts/` for `*.py` | DoD: `__pycache__` and `.venv` excluded.
@@ -54,15 +57,18 @@ working; ≥4 league matches booked; 10 per-algorithm PRDs written; CI green.
 
 ### 0.2 🧑 USER ACTION — External accounts
 > **PAUSE — I stop here. These need a browser and your credentials; I cannot do them.**
+> **Step-by-step guide: `docs/SETUP.md`. Verify with `uv run python scripts/check_setup.py`.**
 
-- [ ] 0.2.1 🧑 [D] - Google Cloud project + Gmail API + OAuth consent screen, **send-only** scope `gmail.send` | DoD: `credentials.json` saved **outside** the repo; a test email arrives in your own inbox. (M#30)
+- [ ] 0.2.1 🧑 [D] - Google Cloud project + Gmail API + Google Auth platform, **send-only** scope `gmail.send` | DoD: `credentials.json` saved **outside** both repos; `check_setup.py` reports Gmail credentials OK. See SETUP 0.2.1. (M#30)
   - [ ] 0.2.1.a 🧑 [D] - Create the project and enable the Gmail API | DoD: API shows as Enabled in the console.
-  - [ ] 0.2.1.b 🧑 [D] - Configure the OAuth consent screen, add yourself as a test user | DoD: Consent screen saved.
-  - [ ] 0.2.1.c 🧑 [D] - Create OAuth client ID (Desktop app), download `credentials.json` | DoD: File on disk, path recorded in `.env`, **not** inside either repo.
+  - [ ] 0.2.1.b 🧑 [D] - Configure Branding + Audience (**External**), add yourself as a test user, add scope `gmail.send` | DoD: Consent screen saved with exactly one scope. SETUP 0.2.1.b-d
+  - [ ] 0.2.1.c 🧑 [D] - Create OAuth client ID (**Desktop app**), download `credentials.json` | DoD: File on disk in `C:\Users\diana\.p2p-secrets\`, path in `.env`, **not** inside either repo. SETUP 0.2.1.e-f
+  - [ ] 0.2.1.d 🧑 [D] - ⚠️ **Publish the app** (Testing → In production) | DoD: Audience page reads *In production*. **Skipping this makes the refresh token expire after 7 days and silently breaks league reporting mid-project** — an unsent report scores 0 for **both** teams. SETUP 0.2.1.g (M#35)
 - [ ] 0.2.2 🧑 [D] - Groq API key at console.groq.com/keys | DoD: Key starts with `gsk_`; `uv run python -c "import os;from dotenv import load_dotenv;load_dotenv();print(os.getenv('GROQ_API_KEY'))"` prints it, not `None`.
 - [ ] 0.2.3 🧑 [I] - Install Ollama and pull a model small enough for the 30 s step deadline | DoD: A 15-word prompt returns in under 10 s at `localhost:11434`. (PRD Q3)
 - [ ] 0.2.4 🧑 [B] - ngrok accounts + authtokens on both machines | DoD: `ngrok http 8801` yields a public URL on each machine.
-- [ ] 0.2.5 🧑 [B] - Decide: reserved ngrok domain, or dynamic URLs re-exchanged per match? | DoD: Answer recorded in PRD Q5; if dynamic, the negotiation step must carry the URL.
+- [x] 0.2.5 [D] - Decide: static ngrok domain or dynamic URLs? | DoD: **Answered — static.** ngrok now assigns every free account a permanent `*.ngrok-free.dev` dev domain, so no paid plan and no per-match URL exchange is needed. Recorded in PRD Q5 and SETUP 0.2.5.
+- [ ] 0.2.6 🧑 [B] - Note each machine's static ngrok domain in `config/<role>/game.toml` | DoD: Both domains recorded; `ngrok http 8801 --url <domain>` works on each machine.
 
 ### 0.3 🧑 USER ACTION — League scheduling ⏰ **DO THIS FIRST**
 > **PAUSE — This is the binding constraint on the final grade, and it is not a coding task.**
@@ -71,25 +77,25 @@ working; ≥4 league matches booked; 10 per-algorithm PRDs written; CI green.
 
 - [ ] 0.3.1 🧑 [B] - Contact 6–8 teams; agree dates and roles | DoD: ≥4 confirmed slots in a shared calendar with team names, contacts and times. (M#31)
 - [ ] 0.3.2 🧑 [B] - Book one **warm-up** (uncounted) match for ~8 Aug | DoD: A friendly team confirmed for protocol shakedown. (M#52)
-- [ ] 0.3.3 [D] - Create `docs/LEAGUE_LOG.md` — one row per opponent: date, role, result, reports sent, commit hash | DoD: Table skeleton committed; filled as matches complete. (M#37)
+- [x] 0.3.3 [D] - Create `docs/LEAGUE_LOG.md` — one row per opponent: date, role, result, reports sent, commit hash | DoD: Table skeleton committed; filled as matches complete. (M#37)
 
 ### 0.4 Specification documents
 - [x] 0.4.1 [D] - `docs/PRD.md` | DoD: All 55 mandatory rules and 31 Appendix F values traced.
 - [x] 0.4.2 [D] - `docs/PLAN.md` | DoD: C4 diagrams, state machine, data schemas, ADR-001..007.
 - [x] 0.4.3 [D] - `docs/TODO.md` | DoD: This file.
-- [ ] 0.4.4 [D] - Seven layer PRDs | DoD: All seven exist with requirements, I/O, constraints, alternatives, test scenarios. (X §2.3)
-  - [ ] 0.4.4.a [D] - `PRD_1_base_logic.md` | DoD: Board, movement, barriers, capture, scoring specified.
-  - [ ] 0.4.4.b [D] - `PRD_2_mcp_infra.md` | DoD: Tool contracts and process separation specified.
-  - [ ] 0.4.4.c [D] - `PRD_3_strategy_baseline.md` | DoD: `BrainBase` interface and baseline policy specified.
-  - [ ] 0.4.4.d [D] - `PRD_4_scent_and_belief.md` | DoD: Emission/decay maths and Bayesian update specified.
-  - [ ] 0.4.4.e [I] - `PRD_5_tunnelling.md` | DoD: Exposure, NAT traversal, reconnection specified.
-  - [ ] 0.4.4.f [D] - `PRD_6_commit_reveal.md` | DoD: Canonical JSON, nonce, four phases, audit, Step-0 specified.
-  - [ ] 0.4.4.g [D] - `PRD_7_reporting.md` | DoD: Gatekeeper, Gmail, four JSON artefacts, GUI, Replay specified.
-- [ ] 0.4.5 [D] - Three algorithm PRDs | DoD: All three exist.
-  - [ ] 0.4.5.a [D] - `PRD_strategy_advanced.md` | DoD: Expectimax, barrier-trap planning, scent-aware evasion specified.
-  - [ ] 0.4.5.b [D] - `PRD_negotiation.md` | DoD: Handshake, config locking, game-count declaration specified.
-  - [ ] 0.4.5.c [D] - `PRD_state_machine.md` | DoD: Transition table, deadlines, watchdog specified.
-- [ ] 0.4.6 [D] - Open `docs/PROMPT_LOG.md` and keep it running from today | DoD: Every significant prompt recorded with context, output and iteration. Assessed material. (X §8.3)
+- [x] 0.4.4 [D] - Seven layer PRDs | DoD: All seven exist with requirements, I/O, constraints, alternatives, test scenarios. (X §2.3)
+  - [x] 0.4.4.a [D] - `PRD_1_base_logic.md` | DoD: Board, movement, barriers, capture, scoring specified.
+  - [x] 0.4.4.b [D] - `PRD_2_mcp_infra.md` | DoD: Tool contracts and process separation specified.
+  - [x] 0.4.4.c [D] - `PRD_3_strategy_baseline.md` | DoD: `BrainBase` interface and baseline policy specified.
+  - [x] 0.4.4.d [D] - `PRD_4_scent_and_belief.md` | DoD: Emission/decay maths and Bayesian update specified.
+  - [x] 0.4.4.e [I] - `PRD_5_tunnelling.md` | DoD: Exposure, NAT traversal, reconnection specified.
+  - [x] 0.4.4.f [D] - `PRD_6_commit_reveal.md` | DoD: Canonical JSON, nonce, four phases, audit, Step-0 specified.
+  - [x] 0.4.4.g [D] - `PRD_7_reporting.md` | DoD: Gatekeeper, Gmail, four JSON artefacts, GUI, Replay specified.
+- [x] 0.4.5 [D] - Three algorithm PRDs | DoD: All three exist. Plus `TRACEABILITY.md` mapping all 60 FRs to a PRD and TODO tasks — verified programmatically, 0 untraced.
+  - [x] 0.4.5.a [D] - `PRD_strategy_advanced.md` | DoD: Expectimax, barrier-trap planning, scent-aware evasion specified.
+  - [x] 0.4.5.b [D] - `PRD_negotiation.md` | DoD: Handshake, config locking, game-count declaration specified.
+  - [x] 0.4.5.c [D] - `PRD_state_machine.md` | DoD: Transition table, deadlines, watchdog specified.
+- [x] 0.4.6 [D] - Open `docs/PROMPT_LOG.md` and keep it running from today | DoD: Six entries logged with goal, prompt, result, problem, iteration and transferable lesson, plus five extracted rules. Assessed material. (X §8.3)
 - [x] 0.4.7 [D] - Open `docs/CONTRADICTIONS.md` | DoD: Three entries logged — C-001 `num_games` 1-vs-6, C-002 docstrings vs. the 150-line rule, C-003 board size 7×7 vs. the 10×10 figure. Template included for future entries.
 
 ### 0.5 Reference material
@@ -114,7 +120,7 @@ conditions fire correctly; scoring matches Appendix F; coverage ≥85 % on `core
 - [ ] 1.1.1 [D] - `core/shared/version.py` with `VERSION = "1.00"` | DoD: Matches `pyproject.toml` and every config `version` key; asserted by a unit test. (X §8.1)
 - [ ] 1.1.2 [D] - `core/shared/constants.py` — immutable non-negotiable constants only | DoD: No value that belongs in config lives here. (X §7.2)
 - [ ] 1.1.3 [D] - `config/<role>/game.json` with all 31 Appendix F defaults | DoD: Every key from PRD §5 present; the two role copies are byte-identical. (M#11, F)
-- [ ] 1.1.4 [D] - `config/<role>/game.toml` private skeleton with explanatory comments | DoD: `[game]`, `[network]`, `[strategy]`, `[trash_talk]`, `[llm]`, `[email]` present. (Appendix B)
+- [ ] 1.1.4 [D] - `config/<role>/game.toml` private skeleton with explanatory comments | DoD: `[game]`, `[network]`, `[strategy]`, `[trash_talk]`, `[llm]`, `[email]` present. **Move the recorded ngrok domains from SETUP 0.2.5 into `[network]`** — Diana's is `customs-countdown-uncork.ngrok-free.dev`. (Appendix B)
 - [ ] 1.1.5 [D] - `config/<role>/rate_limits.json` | DoD: `requests_per_minute`, `concurrent_requests`, `retry_backoff_sec`, `max_retries`, `queue_depth` present; versioned. (F, X §5.2)
 - [ ] 1.1.6 [D] - `core/shared/config_manager.py` — load, merge, validate | DoD: File ≤150 lines; split into loader + validator if needed.
   - [ ] 1.1.6.a [D] - Load private TOML then shared JSON | DoD: Missing JSON falls back to TOML defaults cleanly.
@@ -545,6 +551,9 @@ in both repos. If the schedule slips, cut from here — never from Phase 9.
 ---
 
 ## Continuous gates — run before every commit
+
+`uv run python scripts/ship.py -m "..."` runs all of these in order, then commits and publishes.
+It halts at the first failure and pushes nothing. The individual commands are for debugging.
 
 | Check | Command | Threshold |
 |---|---|---|

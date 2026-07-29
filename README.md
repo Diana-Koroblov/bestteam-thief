@@ -45,7 +45,14 @@ uv run python -m core peer --role thief
 
 ## Quality gates
 
-Run before every commit. All four are enforced in CI.
+One command runs every gate, commits, and publishes to both repositories. It stops at the first
+failure and pushes nothing unless all four gates are green.
+
+```bash
+uv run python scripts/ship.py -m "feat: barriers and capture rules"
+```
+
+The gates individually, for debugging:
 
 ```bash
 uv run ruff check .                        # zero violations
