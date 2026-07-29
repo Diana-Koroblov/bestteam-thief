@@ -1,0 +1,65 @@
+[project]
+name = "p2p-cop-chase"
+version = "1.00"
+description = "Distributed Cops-and-Robbers over a Peer-to-Peer network (FastMCP, Dec-POMDP, SHA-256 commit-reveal)"
+requires-python = ">=3.10"
+dependencies = [
+    "fastmcp>=2.0",
+    "httpx>=0.27",
+    "google-auth>=2.35",
+    "google-auth-oauthlib>=1.2",
+    "google-api-python-client>=2.150",
+    "python-dotenv>=1.0",
+    "tomli>=2.0; python_version < '3.11'",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.0",
+    "pytest>=8.3",
+    "pytest-cov>=5.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.7",
+]
+llm = [
+    # Optional providers. `template` needs nothing; `ollama` talks plain HTTP.
+    "groq>=0.11",
+]
+research = [
+    "ipykernel>=7.3",
+    "matplotlib>=3.10",
+    "nbclient>=0.11",
+    "nbformat>=5.10",
+    "numpy>=2.2",
+    "pandas>=2.3",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+addopts = "--tb=short --cov --cov-report=term-missing"
+
+[tool.coverage.run]
+# `source_pkgs` tolerates a role package being absent, which is exactly the
+# situation in each published repo.
+source_pkgs = ["core", "police", "thief"]
+omit = ["*/tests/*", "core/ui/*", "scripts/*"]
+
+[tool.coverage.report]
+fail_under = 85
+
+[tool.uv]
+# Not an installable distribution: each published repo ships only one role
+# package (core + police, or core + thief), so a fixed package list would break
+# `uv sync` in whichever repo lacks the other role. Imports resolve via
+# pytest's `pythonpath` and the CLI's own sys.path bootstrap.
+package = false

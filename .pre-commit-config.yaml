@@ -1,0 +1,28 @@
+# Local quality gates, run automatically on every commit.
+# One-time setup:  uv run pre-commit install
+#
+# These mirror the CI pipeline in .github/workflows/ci.yml so a failure is
+# caught on the machine that caused it, not ten minutes later on a runner.
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff (lint)
+        entry: uv run ruff check --force-exclude
+        language: system
+        types: [python]
+        require_serial: true
+
+      - id: file-size-150
+        name: file size (max 150 code lines)
+        entry: uv run python scripts/check_file_size.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: no-secrets
+        name: block committed secrets
+        entry: uv run python scripts/scan_secrets.py
+        language: system
+        pass_filenames: false
+        always_run: true

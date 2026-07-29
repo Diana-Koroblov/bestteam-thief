@@ -1,0 +1,42 @@
+# ---------------------------------------------------------------------------
+# Secrets — NEVER commit these. Appendix E rules #39, #40.
+# A secret leaked once is considered permanently exposed: deleting it in a
+# later commit does not help, it stays in the Git history.
+# ---------------------------------------------------------------------------
+.env
+*.env
+!.env-example
+credentials.json
+token.json
+*.pem
+*.key
+client_secret*.json
+config/**/secrets.toml
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.venv/
+venv/
+
+# ---------------------------------------------------------------------------
+# Runtime artefacts (match logs are committed deliberately, not automatically)
+# ---------------------------------------------------------------------------
+results/tmp/
+*.log
+!results/**/log_*.json
+
+# ---------------------------------------------------------------------------
+# Editors / OS
+# ---------------------------------------------------------------------------
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
