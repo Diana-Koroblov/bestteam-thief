@@ -59,14 +59,14 @@ working; ≥4 league matches booked; 10 per-algorithm PRDs written; CI green.
 > **PAUSE — I stop here. These need a browser and your credentials; I cannot do them.**
 > **Step-by-step guide: `docs/SETUP.md`. Verify with `uv run python scripts/check_setup.py`.**
 
-- [ ] 0.2.1 🧑 [D] - Google Cloud project + Gmail API + Google Auth platform, **send-only** scope `gmail.send` | DoD: `credentials.json` saved **outside** both repos; `check_setup.py` reports Gmail credentials OK. See SETUP 0.2.1. (M#30)
-  - [ ] 0.2.1.a 🧑 [D] - Create the project and enable the Gmail API | DoD: API shows as Enabled in the console.
-  - [ ] 0.2.1.b 🧑 [D] - Configure Branding + Audience (**External**), add yourself as a test user, add scope `gmail.send` | DoD: Consent screen saved with exactly one scope. SETUP 0.2.1.b-d
-  - [ ] 0.2.1.c 🧑 [D] - Create OAuth client ID (**Desktop app**), download `credentials.json` | DoD: File on disk in `C:\Users\diana\.p2p-secrets\`, path in `.env`, **not** inside either repo. SETUP 0.2.1.e-f
-  - [ ] 0.2.1.d 🧑 [D] - ⚠️ **Publish the app** (Testing → In production) | DoD: Audience page reads *In production*. **Skipping this makes the refresh token expire after 7 days and silently breaks league reporting mid-project** — an unsent report scores 0 for **both** teams. SETUP 0.2.1.g (M#35)
-- [ ] 0.2.2 🧑 [D] - Groq API key at console.groq.com/keys | DoD: Key starts with `gsk_`; `uv run python -c "import os;from dotenv import load_dotenv;load_dotenv();print(os.getenv('GROQ_API_KEY'))"` prints it, not `None`.
+- [x] 0.2.1 🧑 [D] - Google Cloud project + Gmail API + Google Auth platform, **send-only** scope `gmail.send` | DoD: `credentials.json` saved **outside** both repos; `check_setup.py` reports Gmail credentials OK. See SETUP 0.2.1. (M#30)
+  - [x] 0.2.1.a 🧑 [D] - Create the project and enable the Gmail API | DoD: API shows as Enabled in the console.
+  - [x] 0.2.1.b 🧑 [D] - Configure Branding + Audience (**External**), add yourself as a test user, add scope `gmail.send` | DoD: Consent screen saved with exactly one scope. SETUP 0.2.1.b-d
+  - [x] 0.2.1.c 🧑 [D] - Create OAuth client ID (**Desktop app**), download `credentials.json` | DoD: **Verified 28/07** — `check_setup.py` confirms a Desktop client at `C:\Users\diana\.p2p-secrets\credentials.json`, outside both repos. SETUP 0.2.1.e-f
+  - [x] 0.2.1.d 🧑 [D] - ⚠️ **Publish the app** (Testing → In production) — **confirmed 28/07: Publishing status = In production** | DoD: Audience page reads *In production*. **`check_setup.py` cannot verify this — publishing status is not exposed in `credentials.json` or by any API. Confirm by eye.** **Skipping this makes the refresh token expire after 7 days and silently breaks league reporting mid-project** — an unsent report scores 0 for **both** teams. SETUP 0.2.1.g (M#35)
+- [x] 0.2.2 🧑 [D] - Groq API key at console.groq.com/keys | DoD: **Verified 28/07** — `check_setup.py` reports `gsk_xJkR...(56 chars)`.
 - [ ] 0.2.3 🧑 [I] - Install Ollama and pull a model small enough for the 30 s step deadline | DoD: A 15-word prompt returns in under 10 s at `localhost:11434`. (PRD Q3)
-- [ ] 0.2.4 🧑 [B] - ngrok accounts + authtokens on both machines | DoD: `ngrok http 8801` yields a public URL on each machine.
+- [ ] 0.2.4 🧑 [B] - ngrok accounts + authtokens on both machines | DoD: **Diana verified 28/07** — installed and configured, static domain `customs-countdown-uncork.ngrok-free.dev`. **Itay pending.**
 - [x] 0.2.5 [D] - Decide: static ngrok domain or dynamic URLs? | DoD: **Answered — static.** ngrok now assigns every free account a permanent `*.ngrok-free.dev` dev domain, so no paid plan and no per-match URL exchange is needed. Recorded in PRD Q5 and SETUP 0.2.5.
 - [ ] 0.2.6 🧑 [B] - Note each machine's static ngrok domain in `config/<role>/game.toml` | DoD: Both domains recorded; `ngrok http 8801 --url <domain>` works on each machine.
 
