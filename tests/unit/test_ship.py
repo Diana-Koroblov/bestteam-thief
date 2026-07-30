@@ -13,6 +13,8 @@ from pathlib import Path
 
 import pytest
 
+from core.shared.pipeline import GATES
+
 _SHIP_PATH = Path(__file__).resolve().parent.parent.parent / "scripts" / "ship.py"
 
 
@@ -43,8 +45,12 @@ def test_publishing_is_the_last_step() -> None:
 
 
 def test_all_gates_sit_between_staging_and_publishing() -> None:
-    """Six steps: stage, four gates, publish."""
-    assert len(ship.build_steps("m", "both", False)) == 6
+    """Stage, then every gate, then publish — derived so adding a gate is safe."""
+    steps = ship.build_steps("m", "both", False)
+    assert len(steps) == len(GATES) + 2
+    assert steps[0].name.startswith("Stage")
+    assert steps[-1].name.startswith("Publish")
+    assert [step.name for step in steps[1:-1]] == [gate.name for gate in GATES]
 
 
 def test_the_commit_message_is_passed_through_to_publish() -> None:

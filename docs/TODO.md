@@ -177,6 +177,10 @@ conditions fire correctly; scoring matches Appendix F; coverage ≥85 % on `core
 - [ ] 1.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.
 - [ ] 1.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC. Split anything that grew.
 - [ ] 1.QG.3 [D] - `uv run pytest --cov` | DoD: All pass; coverage ≥85 % on `core/domain` and `core/shared`.
+- [x] 1.QG.3b [D] - `uv run python scripts/check_split_repos.py` — **new standing gate** | DoD: The suite passes in a simulated `bestteam-cop` tree *and* a simulated `bestteam-thief` tree, each holding only its own role.
+  - **Why it exists:** CI run #8 failed on *both* repositories while every local gate was green. `tests/unit/test_config_*.py` referenced `config/police/` at module level; that path does not exist in the thief repository, so the suite died at import (exit code 2, not a test failure). The working tree holds both roles and therefore **structurally cannot** reproduce a split-only failure.
+  - **The pattern to follow:** never name a role directory literally in a test. Derive it from `tests/paths.PRESENT_ROLES` / `role_dir()`, and mark cross-role comparisons with `@BOTH_ROLES` so they skip where only one role ships.
+  - Now runs automatically as the last gate in `scripts/ship.py`, so it cannot be forgotten. It is *not* in `ci.yml` — CI already runs inside a split repository, where there is nothing left to split.
 - [ ] 1.QG.4 [D] - **Milestone M1 observed** | DoD: Two agents move legally on a 7×7 grid; a 15th barrier is rejected; coordinate overlap triggers capture. Behaviour *seen*, not merely coded.
 
 ---

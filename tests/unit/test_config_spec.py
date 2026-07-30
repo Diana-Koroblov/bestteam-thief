@@ -7,8 +7,6 @@ match rather than argued about after it, when both teams have already scored 0.
 from __future__ import annotations
 
 import copy
-import json
-from pathlib import Path
 
 import pytest
 
@@ -21,14 +19,17 @@ from core.shared.config_spec import (
     invariant_violations,
     violations,
 )
-
-CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "police" / "game.json"
+from tests.paths import shared_config
 
 
 @pytest.fixture
 def legal_config() -> dict:
-    """The shipped configuration, which must be legal by construction."""
-    return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    """The shipped configuration, which must be legal by construction.
+
+    Read via ``tests.paths`` rather than a literal role directory, because each
+    published repository ships only its own role's config.
+    """
+    return shared_config()
 
 
 def test_every_parameter_has_a_known_status() -> None:

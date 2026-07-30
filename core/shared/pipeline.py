@@ -78,6 +78,13 @@ GATES: tuple[Step, ...] = (
         ("uv", "run", "python", "scripts/scan_secrets.py", "--tracked"),
     ),
     Step("Tests and coverage (>= 85%)", ("uv", "run", "pytest")),
+    # Last, because it is the slowest and because it only makes sense once the
+    # suite passes here. It is also the only gate that can catch a failure which
+    # exists solely after the role split. See scripts/check_split_repos.py.
+    Step(
+        "Split-repository suite (cop and thief)",
+        ("uv", "run", "python", "scripts/check_split_repos.py"),
+    ),
 )
 
 

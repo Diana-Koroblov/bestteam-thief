@@ -20,37 +20,52 @@ from core.shared.config_manager import (
     ConfigVersionError,
     load_config,
 )
+from tests.paths import PRESENT_ROLES, role_dir, shared_config
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-SHIPPED = json.loads((REPO_ROOT / "config" / "police" / "game.json").read_text(encoding="utf-8"))
+SHIPPED = shared_config()
+
+# Each published repository ships one role only, so cross-role comparisons can
+# only run in the working tree. See tests/paths.py.
+BOTH_ROLES = pytest.mark.skipif(
+    len(PRESENT_ROLES) < 2,
+    reason="only one role is published to this repository (ADR-001)",
+)
 
 
-def _write(role_dir: Path, shared: dict, private: str = "") -> Path:
-    role_dir.mkdir(parents=True, exist_ok=True)
-    (role_dir / "game.json").write_text(json.dumps(shared), encoding="utf-8")
+def _write(directory: Path, shared: dict, private: str = "") -> Path:
+    """Write a throwaway role directory. Named to avoid shadowing ``role_dir``."""
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "game.json").write_text(json.dumps(shared), encoding="utf-8")
     if private:
-        (role_dir / "game.toml").write_text(private, encoding="utf-8")
-    return role_dir
+        (directory / "game.toml").write_text(private, encoding="utf-8")
+    return directory
 
 
-def test_loads_the_shipped_cop_configuration() -> None:
-    config = load_config(REPO_ROOT / "config" / "police")
+@pytest.mark.parametrize("role", PRESENT_ROLES)
+def test_loads_every_shipped_configuration(role: str) -> None:
+    config = load_config(role_dir(role))
     assert config.get("board_and_agents.grid_size") == 7
     assert config.get("network_and_league.num_games") == 6
 
 
+@BOTH_ROLES
 def test_both_roles_ship_an_identical_shared_contract() -> None:
     """M#11 requires byte-identical shared config; our two roles must not drift."""
-    cop = load_config(REPO_ROOT / "config" / "police")
-    thief = load_config(REPO_ROOT / "config" / "thief")
-    assert cop.shared_digest() == thief.shared_digest()
+    digests = {load_config(role_dir(role)).shared_digest() for role in PRESENT_ROLES}
+    assert len(digests) == 1
 
 
+@BOTH_ROLES
 def test_private_settings_differ_between_roles() -> None:
-    cop = load_config(REPO_ROOT / "config" / "police")
-    thief = load_config(REPO_ROOT / "config" / "thief")
-    assert cop.get("identity.role") == "cop"
-    assert thief.get("identity.role") == "thief"
+    assert load_config(role_dir("police")).get("identity.role") == "cop"
+    assert load_config(role_dir("thief")).get("identity.role") == "thief"
+
+
+@pytest.mark.parametrize("role", PRESENT_ROLES)
+def test_each_role_declares_itself(role: str) -> None:
+    """Runs in every repository: the one role present must name itself correctly."""
+    expected = {"police": "cop", "thief": "thief"}[role]
+    assert load_config(role_dir(role)).get("identity.role") == expected
 
 
 def test_shared_overrides_private(tmp_path: Path) -> None:
@@ -154,22 +169,22 @@ REQUIRED_SECTIONS = (
 )
 
 
-@pytest.mark.parametrize("role", ["police", "thief"])
+@pytest.mark.parametrize("role", PRESENT_ROLES)
 def test_private_skeleton_has_every_required_section(role: str) -> None:
-    private = load_config(REPO_ROOT / "config" / role).private
+    private = load_config(role_dir(role)).private
     assert set(REQUIRED_SECTIONS) <= set(private)
 
 
-@pytest.mark.parametrize("role", ["police", "thief"])
+@pytest.mark.parametrize("role", PRESENT_ROLES)
 def test_private_config_does_not_mirror_negotiated_physics(role: str) -> None:
     """A second copy of an agreed value is a second thing that can drift."""
-    private = load_config(REPO_ROOT / "config" / role).private
+    private = load_config(role_dir(role)).private
     assert set(private) & set(SHIPPED) == {"version"}
 
 
-@pytest.mark.parametrize("role", ["police", "thief"])
+@pytest.mark.parametrize("role", PRESENT_ROLES)
 def test_rate_limits_meet_the_appendix_f_minimums(role: str) -> None:
-    path = REPO_ROOT / "config" / role / "rate_limits.json"
+    path = role_dir(role) / "rate_limits.json"
     limits = json.loads(path.read_text(encoding="utf-8"))
     floors = SHIPPED["rate_limiter_gatekeeper"]
     assert limits["version"] == SHIPPED["version"]

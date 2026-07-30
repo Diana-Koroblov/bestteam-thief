@@ -76,10 +76,15 @@ def test_all_four_gates_are_present() -> None:
 
 
 def test_gates_run_the_cheapest_check_first() -> None:
-    """Ruff before pytest, so a typo fails in a second rather than a minute."""
+    """Ruff first, so a typo fails in a second rather than a minute.
+
+    The split-repository suite runs last: it is the slowest gate and it is
+    pointless before the ordinary suite passes.
+    """
     names = [gate.name for gate in GATES]
     assert names[0].startswith("Lint")
-    assert names[-1].startswith("Tests")
+    assert names[-2].startswith("Tests")
+    assert names[-1].startswith("Split-repository")
 
 
 def test_no_gate_uses_a_shell() -> None:
