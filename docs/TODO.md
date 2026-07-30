@@ -104,12 +104,20 @@ working; ≥4 league matches booked; 10 per-algorithm PRDs written; CI green.
   - [x] 0.5.2.a [D] - `core/shared/import_graph.py` + `scripts/make_graph_vault.py` | DoD: **Done 28/07.** AST-based; only internal imports become edges; relative imports resolve; a broken file never aborts the walk. 13 unit tests. Verified against the reference repo: **60 modules, 123 internal edges, 2 949 code lines.**
   - [x] 0.5.2.b 🧑 [D] - Open the vault in Obsidian and screenshot Graph View | DoD: `assets/reference-graph.png` committed. Two display settings first: filter out the generated summary note with `-file:_index` (otherwise it appears as a hub that does not exist in the real architecture), and turn off **Show orphans** (they are all empty `__init__.py` files). Both are noted in the README caption.
   - [x] 0.5.2.c [D] - Write up three architectural findings for the README | DoD: **Done 28/07.** Section added to both READMEs: hubs are the dependency-free leaves (`exceptions` 14, `constants` 11); `peer.runtime` is the orchestrator at 16 connections; no dead code. Plus the colour key and a pointer to C-005…C-009.
-- [ ] 0.5.3 [D] - Read the reference repo's `RESEARCH-REPORT-Performance-Analysis.md` | DoD: Provider rate limits and fallback design understood; informs task 4.5.
+- [x] 0.5.3 [D] - Read the reference repo's `RESEARCH-REPORT-Performance-Analysis.md` | DoD: Provider rate limits and fallback design understood; informs task 4.5. — findings in **`docs/REFERENCE_PERFORMANCE_NOTES.md`**.
+  - **One config change forced:** `every_n_steps` 1 → **3** in both role configs. At 1 a series makes 210 LLM calls instead of ~70, three times the report's analysed worst case, brushing the 5-hour message window of every subscription tier. 3 is the report's recommended floor and every figure it publishes assumes it.
+  - **Confirmed our existing choices:** `template` default, `ollama` for graded matches, movement never delegated to a model, template fallback on provider error.
+  - **For task 4.5:** demand is ~0.5 RPM against a 30 RPM budget, so the Gatekeeper never trips in normal play — it is insurance, must **queue rather than error**, and its retry budget (3 × 5 s) must stay inside the 30 s response timeout. That is why `max_retries` stays at the Appendix F minimum.
+  - **Scheduling consequence:** a 6-sub-game series is ~2.3 h of wall-clock at the speed of the *slower* peer. Ten opponents ≈ 20+ hours of match time to coordinate. Sharpens the deadline on 0.3.1.
 
 ### ✅ Phase 0 Quality Gate
-- [ ] 0.QG.1 [D] - `uv run ruff check .` | DoD: `All checks passed.`
-- [ ] 0.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC.
-- [ ] 0.QG.3 [D] - Secret scan on both repos | DoD: Zero matches for `gsk_`, `sk-ant`, `BEGIN PRIVATE KEY` in tracked files **or history**. (M#39)
+- [x] 0.QG.1 [D] - `uv run ruff check .` | DoD: `All checks passed.` — runs as gate 1 of `ship.py` on every push, so it cannot regress silently.
+- [x] 0.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC. — gate 2 of `ship.py`.
+- [x] 0.QG.3 [D] - Secret scan on both repos | DoD: Zero matches for `gsk_`, `sk-ant`, `BEGIN PRIVATE KEY` in tracked files **or history**. (M#39)
+  - The **"or history"** half was not actually covered: `scan_tracked` only sees the current checkout, so a key committed and then deleted passes it while staying readable forever in the log. Added `scan_history()` and `scripts/scan_secrets.py --history --root <repo>`.
+  - Run on all three trees — working tree, `bestteam-cop`, `bestteam-thief` — across all 11 commits: **clean**. Tracked scan clean on all three too.
+  - Caught two bugs in the scanner while proving it: the history scan initially reported our own test fixture (it lacked the per-file exemption the tracked scan has), and the `.example` suffix exemption never actually matched `.env-example` — a no-op that looked like it worked. `.env-example` is now deliberately **not** exempt, since it is the likeliest place for someone to paste a real key.
+  - ⏰ **Re-run before submission.** History grows; a clean scan today says nothing about a commit made next week.
 - [x] 0.QG.4 [B] - PRD, PLAN and the 10 sub-PRDs reviewed and approved | DoD: **`PRD_1_base_logic.md` approved 30/07** — the five design decisions (diagonals removed from the enum, the three capture-resolution defaults, config-driven values, immutable state, no randomness) all accepted. Remaining sub-PRDs are approved at the start of their own phase. (X §2.5)
 
 ---

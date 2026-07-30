@@ -67,8 +67,12 @@ enabled = true
 # and the contest reduces to movement-algorithm quality (Table 21) — which is
 # where our expectimax and belief filtering live.
 provider = "template"
-# Run the model only once every N turns to cut consumption further (Table 21).
-every_n_steps = 1
+# Run the model only once every N turns (Table 21). The reference performance
+# report measures the book's worst case at every_n_steps = 3: 66-70 calls per
+# 6-sub-game series instead of 210, ~17.5k tokens on a paid provider (8.75% of
+# the 200k budget). At 1 the same series triples that and starts brushing the
+# 5-hour message windows of every subscription tier. 3 is the recommended floor.
+every_n_steps = 3
 # Truth is cheap and buys credibility; we lie only when the lie is decisive.
 # See PRD_strategy_advanced.md §4.3.
 default_truthfulness = "truthful"

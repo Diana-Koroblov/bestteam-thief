@@ -7,11 +7,34 @@ having none.
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import pytest
 
-from core.shared.secret_scanner import SECRET_PATTERNS, scan_staged, scan_text, scan_tracked
+from core.shared.secret_scanner import (
+    SECRET_PATTERNS,
+    scan_history,
+    scan_staged,
+    scan_text,
+    scan_tracked,
+)
+
+
+def _git_repo(path: Path) -> None:
+    """Initialise a throwaway repository with an identity, so commits succeed."""
+    path.mkdir(parents=True, exist_ok=True)
+    for args in (
+        ["init", "-q", "-b", "main"],
+        ["config", "user.email", "test@example.com"],
+        ["config", "user.name", "Test"],
+    ):
+        subprocess.run(["git", *args], cwd=path, check=True, capture_output=True)
+
+
+def _commit(path: Path, message: str) -> None:
+    subprocess.run(["git", "add", "-A"], cwd=path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-qm", message], cwd=path, check=True, capture_output=True)
 
 REALISTIC = {
     "Groq API key": "GROQ_API_KEY = 'gsk_" + "a1B2c3D4e5F6g7H8i9J0" * 2 + "'",
@@ -72,3 +95,68 @@ def test_multiple_secrets_on_separate_lines_are_all_reported() -> None:
     """The scan does not stop at the first hit."""
     text = REALISTIC["Groq API key"] + "\n" + REALISTIC["Private key block"]
     assert len(scan_text(text)) == 2
+
+
+def test_scan_history_outside_a_git_repo_is_quiet(tmp_path: Path) -> None:
+    assert scan_history(tmp_path) == []
+
+
+def test_a_deleted_secret_survives_in_the_history(tmp_path: Path) -> None:
+    """The reason 0.QG.3 demands a history scan and not just a tracked scan.
+
+    Committing a key and deleting it in the next commit leaves the working tree
+    clean. The key is still readable by anyone who clones the repository, so the
+    tracked scan passing means nothing. (M#39, M#40)
+    """
+    repo = tmp_path / "repo"
+    _git_repo(repo)
+    leak = repo / "settings.py"
+    leak.write_text(f'API_KEY = "{REALISTIC["Groq API key"]}"\n', encoding="utf-8")
+    _commit(repo, "oops")
+    leak.unlink()
+    _commit(repo, "remove the key")
+
+    assert scan_tracked(repo) == []  # the checkout looks innocent
+    findings = scan_history(repo)
+    assert len(findings) == 1
+    assert findings[0].label == "Groq API key"
+    assert "settings.py" in findings[0].location
+
+
+def test_history_scan_ignores_the_scanners_own_fixtures(tmp_path: Path) -> None:
+    """Otherwise every repository reports itself and the gate is useless."""
+    repo = tmp_path / "repo"
+    _git_repo(repo)
+    exempt = repo / "tests" / "unit"
+    exempt.mkdir(parents=True)
+    (exempt / "test_secret_scanner.py").write_text(
+        f'SAMPLE = "{REALISTIC["Groq API key"]}"\n', encoding="utf-8"
+    )
+    _commit(repo, "the scanner's own fixtures")
+
+    assert scan_history(repo) == []
+
+
+def test_a_real_key_in_env_example_is_still_reported(tmp_path: Path) -> None:
+    """`.env-example` is deliberately not exempt.
+
+    It is the likeliest place for someone to paste a real key "just to test".
+    Its own placeholders are too short to match, so nothing is lost by scanning
+    it and a whole class of leak is caught.
+    """
+    repo = tmp_path / "repo"
+    _git_repo(repo)
+    (repo / ".env-example").write_text(
+        f'GROQ_API_KEY={REALISTIC["Groq API key"]}\n', encoding="utf-8"
+    )
+    _commit(repo, "example file with a real-looking key")
+
+    assert len(scan_history(repo)) == 1
+
+
+def test_a_clean_history_yields_nothing(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    _git_repo(repo)
+    (repo / "main.py").write_text("print('hello')\n", encoding="utf-8")
+    _commit(repo, "clean")
+    assert scan_history(repo) == []
