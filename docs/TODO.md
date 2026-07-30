@@ -149,19 +149,33 @@ conditions fire correctly; scoring matches Appendix F; coverage ≥85 % on `core
 - [x] 1.1.8 [D] - Unit tests for 1.1 | DoD: 171 pass, coverage 95.16 %; `config_manager.py` and `config_spec.py` both at 100 %.
 
 ### 1.2 Board & movement
-- [ ] 1.2.1 [D] - `core/domain/board.py` — dimensions, bounds, passability | DoD: 7×7 read from config; no hardcoded size; out-of-bounds and barrier cells both report impassable.
-- [ ] 1.2.2 [D] - `core/domain/actions.py` — **4 orthogonal directions + STAY only** | DoD: No diagonal exists anywhere in the enum or the delta table. (M#14, F)
-- [ ] 1.2.3 [D] - `core/domain/movement.py` — legal move resolution | DoD: Diagonal input raises; out-of-bounds raises; barrier cell raises; STAY is legal. (M#13)
-- [ ] 1.2.4 [D] - `get_legal_moves(pos, barriers, board)` | DoD: Returns exactly the passable neighbours plus STAY; empty-except-STAY case handled.
+- [x] 1.2.1 [D] - `core/domain/board.py` — dimensions, bounds, passability | DoD: 7×7 read from config; no hardcoded size; out-of-bounds and barrier cells both report impassable.
+  - `is_passable` deliberately makes an **edge and a wall indistinguishable**. They have identical consequences for mobility, and treating them alike is what makes the corner case of M#47 fall out instead of needing special handling.
+  - Constructor rejects `grid_size < 7`, so an illegal config fails at startup rather than three turns into a match. Tested at sizes 7, 9, 10, 15 and with `origin_index = 1` (T1.18).
+- [x] 1.2.2 [D] - `core/domain/actions.py` — **4 orthogonal directions + STAY only** | DoD: No diagonal exists anywhere in the enum or the delta table. (M#14, F)
+  - `Direction` inherits from `str`, so a move serialises as `"N"` and not `"Direction.N"`. A move that hashed differently on each peer would fail every commitment check.
+  - Guarded by a test asserting `abs(dr) + abs(dc) <= 1` for every delta, so a diagonal cannot be reintroduced by a careless port of the reference `Board` (C-009).
+- [x] 1.2.3 [D] - `core/domain/movement.py` — legal move resolution | DoD: Diagonal input raises; out-of-bounds raises; barrier cell raises; STAY is legal. (M#13)
+  - Raises rather than falling back to STAY: an opponent's illegal move is a technical loss in our favour, and silently absorbing it would cost us the point.
+  - T1.17 verified — the same `(state, action)` on two independent `Board` instances yields identical results, **errors included**.
+- [x] 1.2.4 [D] - `get_legal_moves(pos, barriers, board)` | DoD: Returns exactly the passable neighbours plus STAY; empty-except-STAY case handled.
+  - STAY is always present and always **first**, so a search tie broken by iteration order resolves the same way on both peers.
+  - Added `is_immobilised()` alongside it. The two are deliberately separate: STAY is always legal, so "has no legal move" is never true and cannot be the M#47 test. M#47 is **adjacency** — see C-006b.
 
 ### 1.3 Barriers
-- [ ] 1.3.1 [D] - `core/domain/barriers.py` — `BarrierManager` | DoD: File ≤150 lines. (M#15, M#46, F)
-  - [ ] 1.3.1.a [D] - `__init__` reads quota from config; rejects negative | DoD: Quota 14 default; `-1` raises `ValueError`.
-  - [ ] 1.3.1.b [D] - `can_place(target, cop_pos, is_forgoing_move)` | DoD: Legal only on the Cop's own cell or one of the 4 orthogonal neighbours, and only when forgoing movement. Diagonal-adjacent rejected.
-  - [ ] 1.3.1.c [D] - `place()` enforces the quota | DoD: 15th placement rejected with quota 14.
-  - [ ] 1.3.1.d [D] - Permanence — no removal API exists | DoD: A blocked cell stays blocked for the rest of the sub-game.
-  - [ ] 1.3.1.e [D] - Placement on the Thief's current cell returns `CAPTURE` | DoD: Unit-tested. (M#46)
+- [x] 1.3.1 [D] - `core/domain/barriers.py` — `BarrierManager` | DoD: File ≤150 lines. (M#15, M#46, F) — 111 LOC.
+  - [x] 1.3.1.a [D] - `__init__` reads quota from config; rejects negative | DoD: Quota 14 default; `-1` raises `ValueError`.
+  - [x] 1.3.1.b [D] - `can_place(target, cop_pos, is_forgoing_move)` | DoD: Legal only on the Cop's own cell or one of the 4 orthogonal neighbours, and only when forgoing movement. Diagonal-adjacent rejected.
+    - Backed by `rejection_for()` returning a `RejectionReason` enum rather than a bare bool, checked in the order a reviewer would ask them. `can_place` is a thin wrapper. The reason string is what we quote when refusing an opponent's claim.
+  - [x] 1.3.1.c [D] - `place()` enforces the quota | DoD: 15th placement rejected with quota 14.
+    - Also tested: a **rejected** placement never costs quota.
+  - [x] 1.3.1.d [D] - Permanence — no removal API exists | DoD: A blocked cell stays blocked for the rest of the sub-game.
+    - Enforced by the *absence* of an API, not a flag. A test asserts `remove`/`clear`/`reset`/`undo`/`delete`/`pop` do not exist, so nobody adds one "just for testing".
+  - [x] 1.3.1.e [D] - Placement on the Thief's current cell returns `CAPTURE` | DoD: Unit-tested. (M#46)
+    - `place()` also returns `CAPTURE` when the barrier seals the Thief's **last orthogonal exit** (M#47). Both live in one call because a separate capture check is exactly what gets forgotten.
 - [ ] 1.3.2 [D] - Truthful barrier declaration in the move record | DoD: Every placement carries its exact cell into the signed record; no hidden placement path exists. (M#15, M#16)
+  - [x] 1.3.2.a [D] - Single placement path, cell always carried | DoD: `place()` is the only way a barrier reaches the board, and every result — including every rejection — returns a `Placement` naming the exact cell. There is no API that blocks a cell without producing a declarable record.
+  - [ ] 1.3.2.b [D] - Wire the declaration into the signed record | DoD: The cell appears inside the commit hash, so a placement cannot be altered after the fact. **Blocked on Phase 6** (commit-reveal); the domain half is done.
 
 ### 1.4 Game state, capture & scoring
 - [ ] 1.4.1 [D] - `core/domain/game_state.py` — frozen dataclass | DoD: Positions, barriers, step count, barriers placed; immutable.
@@ -176,8 +190,8 @@ conditions fire correctly; scoring matches Appendix F; coverage ≥85 % on `core
 
 ### 1.5 Tests
 - [ ] 1.5.1 [D] - `tests/conftest.py` shared fixtures: `minimal_config`, `board_7x7`, `game_state_factory`, `barrier_manager`, `mock_llm_provider`, `mock_mcp_peer` | DoD: Each fixture used by ≥1 test.
-- [ ] 1.5.2 [D] - Unit tests for board, movement, actions | DoD: Happy path and error path per public function. (X §6.1)
-- [ ] 1.5.3 [D] - Unit tests for barriers, including all five sub-cases of 1.3.1 | DoD: Every branch covered.
+- [x] 1.5.2 [D] - Unit tests for board, movement, actions | DoD: Happy path and error path per public function. (X §6.1) — `tests/unit/test_board.py` (11) + `test_movement.py` (26). `core/domain/board.py`, `actions.py` and `movement.py` all at **100 %** coverage.
+- [x] 1.5.3 [D] - Unit tests for barriers, including all five sub-cases of 1.3.1 | DoD: Every branch covered. — `tests/unit/test_barriers.py` (29 tests), `core/domain/barriers.py` at **100 %**.
 - [ ] 1.5.4 [D] - Unit tests for rules and scoring | DoD: All four terminal conditions covered.
 - [x] 1.5.5 [D] - Unit tests for the config manager, incl. the overlay and minimum-direction rules | DoD: `ConfigVersionError` and minimum-violation both asserted. — done alongside 1.1 in `tests/unit/test_config_manager.py`, `test_config_spec.py`, `test_canonical.py`.
 
