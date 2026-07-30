@@ -178,21 +178,32 @@ conditions fire correctly; scoring matches Appendix F; coverage ≥85 % on `core
   - [ ] 1.3.2.b [D] - Wire the declaration into the signed record | DoD: The cell appears inside the commit hash, so a placement cannot be altered after the fact. **Blocked on Phase 6** (commit-reveal); the domain half is done.
 
 ### 1.4 Game state, capture & scoring
-- [ ] 1.4.1 [D] - `core/domain/game_state.py` — frozen dataclass | DoD: Positions, barriers, step count, barriers placed; immutable.
-- [ ] 1.4.2 [D] - `core/domain/rules.py` — terminal condition detection | DoD: All four paths unit-tested.
-  - [ ] 1.4.2.e [D] - Capture-resolution config flags: `capture.resolution`, `capture.stay_counts_as_move`, `capture.swap_is_capture` | DoD: All three implemented, not merely defaulted — an opponent may agree the opposite reading. Defaults `after_moves` / `false` / `true`. See CONTRADICTIONS C-006, PRD 1 §3.4b.
-  - [ ] 1.4.2.a [D] - Cop lands on the Thief's cell + Capture Claim → Cop wins | DoD: Tested. (Ch. 3)
-  - [ ] 1.4.2.b [D] - Barrier placed on the Thief's cell → Cop wins | DoD: Tested. (M#46)
-  - [ ] 1.4.2.c [D] - Thief with **no** legal move at all → captured | DoD: Tested with a fully enclosed thief. (M#47)
-  - [ ] 1.4.2.d [D] - Thief survives `survival_threshold` valid steps → Thief wins | DoD: Tested at exactly 35 and at 34. (F)
-- [ ] 1.4.3 [D] - `core/domain/scoring.py` — capture 20/5, survival 5/10, tie 2/2, technical loss 0/0 | DoD: All values read from config, zero numeric literals. (M#48, F)
-- [ ] 1.4.4 [D] - Series aggregation across 6 sub-games, with tie detection | DoD: Equal cumulative totals award `tie_score` to both sides. (F)
+- [x] 1.4.1 [D] - `core/domain/game_state.py` — frozen dataclass | DoD: Positions, barriers, step count, barriers placed; immutable.
+  - `advanced()` always increments the step, rather than leaving it to each caller. A turn that forgets to count is a step the Thief survived for free, and survival is what the Thief wins on.
+  - `barriers_placed` is stored, not derived from `len(barriers)`. If a negotiated rule ever blocks a cell without spending quota, a derived value would be silently wrong instead of loudly stale.
+  - Hashability is tested, because commit-reveal hashes the state a move was made against (Ch. 5.3.1) — a mutable object with an identity cannot serve as that.
+- [x] 1.4.2 [D] - `core/domain/rules.py` — terminal condition detection | DoD: All four paths unit-tested.
+  - Built as a `Rules` value resolved **once** from config, not a function that re-parses config per call: expectimax evaluates this thousands of times per turn, and re-reading config in the hot loop is both slow and a chance for the two peers to drift. This is a deliberate deviation from the `terminal_state(state, config)` signature in PRD 1 §4.
+  - [x] 1.4.2.e [D] - Capture-resolution config flags: `capture.resolution`, `capture.stay_counts_as_move`, `capture.swap_is_capture` | DoD: All three implemented, not merely defaulted — an opponent may agree the opposite reading. Defaults `after_moves` / `false` / `true`. See CONTRADICTIONS C-006, PRD 1 §3.4b.
+    - Each flag is tested in **both** settings, and `test_before_moves_judges_the_pre_move_snapshot` shows the same transition producing opposite verdicts under the two readings — which is precisely why the flag has to be signed rather than assumed.
+  - [x] 1.4.2.a [D] - Cop lands on the Thief's cell + Capture Claim → Cop wins | DoD: Tested. (Ch. 3)
+  - [x] 1.4.2.b [D] - Barrier placed on the Thief's cell → Cop wins | DoD: Tested. (M#46) — lives in `BarrierManager.place()` (1.3.1.e); `rules.py` covers the resulting state.
+  - [x] 1.4.2.c [D] - Thief with **no** legal move at all → captured | DoD: Tested with a fully enclosed thief. (M#47)
+    - Also tested cornered (2 barriers) and against an edge (3), since edges block exactly as barriers do.
+  - [x] 1.4.2.d [D] - Thief survives `survival_threshold` valid steps → Thief wins | DoD: Tested at exactly 35 and at 34. (F)
+    - Capture is checked **before** survival: a Thief caught on step 35 was caught, not saved by the clock.
+- [x] 1.4.3 [D] - `core/domain/scoring.py` — capture 20/5, survival 5/10, tie 2/2, technical loss 0/0 | DoD: All values read from config, zero numeric literals. (M#48, F)
+  - **Confirmed from the book, not inferred:** a technical loss pays **0 to both sides** — Ch. 3.5, *"ההפסד הטכני מאפס את שני הצדדים כאחד"*, explicitly so that neither side can win by making the other time out. Nothing we build should ever stress an opponent's clock; there is no upside.
+  - `score()` **raises** on a `TIE` verdict rather than returning a value. A tie is a series-level result, and quietly returning something for a single sub-game would hide the mistake.
+- [x] 1.4.4 [D] - Series aggregation across 6 sub-games, with tie detection | DoD: Equal cumulative totals award `tie_score` to both sides. (F)
+  - The tie is decided on **cumulative points**, not sub-games won: 3 captures and 3 survivals is 75-45, not a draw.
+  - ⚠️ **New contradiction found while testing — C-013.** A series in which every sub-game ended in a technical loss is also arithmetically level, at 0-0, so a literal reading pays both teams the tie bonus for a series neither played. That inverts the incentive Ch. 3.5 exists to create. We pay the bonus only when at least one sub-game produced a real result. Cheap to raise at negotiation, awkward to argue afterwards.
 
 ### 1.5 Tests
 - [ ] 1.5.1 [D] - `tests/conftest.py` shared fixtures: `minimal_config`, `board_7x7`, `game_state_factory`, `barrier_manager`, `mock_llm_provider`, `mock_mcp_peer` | DoD: Each fixture used by ≥1 test.
 - [x] 1.5.2 [D] - Unit tests for board, movement, actions | DoD: Happy path and error path per public function. (X §6.1) — `tests/unit/test_board.py` (11) + `test_movement.py` (26). `core/domain/board.py`, `actions.py` and `movement.py` all at **100 %** coverage.
 - [x] 1.5.3 [D] - Unit tests for barriers, including all five sub-cases of 1.3.1 | DoD: Every branch covered. — `tests/unit/test_barriers.py` (29 tests), `core/domain/barriers.py` at **100 %**.
-- [ ] 1.5.4 [D] - Unit tests for rules and scoring | DoD: All four terminal conditions covered.
+- [x] 1.5.4 [D] - Unit tests for rules and scoring | DoD: All four terminal conditions covered. — `test_game_state.py` (12), `test_rules.py` (20), `test_scoring.py` (16). `game_state.py`, `rules.py` and `scoring.py` all at **100 %**; all of `core/domain` is at 100 %.
 - [x] 1.5.5 [D] - Unit tests for the config manager, incl. the overlay and minimum-direction rules | DoD: `ConfigVersionError` and minimum-violation both asserted. — done alongside 1.1 in `tests/unit/test_config_manager.py`, `test_config_spec.py`, `test_canonical.py`.
 
 ### ✅ Phase 1 Quality Gate

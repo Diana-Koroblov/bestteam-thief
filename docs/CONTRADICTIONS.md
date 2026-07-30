@@ -190,6 +190,19 @@ implemented as config flags and settled in the pre-match agreement.
 
 ---
 
+## C-013 — A series of technical losses is arithmetically a tie
+
+| | |
+|---|---|
+| **Where** | Appendix F Table 17 row 5 vs. Ch. 3.5 |
+| **The conflict** | Table 17 defines `tie_score` as *"ניקוד לכל צד כאשר הניקוד המצטבר של כל המשחקונים מול יריבה מסתיים בתיקו"* — points to **each** side when the cumulative total against an opponent ends level. Ch. 3.5 separately fixes a technical loss at 0-0 and explains why: *"ההפסד הטכני מאפס את שני הצדדים כאחד, ובכך מתמרץ את שניהם לשמור על תקינות פרוטוקולרית ולא לנצח בפסק זמן"*. A series in which every sub-game ended in a technical loss satisfies both: the totals are equal, at 0-0. Read literally, both teams collect `tie_score` for a series neither managed to play. |
+| **Why it matters** | It inverts the incentive the technical-loss rule exists to create. Two teams that both crash six times out of six would score better than one team that played honestly and lost narrowly. It also makes an empty series — no sub-games at all — worth 2 points a side. |
+| **Our choice** | The tie bonus is paid only when **at least one** sub-game produced a real result. A series of nothing but technical losses returns `TECHNICAL_LOSS` at 0-0, and so does an empty series. A series with *some* failures and a genuine level finish still pays the bonus normally. |
+| **Why** | It is the reading that cannot be gamed, and it is the one the Ch. 3.5 rationale plainly intends. Where a literal reading and a stated purpose disagree, the purpose is the safer thing to implement — we would rather under-claim two points than have a scoring dispute in the league table. |
+| **Effect** | `core/domain/scoring.aggregate()` filters technical losses before deciding the tie; three tests pin the behaviour. Worth raising during negotiation only if a series actually degenerates that way — it costs nothing to agree in advance and is awkward to argue afterwards. |
+
+---
+
 ## Template for future entries
 
 ```markdown
