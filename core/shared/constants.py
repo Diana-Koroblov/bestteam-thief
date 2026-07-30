@@ -6,6 +6,15 @@ anything private to one peer belongs in ``config/<role>/game.toml``.
 
 Rule of thumb (excellence guide §7.2): if a reviewer could plausibly want to
 change it without changing the rules, it is configuration, not a constant.
+
+Note on what is deliberately **absent**: no game value lives here. Grid size,
+move set, barrier count, scoring and the pheromone constants are all reachable
+from ``config/<role>/game.json``, because every one of them is either
+negotiable or a minimum that two teams may agree to raise. Even the values
+Appendix F marks *fixed* stay in config, so that the digest the peers exchange
+covers them — a constant baked into the source is a constant neither peer can
+prove the other is using. ``core/shared/config_spec.py`` is what makes the
+fixed ones unchangeable in practice.
 """
 
 from __future__ import annotations

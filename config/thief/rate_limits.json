@@ -1,0 +1,19 @@
+{
+  "version": "1.00",
+  "_comment": "Gatekeeper budgets. Appendix F sets these as MINIMUMS: raising them by mutual agreement is legal, lowering them is not (M#12). The values here are the floor, so they are always safe to propose.",
+  "requests_per_minute": 30,
+  "concurrent_requests": 2,
+  "retry_backoff_sec": 5,
+  "max_retries": 3,
+  "queue_depth": 100,
+  "per_tool_overrides": {
+    "get_move": {
+      "requests_per_minute": 30,
+      "concurrent_requests": 1
+    },
+    "send_message": {
+      "requests_per_minute": 30,
+      "concurrent_requests": 1
+    }
+  }
+}

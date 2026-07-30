@@ -115,22 +115,30 @@ working; ≥4 league matches booked; 10 per-algorithm PRDs written; CI green.
 ---
 
 ## Phase 1: Base Logic (Layer 1)
-**Priority:** P0 | **Status:** Not Started ☐ | **Target:** 31 Jul – 1 Aug
+**Priority:** P0 | **Status:** In Progress ⏳ (1.1 complete) | **Target:** 31 Jul – 1 Aug
 **DoD:** Two agents move legally on a 7×7 grid; a 15th barrier is rejected; all three capture
 conditions fire correctly; scoring matches Appendix F; coverage ≥85 % on `core/domain`.
 
 ### 1.1 Configuration foundation
-- [ ] 1.1.1 [D] - `core/shared/version.py` with `VERSION = "1.00"` | DoD: Matches `pyproject.toml` and every config `version` key; asserted by a unit test. (X §8.1)
-- [ ] 1.1.2 [D] - `core/shared/constants.py` — immutable non-negotiable constants only | DoD: No value that belongs in config lives here. (X §7.2)
-- [ ] 1.1.3 [D] - `config/<role>/game.json` with all 31 Appendix F defaults | DoD: Every key from PRD §5 present; the two role copies are byte-identical. (M#11, F)
-- [ ] 1.1.4 [D] - `config/<role>/game.toml` private skeleton with explanatory comments | DoD: `[game]`, `[network]`, `[strategy]`, `[trash_talk]`, `[llm]`, `[email]` present. **Move the recorded ngrok domains from SETUP 0.2.5 into `[network]`** — Diana's is `customs-countdown-uncork.ngrok-free.dev`. (Appendix B)
-- [ ] 1.1.5 [D] - `config/<role>/rate_limits.json` | DoD: `requests_per_minute`, `concurrent_requests`, `retry_backoff_sec`, `max_retries`, `queue_depth` present; versioned. (F, X §5.2)
-- [ ] 1.1.6 [D] - `core/shared/config_manager.py` — load, merge, validate | DoD: File ≤150 lines; split into loader + validator if needed.
-  - [ ] 1.1.6.a [D] - Load private TOML then shared JSON | DoD: Missing JSON falls back to TOML defaults cleanly.
-  - [ ] 1.1.6.b [D] - JSON **overlays** TOML for every shared key | DoD: Unit test proves a private file cannot weaken a signed value. (Appendix B)
-  - [ ] 1.1.6.c [D] - Version compatibility check at startup | DoD: Mismatch raises `ConfigVersionError` with a readable message.
-  - [ ] 1.1.6.d [D] - Minimum-direction validator | DoD: A config lowering `max_barriers` below 14 raises; raising it to 20 passes. (M#12)
-  - [ ] 1.1.6.e [D] - `config_sha256()` over canonical JSON | DoD: Both peers compute the same digest for the same file.
+- [x] 1.1.1 [D] - `core/shared/version.py` with `VERSION = "1.00"` | DoD: Matches `pyproject.toml` and every config `version` key; asserted by a unit test. (X §8.1)
+- [x] 1.1.2 [D] - `core/shared/constants.py` — immutable non-negotiable constants only | DoD: No value that belongs in config lives here. (X §7.2)
+- [x] 1.1.3 [D] - `config/<role>/game.json` with all 31 Appendix F defaults | DoD: Every key from PRD §5 present; the two role copies are byte-identical. (M#11, F)
+  - Verified byte-identical by `sha256sum` **and** by `test_both_roles_ship_an_identical_shared_contract`.
+  - Carries our negotiated additions too: `capture.*` (C-006) and `pheromones.decay_model` / `field_includes_current_turn` / `seal_scent_digest` (C-005, C-007, C-008).
+- [x] 1.1.4 [D] - `config/<role>/game.toml` private skeleton with explanatory comments | DoD: `[game]`, `[network]`, `[strategy]`, `[trash_talk]`, `[llm]`, `[email]` present. **Move the recorded ngrok domains from SETUP 0.2.5 into `[network]`** — Diana's is `customs-countdown-uncork.ngrok-free.dev`. (Appendix B)
+  - ⚠️ **Deviation, deliberate:** `[game]` holds *local run settings only* (seed, self-play opponent, step delay). It does **not** mirror the negotiated physics, because a second copy of an agreed value is a second thing that can drift while the shared digest still matches. Enforced by `test_private_config_does_not_mirror_negotiated_physics`.
+- [x] 1.1.5 [D] - `config/<role>/rate_limits.json` | DoD: `requests_per_minute`, `concurrent_requests`, `retry_backoff_sec`, `max_retries`, `queue_depth` present; versioned. (F, X §5.2)
+- [x] 1.1.6 [D] - `core/shared/config_manager.py` — load, merge, validate | DoD: File ≤150 lines; split into loader + validator if needed.
+  - Split as predicted: `config_manager.py` (load/merge/version/digest) + `config_spec.py` (the Appendix F table as data). Both well under 150 LOC.
+  - [x] 1.1.6.a [D] - Load private TOML then shared JSON | DoD: Missing JSON falls back to TOML defaults cleanly.
+  - [x] 1.1.6.b [D] - JSON **overlays** TOML for every shared key | DoD: Unit test proves a private file cannot weaken a signed value. (Appendix B)
+  - [x] 1.1.6.c [D] - Version compatibility check at startup | DoD: Mismatch raises `ConfigVersionError` with a readable message.
+  - [x] 1.1.6.d [D] - Minimum-direction validator | DoD: A config lowering `max_barriers` below 14 raises; raising it to 20 passes. (M#12)
+  - [x] 1.1.6.e [D] - `config_sha256()` over canonical JSON | DoD: Both peers compute the same digest for the same file.
+    - Shipped as `Config.shared_digest()`, over `core/crypto/canonical.py`. Hashes the **shared** file only — including private settings would make two correctly-agreed peers disagree, because their ngrok domains differ.
+- [x] 1.1.7 [D] - `core/crypto/canonical.py` pulled forward from Phase 6 | DoD: Exactly one canonical serialiser exists in the repo; every digest in the project routes through it. (M#11, M#17, M#23)
+  - Pulled forward because the config digest needs it *now*, and a second serialiser written later in Phase 6 is precisely the divergence that scores 0 for both teams.
+- [x] 1.1.8 [D] - Unit tests for 1.1 | DoD: 171 pass, coverage 95.16 %; `config_manager.py` and `config_spec.py` both at 100 %.
 
 ### 1.2 Board & movement
 - [ ] 1.2.1 [D] - `core/domain/board.py` — dimensions, bounds, passability | DoD: 7×7 read from config; no hardcoded size; out-of-bounds and barrier cells both report impassable.
@@ -163,7 +171,7 @@ conditions fire correctly; scoring matches Appendix F; coverage ≥85 % on `core
 - [ ] 1.5.2 [D] - Unit tests for board, movement, actions | DoD: Happy path and error path per public function. (X §6.1)
 - [ ] 1.5.3 [D] - Unit tests for barriers, including all five sub-cases of 1.3.1 | DoD: Every branch covered.
 - [ ] 1.5.4 [D] - Unit tests for rules and scoring | DoD: All four terminal conditions covered.
-- [ ] 1.5.5 [D] - Unit tests for the config manager, incl. the overlay and minimum-direction rules | DoD: `ConfigVersionError` and minimum-violation both asserted.
+- [x] 1.5.5 [D] - Unit tests for the config manager, incl. the overlay and minimum-direction rules | DoD: `ConfigVersionError` and minimum-violation both asserted. — done alongside 1.1 in `tests/unit/test_config_manager.py`, `test_config_spec.py`, `test_canonical.py`.
 
 ### ✅ Phase 1 Quality Gate
 - [ ] 1.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.
