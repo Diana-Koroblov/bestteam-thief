@@ -84,6 +84,31 @@ turn — and hash the agreement. Any later divergence is then provable rather th
 explicitly permits one team to supply the other with the scent code itself; offering to do so is
 worth considering, since it guarantees parity and lets us set the reference implementation.
 
+### 3.2b Sampling timing — the residual problem
+
+Decay is deterministic and its rate is locked before the series, so this turn's emission is
+recoverable exactly from two consecutive observations:
+
+```
+Δτ = τ_t − (1 − ρ) · τ_{t−1}          ← a clean 5×5 pattern centred on the emitter
+```
+
+Whether that collapses the belief map to a point depends entirely on **when** the field is sampled.
+
+| ID | Requirement |
+|---|---|
+| 4.8b | `scent_sampling` config key with two implemented modes: `end_of_previous_full_turn` (default) and `live`. |
+| 4.8c | Under the default, the sampled field reflects the state at the end of the previous full turn. The residual therefore localises the opponent's **previous** position; it has since moved one step, leaving ≤5 candidate cells. |
+| 4.8d | Under `live`, the residual gives the current cell and the belief map is a point. The strategy must remain correct in this mode. |
+| 4.8e | The chosen mode is part of the M#23 pre-series exchange and is recorded in the config JSON. |
+
+The default is what makes the rest of this layer meaningful: it leaves genuine bounded uncertainty,
+gives the verbal hint a job (disambiguating among the ≤5 candidates), and therefore makes deception
+worth something. See `CONTRADICTIONS.md` C-005.
+
+**Implement the residual computation regardless of mode.** It is the strongest signal available and
+both sides can compute it; declining to would simply hand the opponent an advantage.
+
 ### 3.3 Belief
 
 | ID | Requirement |

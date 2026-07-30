@@ -100,7 +100,42 @@ opponent without their informed agreement. The book permits exploiting undefined
 permit dishonesty, and a reputation for sharp practice in a small league is worth less than any
 match.
 
-### 3.5 Per-match artefacts
+### 3.6 Ambiguities that must be settled in writing
+
+Four gaps in the rulebook decide matches and are invisible until they do. Each is implemented as a
+config flag, so we can play under either reading without a code change — but the reading must be
+agreed **before** the first move, because with no referee a disagreement discovered mid-match is
+unresolvable, and under M#35 a disputed result can void the match and score **0 for both teams**.
+
+| # | Gap | Our proposed reading | Ref |
+|---|---|---|---|
+| N13 | **Scent sampling timing.** Decay is deterministic, so the residual `Δτ = τ_t − (1−ρ)τ_{t−1}` recovers the emission exactly. Whether that localises the opponent's *current* or *previous* position depends on when the field is sampled. | Field reflects the state at the **end of the previous full turn**. The residual gives the previous position; the opponent has since moved one step. | C-005 |
+| N14 | **STAY and M#47.** STAY is always a legal action, so "no legal move" read literally can never occur. | Capture is defined by **adjacency**: all four orthogonal neighbours blocked, regardless of STAY. | C-006a |
+| N15 | **M#46 timing.** Under commit-reveal, does a barrier capture a thief that simultaneously vacates the cell? | **No.** Positions are evaluated after both moves resolve. A barrier on a vacated cell does not capture. | C-006b |
+| N16 | **The swap.** Cop and thief exchange cells in the same turn; neither ends on the other's square. | **Capture.** | C-006c |
+
+Proposed clause, to be pasted into the agreement alongside the scent worked example:
+
+> **Capture resolution.** Actions resolve simultaneously; positions are evaluated after both moves
+> are applied. A barrier placed on a cell the thief has vacated does not capture. A thief whose four
+> orthogonal neighbours are all blocked by barriers and/or board edges is captured, regardless of
+> the availability of STAY. Two agents exchanging cells in the same turn counts as a capture.
+> **Scent sampling.** The opponent's scent field is sampled as of the end of the previous full turn.
+
+These readings are deliberately balanced rather than self-serving. N14 helps the cop, N15 helps the
+thief, N16 helps the cop, N13 is neutral — and we play both roles, so a lopsided proposal would cost
+us as often as it gained.
+
+### 3.7 Role split across the series
+
+| ID | Requirement |
+|---|---|
+| N17 | Confirm explicitly how the `[number of sub-games]` sub-games divide between cop and thief. |
+
+Do not assume. Our scoring analysis (`PRD_strategy_advanced.md` §2.3) assumes an even 3/3 split; a
+fixed-role or uneven series changes the arithmetic completely, and with it where effort should go.
+
+### 3.8 Per-match artefacts
 
 | ID | Requirement |
 |---|---|

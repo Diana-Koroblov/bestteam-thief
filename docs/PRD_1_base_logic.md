@@ -77,6 +77,21 @@ an illegal move cannot be represented, so it cannot be accidentally constructed.
 
 1.15 is easy to miss: a Thief that is walled in has lost even though nobody moved onto it.
 
+### 3.4b Capture resolution — three config flags
+
+Moves resolve simultaneously under commit-reveal, and the rulebook does not say how three specific
+situations resolve. Each is a config key, negotiated per match (`PRD_negotiation.md` §3.6,
+`CONTRADICTIONS.md` C-006).
+
+| ID | Config key | Default | Meaning |
+|---|---|---|---|
+| 1.12a | `capture.resolution` | `after_moves` | Positions are evaluated after both actions apply. A barrier placed on a cell the thief has vacated does **not** capture. |
+| 1.12b | `capture.stay_counts_as_move` | `false` | M#47 is defined by adjacency: all four orthogonal neighbours blocked → captured, regardless of STAY being available. |
+| 1.12c | `capture.swap_is_capture` | `true` | Cop and thief exchanging cells in the same turn counts as a capture. |
+
+All three must be implemented, not merely defaulted — an opponent may agree the opposite reading and
+we play under whichever was signed.
+
 ### 3.5 Scoring (M#48)
 
 | Outcome | Cop | Thief |

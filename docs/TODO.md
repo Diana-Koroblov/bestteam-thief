@@ -147,6 +147,7 @@ conditions fire correctly; scoring matches Appendix F; coverage ≥85 % on `core
 ### 1.4 Game state, capture & scoring
 - [ ] 1.4.1 [D] - `core/domain/game_state.py` — frozen dataclass | DoD: Positions, barriers, step count, barriers placed; immutable.
 - [ ] 1.4.2 [D] - `core/domain/rules.py` — terminal condition detection | DoD: All four paths unit-tested.
+  - [ ] 1.4.2.e [D] - Capture-resolution config flags: `capture.resolution`, `capture.stay_counts_as_move`, `capture.swap_is_capture` | DoD: All three implemented, not merely defaulted — an opponent may agree the opposite reading. Defaults `after_moves` / `false` / `true`. See CONTRADICTIONS C-006, PRD 1 §3.4b.
   - [ ] 1.4.2.a [D] - Cop lands on the Thief's cell + Capture Claim → Cop wins | DoD: Tested. (Ch. 3)
   - [ ] 1.4.2.b [D] - Barrier placed on the Thief's cell → Cop wins | DoD: Tested. (M#46)
   - [ ] 1.4.2.c [D] - Thief with **no** legal move at all → captured | DoD: Tested with a fully enclosed thief. (M#47)
@@ -220,6 +221,16 @@ correctly; the Orchestrator is the only inter-module path; no import path joins 
 - [ ] 3.3.2 [D] - Guard: the LLM is never consulted for a movement decision | DoD: An architecture test asserts no import of `core.infra.llm` from any brain module. (M#25)
 - [ ] 3.4.1 [D] - Unit tests for both baselines | DoD: Fixed-board scenarios with asserted move sequences.
 
+### 3.5 Self-play harness — **moved here from Phase 8**
+Strategy is the grade, and you cannot tune what you cannot measure. Every change from this point on
+is A/B'd against the baseline rather than trusted. Costs nothing: no MCP, no LLM, no tokens.
+
+- [ ] 3.5.1 [D] - Headless match runner: engine + two brains in one process, no network, no LLM | DoD: 100 sub-games complete in seconds; seeded and reproducible.
+- [ ] 3.5.2 [D] - Per-turn ASCII board render | DoD: Shows positions, barriers, belief peak, thief exit count. Watchable in the terminal, free. Better than the GUI for debugging.
+- [ ] 3.5.3 [D] - A/B report: win rate by role, steps to capture, captures per barrier spent, which win condition fired | DoD: Printed as a table with the seed recorded.
+- [ ] 3.5.4 [D] - **Cop self-separation counter** | DoD: Reports how often the cop stranded believed thief-mass outside its own component. **Must be 0.** (PRD advanced §3.2)
+- [ ] 3.5.5 [D] - Ablation switches for each tactic | DoD: Any tactic can be toggled off from config, so its contribution is measurable in isolation.
+
 ### ✅ Phase 3 Quality Gate
 - [ ] 3.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.
 - [ ] 3.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC.
@@ -240,6 +251,8 @@ Most of the schedule slack is allocated here — if anything slips, it slips her
 - [ ] 4.1.3 [D] - Symmetry: both agents emit; each reads only the opponent's field | DoD: A test asserts an agent cannot sample its own trail. (Ch. 4)
 - [ ] 4.1.4 [D] - Truncation at zero | DoD: Intensity never goes negative.
 - [ ] 4.1.5 [D] - Scent-model exchange payload: formula + a concrete numeric example, hashed | DoD: Both peers agree the digest before the series opens. (M#23)
+- [ ] 4.1.6 [D] - `scent_sampling` mode: `end_of_previous_full_turn` (default) and `live` | DoD: Both implemented. Under the default the residual `Δτ = τ_t − (1−ρ)τ_{t−1}` localises the opponent's *previous* cell, leaving ≤5 candidates; under `live` it gives the current cell. Part of the M#23 exchange. See CONTRADICTIONS C-005.
+- [ ] 4.1.7 [D] - Residual emission recovery | DoD: Implemented regardless of mode — it is the strongest available signal and both sides can compute it.
 
 ### 4.2 Belief engine
 - [ ] 4.2.1 [D] - `core/domain/belief.py` — full 7×7 posterior | DoD: Sums to 1.0 within float tolerance after every update.
@@ -401,32 +414,51 @@ truth only; the Replay App reproduces a recorded series with `Verified OK`.
 
 ## Phase 8: Advanced Strategy — the competitive edge
 **Priority:** P1 | **Status:** Not Started ☐ | **Target:** starts once Phase 4 lands; runs parallel to 5–7
-**DoD:** The advanced brains beat the Phase 3 baselines in ≥70 % of self-play sub-games.
-**This is where the league grade lives.**
+**DoD:** The advanced brains beat the Phase 3 baselines in ≥70 % of self-play sub-games, measured on
+the harness built at 3.5.
+**This is where the league grade lives.** See `PRD_strategy_advanced.md`.
 
-### 8.1 Cop — barrier-trap planning
-- [ ] 8.1.1 [D] - Expectimax over the belief map, depth 2–3 | DoD: Beats the baseline Cop in self-play.
-- [ ] 8.1.2 [D] - Barrier placement scored by reduction in the Thief's 3-step reachable-cell count | DoD: Greedy blocking replaced by cage construction.
-- [ ] 8.1.3 [D] - Self-entrapment guard | DoD: A placement that reduces the Cop's own mobility below a threshold is rejected. (Ch. 3 warning)
-- [ ] 8.1.4 [D] - Barrier budget pacing across 35 steps | DoD: Barriers remain available for the endgame squeeze.
-- [ ] 8.1.5 [D] - Entropy-aware pursuit on a bimodal posterior | DoD: Chooses the move that best splits the modes rather than chasing the argmax.
+### 8.1 Cop — the role that breaks ties
+Between two competent teams every sub-game ends in survival, the series ties, and each takes 2.
+The cop carries a 15-point spread against the thief's 5, and is the only role that can win outright.
 
-### 8.2 Thief — scent-aware evasion
-- [ ] 8.2.1 [I] - Escape-route maximisation under the belief map | DoD: Beats the baseline Thief in self-play.
-- [ ] 8.2.2 [I] - Trail-aware movement — treat one's own emission as a cost | DoD: Avoids re-emitting at full strength in a cul-de-sac.
-- [ ] 8.2.3 [I] - False-anchor tactic: lay a strong trail, then break away | DoD: Measurably increases survival rate against the baseline Cop. *(Original extension.)*
-- [ ] 8.2.4 [I] - Endgame switch to safety once guaranteed evasion covers the remaining steps | DoD: Survival rate rises in the last third of a sub-game.
+- [ ] 8.1.1 [D] - Expectimax over the belief map, depth 2–3 | DoD: Beats the baseline cop; completes well inside the 30 s step deadline.
+- [ ] 8.1.2 [D] - **Connectivity constraint** replacing the old mobility guard | DoD: Hard penalty ∝ believed thief-mass outside `component(cop)`. **Co-confinement is rewarded, not rejected** — sealing yourself in with the thief is the winning move. (PRD advanced §3.2)
+- [ ] 8.1.3 [D] - Reward shrinking the **shared** component | DoD: `−β·|component containing both|`; smaller is better.
+- [ ] 8.1.4 [D] - **Wall-behind-yourself rule** | DoD: A placement that puts the wall between cop and thief is rejected. Sealing the thief away from you guarantees its survival.
+- [ ] 8.1.5 [D] - Diagonal minimum cuts | DoD: Placements extending a diagonal chain are preferred — a diagonally-connected wall cannot be crossed on a 4-connected grid, so it is the cheapest cut. 4 barriers seal a 6-cell corner.
+- [ ] 8.1.6 [D] - Cycle elimination as the barrier objective | DoD: Prefer placements that destroy cycles. A region the thief can circle is a region it survives in.
+- [ ] 8.1.7 [D] - **One-placement rule** | DoD: Reject any cut that cannot be completed with one further placement. Each placement gifts the thief a free step, so a two-barrier seal leaks.
+- [ ] 8.1.8 [D] - **Win condition: drive thief exit count to 1 while adjacent to that exit** | DoD: The evaluation targets this state explicitly, not generic region shrinkage.
+- [ ] 8.1.9 [D] - Three-phase plan: herd (0 barriers) → seal → squeeze | DoD: Transitions driven by measured state — thief edge-adjacency, exit count, belief entropy — never by turn number.
+- [ ] 8.1.10 [D] - Opponent-type gate on the phasing | DoD: Flee-greedy thief → chase, no early barriers (the board's edges corner it for free). Orbiting thief → spend barriers early to cut the cycle.
+- [ ] 8.1.11 [D] - Entropy-aware pursuit on a multimodal posterior | DoD: Chooses the information-revealing move over the argmax chase.
+- [ ] 8.1.12 [D] - No barrier while belief entropy is high | DoD: A barrier placed where the thief probably is not can open a route *for* it.
+
+### 8.2 Thief — full tactic set, value measured not assumed
+Retained in full. Whether each tactic earns its keep is settled by ablation (8.3.4), not by prior belief.
+
+- [ ] 8.2.1 [I] - Escape-route maximisation under the belief map | DoD: Beats the baseline thief.
+- [ ] 8.2.2 [I] - **Never let exit count reach 1** while the cop is within placement range | DoD: The mirror of the cop's win condition; the single most valuable line in the thief's evaluation.
+- [ ] 8.2.3 [I] - Scent-aware movement — own emission treated as a cost | DoD: Avoids lingering in cul-de-sacs where re-emission plateaus at full strength.
+- [ ] 8.2.4 [I] - **Cycle preservation** | DoD: Prefers regions that still contain a cycle; tracks the cop's remaining barriers as the measure of how many cycles it can still destroy.
+- [ ] 8.2.5 [I] - False-anchor tactic | DoD: Lay a strong trail, then break away. Triggered only when estimated payoff exceeds the turns spent.
+- [ ] 8.2.6 [I] - Measure the false anchor | DoD: Survival rate with and without, against **both** the baseline cop and our own advanced cop. Adopted for graded matches only if it wins.
 
 ### 8.3 Shared
-- [ ] 8.3.1 [D] - Bluff strategy driven by the reliability coefficient | DoD: Lies more when the opponent is believed to trust; tells truth when profiling suggests they discount everything.
-- [ ] 8.3.2 [B] - Self-play harness: advanced vs. baseline, 100 sub-games | DoD: Win rate reported; ≥70 % required to adopt.
-- [ ] 8.3.3 [D] - Unit tests for every scoring heuristic | DoD: Deterministic on fixed boards; coverage ≥85 %.
+- [ ] 8.3.1 [D] - **Unexploitable default** | DoD: Near-ties resolved by a seeded random choice (seed logged); no fixed lie schedule; no rhythmic movement pattern. Unexploitability is the floor, exploitation is upside.
+- [ ] 8.3.2 [D] - Opponent profiling — **at most 4 traits, confidence-gated** | DoD: Barrier rate (public under M#15), flee-greediness, hint-responsiveness, reliability `r`. Below the confidence threshold, behaviour stays on the unexploitable default. ~200 steps per series cannot support more without fitting noise.
+- [ ] 8.3.3 [D] - Profile resets between opponents | DoD: Accumulates across the 6 sub-games of a series; cleared for a new team, since teams may change code between matches.
+- [ ] 8.3.4 [D] - **Cheap-truth bluff policy** | DoD: Compute the hint's information value beyond what our scent already reveals. Low → tell the truth free and bank credibility. High → consider a lie weighted by credibility banked. As cop, spend it in Phase A to herd.
+- [ ] 8.3.5 [D] - Disable the verbal layer when hint-responsiveness ≈ 0 | DoD: An opponent who ignores hints makes the tokens pure waste.
+- [ ] 8.3.6 [B] - Self-play benchmark on the 3.5 harness | DoD: ≥100 sub-games, both roles, seeded; adopt only on ≥70 % against the control.
+- [ ] 8.3.7 [D] - Unit tests for every scoring heuristic | DoD: Deterministic on fixed boards; coverage ≥85 %.
 
 ### ✅ Phase 8 Quality Gate
 - [ ] 8.QG.1 [B] - `uv run ruff check .` | DoD: 0 violations.
-- [ ] 8.QG.2 [B] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC. Brains grow fast — split search, scoring and policy.
+- [ ] 8.QG.2 [B] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC. Brains grow fastest — split search, evaluation and policy.
 - [ ] 8.QG.3 [B] - `uv run pytest --cov` | DoD: All pass; coverage ≥85 %.
-- [ ] 8.QG.4 [B] - Self-play benchmark | DoD: Advanced brains win ≥70 % against the baselines.
+- [ ] 8.QG.4 [B] - Self-play benchmark | DoD: Advanced brains win ≥70 % against the baselines; **cop self-separation rate is 0**.
 
 ---
 
@@ -441,6 +473,9 @@ Graded matches are hosted from Itay's machine on Ollama (zero tokens). (ADR-003)
 - [ ] 9.1.3 [B] - Declare counted games played so far, honestly | DoD: Recorded in the declaration JSON. A false declaration disqualifies the project. (M#37, M#38)
 - [ ] 9.1.4 [B] - Exchange Step-0 declarations incl. commit hash | DoD: Tree clean; hash matches `git rev-parse HEAD`. (M#53)
 - [ ] 9.1.5 [B] - Record any negotiated rule extension | DoD: Written into the config JSON and `docs/CONTRADICTIONS.md`.
+- [ ] 9.1.6 [B] - **Agree the capture-resolution clause in writing** | DoD: M#46 timing, M#47 vs STAY, and the swap case all settled before the first move. With no referee, a disagreement found mid-match is unresolvable and can void the result for **both** teams (M#35). See PRD_negotiation §3.6.
+- [ ] 9.1.7 [B] - **Agree the scent sampling mode** | DoD: `end_of_previous_full_turn` proposed; recorded in the config JSON as part of the M#23 exchange. See CONTRADICTIONS C-005.
+- [ ] 9.1.8 [B] - **Confirm the role split across the series** | DoD: How the 6 sub-games divide between cop and thief. Do not assume 3/3 — the scoring analysis depends on it.
 
 ### 9.2 Matches
 - [ ] 9.2.1 [B] - Warm-up match (uncounted) | DoD: Protocol bugs shaken out before anything counts. (M#52)

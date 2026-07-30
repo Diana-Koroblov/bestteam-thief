@@ -57,6 +57,54 @@ This file is that record. Each entry is also summarised in the README of both re
 
 ---
 
+## C-005 — When is the opponent's scent field sampled?
+
+| | |
+|---|---|
+| **Where** | Chapter 4 — "each agent can sample the board and receive the opponent's scent map" |
+| **The problem** | Decay is deterministic and its rate is locked before the series (M#23). If the full field is observed on consecutive turns, this turn's emission is recoverable exactly: `Δτ = τ_t − (1−ρ)·τ_{t−1}`. That residual is a clean 5×5 pattern centred on the emitter, so the belief map collapses to a single cell. Chapter 4's own worked example reasons this way — it computes the expected fresh trace as `(1−ρ)·0.9 ≈ 0.81` and reads cells across the whole board — so global observation is clearly intended. But an entire chapter is then built on probabilistic belief, which would be unnecessary if localisation were exact. |
+| **The real hinge** | Not *scope* but *timing*. If the field is sampled **after** the opponent's move, the residual gives its current cell and there is no uncertainty at all. If it reflects the state at the **end of the previous full turn**, we know exactly where it *was*, it has since moved one step, and the belief is spread over ≤5 cells. |
+| **Our choice** | **End of the previous full turn.** The residual localises the opponent's *previous* position, not its current one. |
+| **Why** | It is the only reading under which the rest of Chapter 4 and the whole of Chapter 6 make sense. It leaves genuine, bounded uncertainty; it makes the verbal hint meaningful, because its job is to disambiguate among the ≤5 candidates; and it therefore makes deception worth something, which the book clearly intends. Claiming instead that the board is only *locally* observable would contradict Chapter 4's explicit example. |
+| **Effect** | `scent_sampling` is a config key with two values, `end_of_previous_full_turn` (our default) and `live`. Both are implemented, so an opponent who insists on the other reading can be accommodated without a code change. Added to the M#23 pre-series exchange alongside the worked numeric example. |
+
+---
+
+## C-006 — Capture resolution under simultaneous commit
+
+Three related gaps, all invisible until the moment they decide a match. All three are
+implemented as config flags and settled in the pre-match agreement.
+
+### C-006a — Does STAY count as "a legal move" for M#47?
+
+| | |
+|---|---|
+| **Where** | M#47 vs. the move set in Appendix F |
+| **The conflict** | M#47 captures a thief "imprisoned without any legal move". Chapter 3 adds "(all adjacent cells blocked by barriers and/or board edges)". But the move set is fixed as `N, S, E, W, STAY` — so STAY is *always* legal, and under a literal reading M#47 could never fire. |
+| **Our choice** | Capture is defined by **adjacency**. All four orthogonal neighbours blocked → captured, regardless of STAY. |
+| **Why** | The parenthetical is explicit, and the alternative reading makes a mandatory rule dead on arrival. |
+| **Stakes** | A thief at `(6,6)` with barriers at `(5,6)` and `(6,5)`: captured (cop 20 / thief 5) under our reading, survives (cop 5 / thief 10) under the other. A 15-point swing on identical boards. |
+
+### C-006b — M#46 timing: barrier on a cell the thief is leaving
+
+| | |
+|---|---|
+| **Where** | M#46 — "a barrier placed on the cell where the thief stands **at that moment**" — under a commit-reveal protocol where neither side sees the other's action before choosing |
+| **The conflict** | If the cop commits "place at (6,6)" while the thief commits "move to (6,5)", is the thief captured? "At that moment" could mean commit time (capture) or after resolution (no capture). |
+| **Our choice** | **Positions are evaluated after both moves are applied.** A barrier placed on a vacated cell does not capture. |
+| **Why** | The alternative makes the cop overwhelming — any adjacency becomes a guaranteed capture and the thief can never escape once approached, which cannot be the intended balance. Under our reading M#46 still matters: it catches a thief that chose STAY, which is a real and predictable situation. |
+
+### C-006c — The swap
+
+| | |
+|---|---|
+| **Where** | Not addressed anywhere in the rulebook |
+| **The conflict** | Cop at `(5,6)` moves to `(6,6)`; thief at `(6,6)` moves to `(5,6)`. They pass through each other and neither ends on the other's cell. Capture, or not? |
+| **Our choice** | **A swap counts as a capture.** |
+| **Why** | Standard in pursuit-evasion games, and the alternative gives the thief a free escape every time the cop closes to adjacency — which would break the endgame entirely. |
+
+---
+
 ## Template for future entries
 
 ```markdown
