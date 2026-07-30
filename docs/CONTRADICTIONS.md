@@ -57,16 +57,20 @@ This file is that record. Each entry is also summarised in the README of both re
 
 ---
 
-## C-005 — When is the opponent's scent field sampled?
+## C-005 — The scent field is transmitted, not sampled
+
+**Revised 28/07 after reading the reference implementation.** The original entry framed this as a
+question of *when the board is sampled*. That framing was wrong: nobody samples anything.
 
 | | |
 |---|---|
-| **Where** | Chapter 4 — "each agent can sample the board and receive the opponent's scent map" |
-| **The problem** | Decay is deterministic and its rate is locked before the series (M#23). If the full field is observed on consecutive turns, this turn's emission is recoverable exactly: `Δτ = τ_t − (1−ρ)·τ_{t−1}`. That residual is a clean 5×5 pattern centred on the emitter, so the belief map collapses to a single cell. Chapter 4's own worked example reasons this way — it computes the expected fresh trace as `(1−ρ)·0.9 ≈ 0.81` and reads cells across the whole board — so global observation is clearly intended. But an entire chapter is then built on probabilistic belief, which would be unnecessary if localisation were exact. |
-| **The real hinge** | Not *scope* but *timing*. If the field is sampled **after** the opponent's move, the residual gives its current cell and there is no uncertainty at all. If it reflects the state at the **end of the previous full turn**, we know exactly where it *was*, it has since moved one step, and the belief is spread over ≤5 cells. |
-| **Our choice** | **End of the previous full turn.** The residual localises the opponent's *previous* position, not its current one. |
-| **Why** | It is the only reading under which the rest of Chapter 4 and the whole of Chapter 6 make sense. It leaves genuine, bounded uncertainty; it makes the verbal hint meaningful, because its job is to disambiguate among the ≤5 candidates; and it therefore makes deception worth something, which the book clearly intends. Claiming instead that the board is only *locally* observable would contradict Chapter 4's explicit example. |
-| **Effect** | `scent_sampling` is a config key with two values, `end_of_previous_full_turn` (our default) and `live`. Both are implemented, so an opponent who insists on the other reading can be accommodated without a code change. Added to the M#23 pre-series exchange alongside the worked numeric example. |
+| **Where** | Chapter 4 — "each agent can sample the board and receive the opponent's scent map" — vs. `Game-P2P-Cop-Chase/src/police_thief/domain/protocol.py` and `peer/turn_sender.py` |
+| **What the code actually does** | `TurnMessage` carries a `smell_grid` field. Each peer **sends its own scent field** to the opponent as part of every turn message; the receiver merges it with `SmellField.absorb()`. There is no board to sample and no shared world state — the field is a message payload. |
+| **Observed ordering** | `turn_sender.send()` does `deposit(current_position)` → `decay_all()` → `snapshot()` → send. So the transmitted field **includes the sender's current-turn deposit**. |
+| **Why uncertainty survives anyway** | The field arrives with the opponent's reveal, telling you where they were when they sent it. Both peers then commit their next move simultaneously. By the time your action lands they have moved again — leaving **≤5 candidate cells** (four orthogonal neighbours plus STAY, minus barriers and edges). |
+| **Our choice** | Match the reference: the transmitted field includes our current-turn deposit. Config key `scent_field_includes_current_turn`, default `true`. |
+| **Why** | Opponents who started from the reference simulator will behave this way, and matching them removes a whole class of dispute. It also preserves exactly the bounded uncertainty the rest of Chapter 4 and all of Chapter 6 depend on: enough that the belief map is real, little enough that the verbal hint has a job — disambiguating among the ≤5 candidates. That is what makes deception worth anything. |
+| **Effect** | Both modes implemented. The residual technique is still worth computing, but note it is far weaker against this implementation than against the book's formula — see C-007. Part of the M#23 exchange. |
 
 ---
 
@@ -102,6 +106,47 @@ implemented as config flags and settled in the pre-match agreement.
 | **The conflict** | Cop at `(5,6)` moves to `(6,6)`; thief at `(6,6)` moves to `(5,6)`. They pass through each other and neither ends on the other's cell. Capture, or not? |
 | **Our choice** | **A swap counts as a capture.** |
 | **Why** | Standard in pursuit-evasion games, and the alternative gives the thief a free escape every time the cop closes to adjacency — which would break the endgame entirely. |
+
+---
+
+## C-007 — The reference decay formula contradicts the book
+
+| | |
+|---|---|
+| **Where** | Chapter 4's formula vs. `Game-P2P-Cop-Chase/src/police_thief/domain/smell.py` |
+| **The book** | Multiplicative: `τ(t+1) = max(0, (1−ρ)·τ(t) + Δτ)`. Its own worked example states a centre cell at 0.9 decays to **0.81** after one turn at ρ = 0.10. |
+| **The reference code** | Subtractive: `self._values[cell] = max(0.0, round(self._values[cell] - self._decay, 3))`. The same cell decays to **0.80**. Merging is also `max(existing, new)` rather than additive, and the falloff is linear in Chebyshev distance (`intensity − intensity/(half+1) · ring`) rather than the radial values in the book's figure. |
+| **How far they diverge** | Book: 0.900 → 0.810 → 0.729 → … → 0.387 at step 9, asymptotic, never zero. Code: 0.900 → 0.800 → 0.700 → … → **0.000** at step 9. Different curve, different trail length, different half-life. |
+| **Our choice** | **Implement the book's formula.** Appendix D is explicit that where the repository deviates from the book, the book prevails. |
+| **Why this is the single most valuable finding so far** | It is exactly what M#23's mandatory worked numeric example exists to catch. Any opponent who started from the simulator will compute 0.80 where we compute 0.81 — and the pre-series exchange will surface that **before** the first move rather than as an unresolvable dispute afterwards. |
+| **Effect** | `decay_model` config key: `multiplicative` (book, our default) and `subtractive` (reference-compatible). We can play either way. The worked example we send is `τ=0.9, ρ=0.10, one turn → 0.81`; if the reply says 0.80 we know immediately which implementation they built on, which is also useful intelligence about the rest of their behaviour. |
+
+---
+
+## C-008 — The scent field is transmitted but never sealed
+
+| | |
+|---|---|
+| **Where** | Chapter 4's claim vs. `domain/crypto.py` and `domain/protocol.py` |
+| **The book** | *"The scent map cannot lie — it is emitted by the very act of movement and cannot be falsified."* |
+| **The reference code** | The commitment is `SHA256(canonical_json(payload) | nonce)` over `state | move | verdict`. **`smell_grid` is not in the sealed payload** — it travels in the clear inside `TurnMessage`. A peer could transmit a fabricated field every turn and the end-of-game audit would recompute every commit successfully and report no tampering. |
+| **Consequence** | The one channel the whole belief model treats as unfalsifiable is, under this protocol, the *only* channel with no integrity guarantee at all. The verbal hint is sealed via `Intent`; the scent field is not. |
+| **Our choice** | **Include a digest of our emitted field in the sealed per-step payload**, and require the same of an opponent by agreement. We do not fabricate fields under any circumstance. |
+| **Why** | Sealing it costs one hash and closes the gap. Not sealing it means our own honest play is indistinguishable from a dishonest opponent's, and we would have no way to prove the difference at audit. |
+| **Effect** | `seal_scent_digest` config key, default `true`. If an opponent refuses, we still seal ours — it costs nothing and the log then contains evidence of our own integrity even if theirs does not. Raised during negotiation as a proposal, not a demand. |
+
+---
+
+## C-009 — Reference `Board` defaults to 8-direction king movement
+
+| | |
+|---|---|
+| **Where** | `Game-P2P-Cop-Chase/src/police_thief/domain/board.py` |
+| **The problem** | `Board.__init__(self, size, moves=None)` falls back to `tuple(Direction)` — **all eight directions** — when no move set is supplied. The docstring is candid about it: *"the legacy 8-direction king movement is used when no move set is supplied."* The shipped config does pass the correct four, so the simulator itself is compliant. |
+| **Why it matters to us** | Diagonal movement is explicitly prohibited (M#14), with technical loss as the sanction. Any team reusing this class and forgetting the `moves` argument silently plays an illegal game — and would only discover it when an opponent rejects a move mid-match. |
+| **Our choice** | Our `Direction` enum contains **no diagonals at all**. An illegal move is unrepresentable rather than merely rejected. |
+| **Why** | Already recorded as a design decision in `PRD_1_base_logic.md` §6; this entry records the concrete trap it protects against, found in code we were invited to reuse. |
+| **Effect** | If we port anything from the reference `board.py`, the diagonal deltas are deleted rather than defaulted away. Test T1.3 asserts no diagonal exists in the enum. |
 
 ---
 

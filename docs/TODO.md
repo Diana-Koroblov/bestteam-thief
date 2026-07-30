@@ -99,8 +99,11 @@ working; ≥4 league matches booked; 10 per-algorithm PRDs written; CI green.
 - [x] 0.4.7 [D] - Open `docs/CONTRADICTIONS.md` | DoD: Three entries logged — C-001 `num_games` 1-vs-6, C-002 docstrings vs. the 150-line rule, C-003 board size 7×7 vs. the 10×10 figure. Template included for future entries.
 
 ### 0.5 Reference material
-- [ ] 0.5.1 [B] - Clone and run `rmisegal/Game-P2P-Cop-Chase` in two PowerShell terminals | DoD: A full match observed end-to-end; notes in `docs/REFERENCE_NOTES.md`.
-- [ ] 0.5.2 [D] - Build a Graphify knowledge graph of the reference repo | DoD: Graph screenshot in `assets/`; three architectural findings written up for the README. *(P2)*
+- [x] 0.5.1 [D] - Clone and read `rmisegal/Game-P2P-Cop-Chase` | DoD: **Done 28/07.** Confirmed genuinely two-process (refuting a claimed monolith). Four divergences found and logged: C-005 (field transmitted, not sampled), C-007 (subtractive vs multiplicative decay), C-008 (scent field unsealed), C-009 (Board defaults to king moves). Still to do: run a live match in two terminals.
+- [ ] 0.5.2 [D] - Graphify knowledge graph of the reference repo | DoD: Graph screenshot in `assets/` + three architectural findings written up for the README. *(P2)*
+  - [x] 0.5.2.a [D] - `core/shared/import_graph.py` + `scripts/make_graph_vault.py` | DoD: **Done 28/07.** AST-based; only internal imports become edges; relative imports resolve; a broken file never aborts the walk. 13 unit tests. Verified against the reference repo: **60 modules, 123 internal edges, 2 949 code lines.**
+  - [ ] 0.5.2.b 🧑 [D] - Open the vault in Obsidian and screenshot Graph View | DoD: `assets/reference-graph.png` committed.
+  - [ ] 0.5.2.c [D] - Write up three architectural findings for the README | DoD: Drawn from `_index.md` — the hub modules, the layering, the entry points.
 - [ ] 0.5.3 [D] - Read the reference repo's `RESEARCH-REPORT-Performance-Analysis.md` | DoD: Provider rate limits and fallback design understood; informs task 4.5.
 
 ### ✅ Phase 0 Quality Gate
@@ -251,8 +254,10 @@ Most of the schedule slack is allocated here — if anything slips, it slips her
 - [ ] 4.1.3 [D] - Symmetry: both agents emit; each reads only the opponent's field | DoD: A test asserts an agent cannot sample its own trail. (Ch. 4)
 - [ ] 4.1.4 [D] - Truncation at zero | DoD: Intensity never goes negative.
 - [ ] 4.1.5 [D] - Scent-model exchange payload: formula + a concrete numeric example, hashed | DoD: Both peers agree the digest before the series opens. (M#23)
-- [ ] 4.1.6 [D] - `scent_sampling` mode: `end_of_previous_full_turn` (default) and `live` | DoD: Both implemented. Under the default the residual `Δτ = τ_t − (1−ρ)τ_{t−1}` localises the opponent's *previous* cell, leaving ≤5 candidates; under `live` it gives the current cell. Part of the M#23 exchange. See CONTRADICTIONS C-005.
-- [ ] 4.1.7 [D] - Residual emission recovery | DoD: Implemented regardless of mode — it is the strongest available signal and both sides can compute it.
+- [ ] 4.1.6 [D] - Scent field **transmission** (not sampling) | DoD: Our field is sent inside each turn message and the opponent's is merged on receipt. `scent_field_includes_current_turn` default `true`, matching the reference. Uncertainty survives because both peers then move again, leaving ≤5 candidates. See CONTRADICTIONS C-005.
+- [ ] 4.1.7 [D] - `decay_model` config key: `multiplicative` (book, default) and `subtractive` (reference) | DoD: Both implemented. At ρ=0.10 the book gives 0.9→**0.81**, the reference 0.9→**0.80** — the M#23 worked example catches the mismatch before a move is played. See CONTRADICTIONS C-007.
+- [ ] 4.1.8 [D] - **Seal a digest of our emitted scent field** in the per-step commit payload | DoD: The reference leaves `smell_grid` outside the seal, so a fabricated field passes audit undetected. We close it on our side regardless of what the opponent does. See CONTRADICTIONS C-008.
+- [ ] 4.1.9 [D] - Residual emission recovery | DoD: Implemented under both decay models — strongest available signal, and both sides can compute it.
 
 ### 4.2 Belief engine
 - [ ] 4.2.1 [D] - `core/domain/belief.py` — full 7×7 posterior | DoD: Sums to 1.0 within float tolerance after every update.

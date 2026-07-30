@@ -53,7 +53,9 @@ from 0 and the other from 1, `[3,3]` means different cells and the match silentl
 | 1.7 | `get_legal_moves(pos, barriers, board)` returns all passable neighbours plus `STAY`. |
 
 Deleting diagonals from the enum rather than filtering them at validation time is deliberate:
-an illegal move cannot be represented, so it cannot be accidentally constructed.
+an illegal move cannot be represented, so it cannot be accidentally constructed. This is not
+hypothetical — the reference implementation's `Board` falls back to 8-direction king movement when
+no move set is passed, so any team reusing it carelessly plays an illegal game (C-009).
 
 ### 3.3 Barriers
 

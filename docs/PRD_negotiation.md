@@ -109,7 +109,9 @@ unresolvable, and under M#35 a disputed result can void the match and score **0 
 
 | # | Gap | Our proposed reading | Ref |
 |---|---|---|---|
-| N13 | **Scent sampling timing.** Decay is deterministic, so the residual `Δτ = τ_t − (1−ρ)τ_{t−1}` recovers the emission exactly. Whether that localises the opponent's *current* or *previous* position depends on when the field is sampled. | Field reflects the state at the **end of the previous full turn**. The residual gives the previous position; the opponent has since moved one step. | C-005 |
+| N13 | **Scent field exchange.** The field is *transmitted* with each turn message, not sampled from a shared board. Does the sent field include the sender's current-turn deposit? | **Yes** — matching the reference implementation. Uncertainty survives anyway, since both peers then move again, leaving ≤5 candidates. | C-005 |
+| N13b | **Decay model.** The book specifies multiplicative `(1−ρ)·τ + Δτ`; the reference simulator implements subtractive `τ − ρ`. At ρ=0.10 these give 0.81 and 0.80 from 0.9. | **The book's multiplicative model.** Appendix D says the book prevails over the repository. | C-007 |
+| N13c | **Sealing the scent field.** The reference leaves `smell_grid` outside the commit, so a fabricated field passes audit undetected. | **Seal a digest of the emitted field** in the per-step payload. Proposed, not demanded — we seal ours regardless. | C-008 |
 | N14 | **STAY and M#47.** STAY is always a legal action, so "no legal move" read literally can never occur. | Capture is defined by **adjacency**: all four orthogonal neighbours blocked, regardless of STAY. | C-006a |
 | N15 | **M#46 timing.** Under commit-reveal, does a barrier capture a thief that simultaneously vacates the cell? | **No.** Positions are evaluated after both moves resolve. A barrier on a vacated cell does not capture. | C-006b |
 | N16 | **The swap.** Cop and thief exchange cells in the same turn; neither ends on the other's square. | **Capture.** | C-006c |
@@ -120,7 +122,15 @@ Proposed clause, to be pasted into the agreement alongside the scent worked exam
 > are applied. A barrier placed on a cell the thief has vacated does not capture. A thief whose four
 > orthogonal neighbours are all blocked by barriers and/or board edges is captured, regardless of
 > the availability of STAY. Two agents exchanging cells in the same turn counts as a capture.
-> **Scent sampling.** The opponent's scent field is sampled as of the end of the previous full turn.
+> **Scent.** Each peer transmits its own scent field with every turn message, including that
+> turn's deposit. Decay is multiplicative: `τ(t+1) = max(0, (1−ρ)·τ(t) + Δτ)`. Worked example at
+> ρ = 0.10: a centre cell at 0.900 becomes **0.810** after one turn. Each peer seals a digest of its
+> emitted field inside that step's commitment.
+
+**The worked example is also intelligence.** If an opponent's reply gives 0.80 rather than 0.81,
+they built on the reference simulator — which tells us in advance that they likely have no
+implementation of M#46, M#47 or the swap case either (the reference implements none of them), and
+that their scent field is probably unsealed. Ask the question early.
 
 These readings are deliberately balanced rather than self-serving. N14 helps the cop, N15 helps the
 thief, N16 helps the cop, N13 is neutral — and we play both roles, so a lopsided proposal would cost

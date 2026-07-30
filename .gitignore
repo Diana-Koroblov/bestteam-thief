@@ -34,6 +34,12 @@ results/tmp/
 !results/**/log_*.json
 
 # ---------------------------------------------------------------------------
+# Generated Obsidian vaults (regenerate with scripts/make_graph_vault.py).
+# The screenshot goes in assets/; the vault itself is a build artefact.
+# ---------------------------------------------------------------------------
+vaults/
+
+# ---------------------------------------------------------------------------
 # Editors / OS
 # ---------------------------------------------------------------------------
 .idea/

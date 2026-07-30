@@ -84,30 +84,30 @@ turn — and hash the agreement. Any later divergence is then provable rather th
 explicitly permits one team to supply the other with the scent code itself; offering to do so is
 worth considering, since it guarantees parity and lets us set the reference implementation.
 
-### 3.2b Sampling timing — the residual problem
+### 3.2b How the field reaches the opponent — transmission, not sampling
 
-Decay is deterministic and its rate is locked before the series, so this turn's emission is
-recoverable exactly from two consecutive observations:
-
-```
-Δτ = τ_t − (1 − ρ) · τ_{t−1}          ← a clean 5×5 pattern centred on the emitter
-```
-
-Whether that collapses the belief map to a point depends entirely on **when** the field is sampled.
+**Corrected 28/07 against the reference implementation.** Nobody samples a shared board. Each peer
+**sends its own scent field** inside every turn message; the receiver merges it. The field is a
+message payload, not a world state.
 
 | ID | Requirement |
 |---|---|
-| 4.8b | `scent_sampling` config key with two implemented modes: `end_of_previous_full_turn` (default) and `live`. |
-| 4.8c | Under the default, the sampled field reflects the state at the end of the previous full turn. The residual therefore localises the opponent's **previous** position; it has since moved one step, leaving ≤5 candidate cells. |
-| 4.8d | Under `live`, the residual gives the current cell and the belief map is a point. The strategy must remain correct in this mode. |
-| 4.8e | The chosen mode is part of the M#23 pre-series exchange and is recorded in the config JSON. |
+| 4.8b | Our emitted field is transmitted with each turn message and merged by the opponent. See C-005. |
+| 4.8c | `scent_field_includes_current_turn` config key, default `true` — matching the reference, which deposits at the current position *before* snapshotting. |
+| 4.8d | Uncertainty survives regardless: the field tells us where the opponent was when they sent it, and both peers then commit simultaneously. By the time our action lands they have moved again — leaving **≤5 candidate cells**. |
+| 4.8e | `decay_model` config key: `multiplicative` (the book's `(1−ρ)·τ + Δτ`, our default) and `subtractive` (the reference's `τ − ρ`). Both implemented. See C-007. |
+| 4.8f | **Seal a digest of our emitted field** in the per-step commit payload. The reference leaves `smell_grid` outside the seal, so a fabricated field would pass audit undetected. We close that on our side whether or not the opponent does. See C-008. |
+| 4.8g | Both the sampling mode and the decay model form part of the M#23 pre-series exchange and are recorded in the config JSON. |
 
-The default is what makes the rest of this layer meaningful: it leaves genuine bounded uncertainty,
-gives the verbal hint a job (disambiguating among the ≤5 candidates), and therefore makes deception
-worth something. See `CONTRADICTIONS.md` C-005.
+**The residual technique still applies but is weaker here.** Under the book's multiplicative model,
+`Δτ = τ_t − (1−ρ)·τ_{t−1}` recovers the emission exactly. Under the reference's `max`-merge and
+subtractive decay it degrades — though the freshest cell still tends to sit at `emit_intensity`
+while everything else has decayed, so `argmax` alone is a strong positional estimate. Implement it
+either way: both sides can, and declining would simply concede the advantage.
 
-**Implement the residual computation regardless of mode.** It is the strongest signal available and
-both sides can compute it; declining to would simply hand the opponent an advantage.
+**Why the worked example matters.** At ρ = 0.10 the book gives 0.9 → **0.81**; the reference gives
+0.9 → **0.80**. That single digit identifies which implementation an opponent built on, before a
+move is played. See C-007.
 
 ### 3.3 Belief
 

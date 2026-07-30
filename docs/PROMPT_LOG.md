@@ -115,3 +115,25 @@ platform", so older instructions point at menus that no longer exist. And a proj
 would have silently broken automated league reporting mid-series, scoring 0 for both teams.
 **Lesson:** Training data goes stale in exactly the places that waste the most time — console
 menus and platform policies. Check before writing instructions someone will follow literally.
+
+### 2026-07-28 — Verify a second model's claims against the source
+**Goal:** Decide whether three additional "contradictions" suggested by NotebookLM belonged in
+`CONTRADICTIONS.md`.
+**Prompt (abridged):** Another model proposed three gaps. Are they worth adding? How do we verify
+the first one?
+**Result:** None were added. Checking each against the rulebook: the visibility-radius "conflict"
+described HW6, not the book, which has no such parameter; the three-meanings-of-token "conflict" is
+explicitly disambiguated by the book itself in a Chapter 9 callout; and the architectural claim —
+that the reference simulator is a monolith with a shared-truth backdoor — was **false**. Reading the
+cloned repository showed a single `opponent_url` per client, separate config directories per role,
+and a CLI documented as *"Two terminals, two peers, no central server."* The description it gave was
+an exact match for HW6, which it had in context.
+**But the verification paid for itself.** Reading the code to disprove one claim surfaced four real
+divergences worth far more: subtractive rather than multiplicative decay (0.80 vs 0.81 from the same
+input), the scent field being transmitted rather than sampled, that field sitting outside the
+cryptographic seal, and a `Board` that defaults to illegal king movement.
+**Lesson:** A plausible-sounding claim from a model is a hypothesis, not a finding. Check it against
+the primary source before writing it down — and check it by reading, not by asking another model.
+Padding a graded artefact with unverified claims converts evidence of careful work into evidence of
+the opposite. The check is also rarely wasted: going to the source to disprove one thing tends to
+turn up several others.
