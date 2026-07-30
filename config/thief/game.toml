@@ -67,12 +67,21 @@ enabled = true
 # and the contest reduces to movement-algorithm quality (Table 21) — which is
 # where our expectimax and belief filtering live.
 provider = "template"
-# Run the model only once every N turns (Table 21). The reference performance
-# report measures the book's worst case at every_n_steps = 3: 66-70 calls per
-# 6-sub-game series instead of 210, ~17.5k tokens on a paid provider (8.75% of
-# the 200k budget). At 1 the same series triples that and starts brushing the
-# 5-hour message windows of every subscription tier. 3 is the recommended floor.
-every_n_steps = 3
+# How often the MODEL runs - not how often a hint is sent. A hint goes out on
+# every single turn regardless: it is part of the commit record together with
+# the Intent flag (Ch. 5.3.1), so a turn without one would break commit-reveal.
+# On the turns the model is skipped, the template writes the hint instead.
+#
+# The book frames this purely as a token-budget question (Ch. 6.5.1). Our two
+# providers spend zero tokens - `template` calls no model at all and `ollama`
+# is local, unmetered and rate-limit free - so there is no budget to protect
+# and 1 costs us nothing while giving the richest verbal game.
+#
+# RAISE TO 3 IF the provider ever becomes metered (groq, claude_api,
+# claude_cli). At 1 a 6-sub-game series makes 210 model calls instead of ~70;
+# on a paid tier that is ~52k tokens and enough to brush the 5-hour message
+# window of every subscription. Enforced by a startup check - see TODO 7.x.
+every_n_steps = 1
 # Truth is cheap and buys credibility; we lie only when the lie is decisive.
 # See PRD_strategy_advanced.md §4.3.
 default_truthfulness = "truthful"

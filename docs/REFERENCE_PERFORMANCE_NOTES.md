@@ -28,15 +28,38 @@ ceiling. What bites is that 140 minutes fits entirely inside a single 3-, 4- and
 window, so **there is no mid-series quota reset to lean on**. The comparison is 70 calls
 against the per-window cap, directly.
 
-## 2. What we changed as a result
+## 2. What we changed as a result — nothing, and here is why
 
-**`every_n_steps`: 1 → 3, in both role configs.** This is the one concrete change the report
-forces. At 1 we would make 210 calls per series instead of 70 — three times the analysed
-worst case, and enough to brush the 5-hour message window of every subscription tier. The
-report names 3 as the recommended floor and every figure above assumes it. We had 1 purely
-because I never questioned the default.
+**I initially changed `every_n_steps` from 1 to 3 in both configs. That was wrong, and it has
+been reverted.** Diana caught it. The reasoning is worth keeping because the mistake is easy
+to repeat.
 
-Everything else the report recommends, we had already chosen independently:
+Two things were conflated:
+
+- **A hint is sent every turn, unconditionally.** Ch. 5.3.1: the agent chooses its move *and*
+  the hint together, and the sealed commit covers «הרמז המילולי, סיווג הכוונה, מספר הצעד
+  והתפקיד». A turn without a hint would break commit-reveal.
+- **`every_n_steps` governs how often the *model* runs**, not whether a hint is sent. On the
+  turns the model is skipped, `template` writes the hint instead. The verbal channel never
+  goes quiet.
+
+And the decisive point: the book frames this as a **budget** question — «הבחירה כיצד להפעילו
+היא בעיקר שאלת תקציב: כמה טוקנים מתוך [אומדן טוקנים לסדרה] אתם מוכנים להוציא על דיבור»
+(Ch. 6.5.1). Our two providers spend **zero** tokens. `template` never calls a model at all;
+`ollama` is local, unmetered and rate-limit free. There is no budget to protect, so raising
+the interval buys nothing and costs two-thirds of our verbal variety — in a project where
+the deception layer is graded.
+
+The 17.5 k-token figure in §1 describes `claude_api`. Applying it to a zero-token
+configuration was the error.
+
+**`every_n_steps` stays at 1, with a condition attached:** if the provider ever becomes
+metered (`groq`, `claude_api`, `claude_cli`), it must rise to 3. At 1 a series makes 210
+model calls instead of ~70 — on a paid tier roughly 52 k tokens, and enough to brush the
+5-hour message window of every subscription. That pairing is enforced by a startup check
+(TODO 7.1.6) rather than left to memory.
+
+Everything the report recommends, we had already chosen independently:
 
 | Report's recommendation | Our decision | Where |
 |---|---|---|
