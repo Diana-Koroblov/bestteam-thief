@@ -18,7 +18,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-__all__ = ["FIXED", "MINIMUM", "NEGOTIABLE", "Parameter", "PARAMETERS", "dotted_get", "violations"]
+__all__ = [
+    "FIXED",
+    "MINIMUM",
+    "NEGOTIABLE",
+    "Parameter",
+    "PARAMETERS",
+    "dotted_get",
+    "violations",
+    "invariant_violations",
+]
 
 FIXED = "fixed"
 MINIMUM = "minimum"
@@ -126,4 +135,22 @@ def violations(config: dict) -> list[str]:
                 f"{parameter.path}: {value!r} is below the binding minimum "
                 f"{parameter.default!r} — raising is legal, lowering is not (M#12)"
             )
+    return found
+
+
+def invariant_violations(config: dict) -> list[str]:
+    """Return breaches of invariants Appendix F permits but the game cannot survive.
+
+    These are legal under the letter of Appendix F and still produce a game with
+    no defined outcome, so we refuse to sign them. See CONTRADICTIONS C-011.
+    """
+    found: list[str] = []
+    max_moves = dotted_get(config, "movement_and_barriers.max_moves", None)
+    survival = dotted_get(config, "movement_and_barriers.survival_threshold", None)
+    if max_moves is not None and survival is not None and survival != max_moves:
+        found.append(
+            f"survival_threshold ({survival}) != max_moves ({max_moves}): both are "
+            "minimums and may be raised independently, but the win conditions are only "
+            "defined when they are equal. Raise them together or not at all (C-011)."
+        )
     return found

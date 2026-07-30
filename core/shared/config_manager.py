@@ -140,7 +140,7 @@ def load_config(role_dir: Path, *, enforce_rules: bool = True) -> Config:
 
     merged = _deep_merge(private, shared)
     if enforce_rules:
-        found = config_spec.violations(merged)
+        found = config_spec.violations(merged) + config_spec.invariant_violations(merged)
         if found:
-            raise ConfigRuleError("configuration breaches Appendix F:\n  " + "\n  ".join(found))
+            raise ConfigRuleError("configuration is not playable:\n  " + "\n  ".join(found))
     return Config(shared=shared, private=private, merged=merged)

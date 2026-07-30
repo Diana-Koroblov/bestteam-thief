@@ -150,6 +150,46 @@ implemented as config flags and settled in the pre-match agreement.
 
 ---
 
+## C-010 — A position tuple has no defined component order
+
+| | |
+|---|---|
+| **Where** | Appendix F, Table 13 rows 3–6 (p. 135) vs. every coordinate carried on the wire |
+| **The problem** | The book negotiates `axis_origin_corner` ("top-left") and `axis_start_index` (0), which fixes *where* cell (0,0) sits and *what* the axes count from. It never states whether a position is `(row, col)` or `(x, y)`. The published defaults hide the gap perfectly: the cop starts at `(0,0)` and the thief at `(3,3)`, and both are order-invariant. The first asymmetric coordinate in the game — `(0,1)` — is the point at which two honest implementations silently disagree, and by then every barrier declaration and capture claim is mirrored. |
+| **Why it matters** | Mirrored coordinates are not a gameplay bug, they are an **audit** bug. Our capture claim lands where their log says nothing happened; their barrier declaration lands on a cell we recorded as open. The `log-audit` reports board forgery, and the sanction is disqualification for **both** teams — including the honest one. |
+| **Our choice** | `(row, col)`, origin top-left, index from 0: `[r, c]` means row `r` from the top, column `c` from the left. Increasing `c` is **East**; increasing `r` is **South**. Fixed in `PRD_1_base_logic.md` and unrepresentable otherwise, since `Position` is a named 2-tuple, not a bare list. |
+| **Why** | It matches `axis_origin_corner = "top-left"`, matches the reference implementation, and matches the way the board is drawn in the book's figures. |
+| **Effect** | The negotiation payload carries a **worked example**, not a label: *"we read `[0, 1]` as row 0, column 1 — one cell East of the cop's start; confirm."* One sentence, exchanged before the first move. A disagreement here is the cheapest possible thing to detect and the most expensive to discover late. Added to `PRD_negotiation.md` as a mandatory confirmation item. |
+
+---
+
+## C-011 — `survival_threshold` and `max_moves` can be negotiated apart
+
+| | |
+|---|---|
+| **Where** | Appendix F, Table 15 rows 3–4 (p. 137) |
+| **The problem** | Both default to 35 and both carry status **minimum**, so either may be raised independently by agreement. The book never says they must stay equal. Raising `survival_threshold` to 40 while `max_moves` stays at 35 produces a game that terminates at step 35 with the thief having survived 35 of a required 40 — a state no win condition in Chapter 3.5 covers. Raising `max_moves` alone is merely inert: the thief has already won at 35. |
+| **Related gap** | Appendix F fixes `num_games = 6` (Table 18 row 1) but never says how the six sub-games divide between the two roles. We field both roles from two repositories, so an uneven split is expressible — and an opponent strong in one role has an obvious interest in one. |
+| **Our choice** | We treat `survival_threshold == max_moves` as an invariant of every configuration we propose or accept, and we insist on a **3–3** role split in the handshake. |
+| **Why** | The equal-value case is the only one the win conditions fully define. A team proposing them unequal has either an implementation bug or a trap, and either way we want to know before the match rather than during the audit. On the role split, 3–3 is the symmetric default and is easy to defend; conceding an uneven split gives away an edge for nothing. |
+| **Effect** | A validator rejects `survival_threshold != max_moves` before the digest is computed, so an illegal pair can never be signed. The role split is an explicit field in the negotiation payload. See `docs/PARAMETERS.md` §4.2 and §7. |
+
+---
+
+## C-012 — Our LLM provider is not one of the book's four modes
+
+| | |
+|---|---|
+| **Where** | Appendix F, Table 21 (p. 142) vs. `config/<role>/game.toml` and ADR-003 |
+| **The problem** | Table 21 enumerates exactly four LLM modes — `template`, `ollama`, `claude_api`, `claude_cli` — and locates the selector at **`[trash_talk] provider`**. Our config ships `[llm] provider = "groq"`: a fifth provider, under a different section name. |
+| **Mitigating** | The same table states the choice is "פרטית לכל עמית, אינה חלק מקובץ התצורה המוסכם ואינה נתונה למשא ומתן" — private to each peer, outside the agreed config, and not negotiated. So this is not a rule breach and cannot disqualify us. |
+| **Why it still matters** | It is a gratuitous deviation from a reference table in a project graded partly on conformance, and it puts a network dependency inside the move loop for no competitive gain. Table 21 also notes that in `template` and `ollama` modes the entire six-sub-game series runs at **zero tokens**, and "כל התחרות עוברת לאיכות אלגוריתם התנועה" — the whole contest reduces to movement-algorithm quality, which is where our work actually is. |
+| **Our choice** | **Resolved 30 Jul.** The selector moved to `[trash_talk] provider` where the book puts it, and the **committed** value is `template` — the book's own default, zero tokens, no network in the move loop, so a fresh clone always runs. Each machine overrides via `P2P_LLM_PROVIDER` in `.env`: Diana `groq` (development only), Itay `ollama` (graded matches). `[llm]` keeps the per-provider settings, matching PLAN.md §7 and ADR-003. |
+| **Why** | Groq was never intended for a graded match — ADR-003 always hosted matches from Itay's machine on `ollama`, which is one of the book's four modes. So the deviation only ever existed in development, and putting `template` in the committed file removes it from the repository entirely. Note this was our own drift: ADR-003 already said `[trash_talk] provider`; the config written in task 1.1.4 said `[llm] provider`. |
+| **Effect** | `config/<role>/game.toml` and `.env-example` updated. Two consequences follow, tracked separately: matches now depend on **Itay's** ngrok domain rather than Diana's (TODO 0.2.4, 0.2.6 are blocking for the league, not optional), and a single hosting machine is a single point of failure — Diana's machine must stay match-capable on `template` as a fallback, since a no-show is a technical loss worth 0. |
+
+---
+
 ## Template for future entries
 
 ```markdown

@@ -55,7 +55,7 @@ excellence/competitive notes.
 **Result:** `FINAL_PROJECT_BRIEF.md`.
 **Problem:** None in the output, but the extraction needed care — the Hebrew PDF reversed
 character order under naive extraction, which would have corrupted every quoted value.
-**Iteration:** Switched extraction tool and verified all 31 Appendix F values programmatically
+**Iteration:** Switched extraction tool and verified all Appendix F values (later recounted: 32, not 31 — see docs/PARAMETERS.md) programmatically
 against the book's own sample config rather than trusting the read.
 **Lesson:** When a document is the source of truth, verify the *extraction* before trusting
 anything derived from it.

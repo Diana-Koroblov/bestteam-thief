@@ -53,6 +53,22 @@ max_profiled_traits = 4
 
 [trash_talk]
 enabled = true
+# Appendix F Table 21 defines four modes: template | ollama | claude_api |
+# claude_cli. The choice is explicitly private to each peer, outside the agreed
+# config and not negotiated. `groq` is our own fifth provider (ADR-003).
+#
+# The committed value is `template` — the book's own default. It costs zero
+# tokens, needs no network inside the move loop, and works on any machine, so a
+# fresh clone always runs. Each machine overrides it in .env, never here:
+#   Diana  P2P_LLM_PROVIDER=groq     development only, weak machine, no GPU
+#   Itay   P2P_LLM_PROVIDER=ollama   graded matches, zero tokens
+#
+# In template and ollama modes the whole 6-sub-game series runs at zero tokens
+# and the contest reduces to movement-algorithm quality (Table 21) — which is
+# where our expectimax and belief filtering live.
+provider = "template"
+# Run the model only once every N turns to cut consumption further (Table 21).
+every_n_steps = 1
 # Truth is cheap and buys credibility; we lie only when the lie is decisive.
 # See PRD_strategy_advanced.md §4.3.
 default_truthfulness = "truthful"
@@ -62,14 +78,17 @@ max_words = 15
 never_fabricate = ["capture", "barriers", "scent", "game_count"]
 
 [llm]
-# Per-machine choice, see ADR-003. Diana: groq (no local GPU). Itay: ollama.
-# The actual key is read from GROQ_API_KEY in .env, never from this file.
-provider = "groq"
-model = "llama-3.3-70b-versatile"
-# When the provider is unreachable the agent falls back to deterministic
-# templates rather than forfeiting the turn on a watchdog timeout.
+# Settings for whichever provider [trash_talk] selects. Keys and base URLs are
+# read from .env (GROQ_API_KEY, OLLAMA_BASE_URL), never from this file.
+groq_model = "llama-3.3-70b-versatile"
+ollama_model = "llama3.1:8b"
+# When the selected provider errors or is slow, degrade to `template` rather
+# than forfeiting the turn on the watchdog. A dull sentence costs nothing;
+# a timeout is a technical loss worth 0.
 allow_template_fallback = true
 max_output_tokens = 200
+# Hard cap on time spent generating text, well inside the 30 s response limit.
+timeout_sec = 8
 
 [email]
 # League reporting via the Gmail API, send-only scope (M#30).

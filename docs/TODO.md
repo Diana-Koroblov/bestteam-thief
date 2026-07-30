@@ -80,7 +80,7 @@ working; ≥4 league matches booked; 10 per-algorithm PRDs written; CI green.
 - [x] 0.3.3 [D] - Create `docs/LEAGUE_LOG.md` — one row per opponent: date, role, result, reports sent, commit hash | DoD: Table skeleton committed; filled as matches complete. (M#37)
 
 ### 0.4 Specification documents
-- [x] 0.4.1 [D] - `docs/PRD.md` | DoD: All 55 mandatory rules and 31 Appendix F values traced.
+- [x] 0.4.1 [D] - `docs/PRD.md` | DoD: All 55 mandatory rules and 32 Appendix F values traced (recount 30 Jul: Tables 13–19 hold 32 rows, not 31 — see docs/PARAMETERS.md).
 - [x] 0.4.2 [D] - `docs/PLAN.md` | DoD: C4 diagrams, state machine, data schemas, ADR-001..007.
 - [x] 0.4.3 [D] - `docs/TODO.md` | DoD: This file.
 - [x] 0.4.4 [D] - Seven layer PRDs | DoD: All seven exist with requirements, I/O, constraints, alternatives, test scenarios. (X §2.3)
@@ -122,7 +122,7 @@ conditions fire correctly; scoring matches Appendix F; coverage ≥85 % on `core
 ### 1.1 Configuration foundation
 - [x] 1.1.1 [D] - `core/shared/version.py` with `VERSION = "1.00"` | DoD: Matches `pyproject.toml` and every config `version` key; asserted by a unit test. (X §8.1)
 - [x] 1.1.2 [D] - `core/shared/constants.py` — immutable non-negotiable constants only | DoD: No value that belongs in config lives here. (X §7.2)
-- [x] 1.1.3 [D] - `config/<role>/game.json` with all 31 Appendix F defaults | DoD: Every key from PRD §5 present; the two role copies are byte-identical. (M#11, F)
+- [x] 1.1.3 [D] - `config/<role>/game.json` with all 32 Appendix F defaults | DoD: Every key from PRD §5 present; the two role copies are byte-identical. (M#11, F)
   - Verified byte-identical by `sha256sum` **and** by `test_both_roles_ship_an_identical_shared_contract`.
   - Carries our negotiated additions too: `capture.*` (C-006) and `pheromones.decay_model` / `field_includes_current_turn` / `seal_scent_digest` (C-005, C-007, C-008).
 - [x] 1.1.4 [D] - `config/<role>/game.toml` private skeleton with explanatory comments | DoD: `[game]`, `[network]`, `[strategy]`, `[trash_talk]`, `[llm]`, `[email]` present. **Move the recorded ngrok domains from SETUP 0.2.5 into `[network]`** — Diana's is `customs-countdown-uncork.ngrok-free.dev`. (Appendix B)

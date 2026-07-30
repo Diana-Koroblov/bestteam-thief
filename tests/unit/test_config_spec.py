@@ -18,6 +18,7 @@ from core.shared.config_spec import (
     NEGOTIABLE,
     PARAMETERS,
     dotted_get,
+    invariant_violations,
     violations,
 )
 
@@ -114,3 +115,44 @@ def test_dotted_get_raises_without_a_default(legal_config: dict) -> None:
 def test_dotted_get_handles_a_scalar_midway(legal_config: dict) -> None:
     """Walking through a non-mapping must fail cleanly, not raise TypeError."""
     assert dotted_get(legal_config, "scoring.tie_score.deeper", None) is None
+
+
+def test_appendix_f_has_thirty_two_rows() -> None:
+    """Tables 13-19 hold 32 parameters. Our additions are counted separately."""
+    additions = {
+        "scoring.technical_loss",
+        "pheromones.decay_model",
+        "pheromones.field_includes_current_turn",
+        "pheromones.seal_scent_digest",
+        "capture.resolution",
+        "capture.stay_counts_as_move",
+        "capture.swap_is_capture",
+    }
+    from_book = [p for p in PARAMETERS if p.path not in additions]
+    assert len(from_book) == 32
+    counts = {status: sum(1 for p in from_book if p.status == status) for status in
+              (FIXED, MINIMUM, NEGOTIABLE)}
+    assert counts == {FIXED: 14, MINIMUM: 9, NEGOTIABLE: 9}
+
+
+def test_shipped_config_satisfies_our_invariants(legal_config: dict) -> None:
+    assert invariant_violations(legal_config) == []
+
+
+def test_unequal_move_cap_and_survival_threshold_is_reported(legal_config: dict) -> None:
+    """C-011: legal under Appendix F, but the win conditions do not cover it."""
+    config = copy.deepcopy(legal_config)
+    config["movement_and_barriers"]["survival_threshold"] = 40
+    found = invariant_violations(config)
+    assert len(found) == 1
+    assert "C-011" in found[0]
+    # Appendix F itself is content with the raised minimum. That is the point.
+    assert violations(config) == []
+
+
+def test_raising_both_limits_together_is_allowed(legal_config: dict) -> None:
+    config = copy.deepcopy(legal_config)
+    config["movement_and_barriers"]["max_moves"] = 45
+    config["movement_and_barriers"]["survival_threshold"] = 45
+    assert violations(config) == []
+    assert invariant_violations(config) == []
