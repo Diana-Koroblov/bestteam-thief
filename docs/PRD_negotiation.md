@@ -136,6 +136,26 @@ These readings are deliberately balanced rather than self-serving. N14 helps the
 thief, N16 helps the cop, N13 is neutral — and we play both roles, so a lopsided proposal would cost
 us as often as it gained.
 
+### 3.6b If the opponent refuses
+
+Every negotiable position is a config flag, so disagreement costs a config change rather than a code
+change. Four cases, and none of them threatens the project.
+
+| Case | Example | What we do |
+|---|---|---|
+| **They prefer the other reading** | They want a barrier on a vacated cell to capture; they want the reference's subtractive decay | **Play their way.** Both options are implemented. Flip the flag, record it in the config JSON, play. |
+| **They refuse something we wanted** | They will not seal their scent digest; they will not raise the barrier quota | **Play anyway.** We seal ours regardless — their field is then simply unverifiable, and we note that in the log. A quota of 14 is workable. |
+| **They propose something illegal** | Barriers below 14, board below 7×7, a changed scoring table or decay rate | **Refuse.** Lowering an Appendix F minimum or altering a `fixed` value disqualifies **both** teams (M#12). Agreement is not a defence. |
+| **Deadlock** | They will not play under any terms we can legally accept | **Play someone else.** Two counted matches are required and up to ten are permitted; one difficult team costs a fixture, nothing more. |
+
+**The risk is not disagreement — it is discovering it mid-match.** A refused match costs nothing.
+A *disputed* match scores 0 for both teams (M#35), which is why N2 refuses to start play on any
+mismatch rather than reconciling afterwards.
+
+**Tone.** Open with *"here is what we have implemented, and we are happy to play either way"* rather
+than a list of demands. Most teams will not have considered these cases and will simply accept; the
+ones who push back reveal how carefully they have read the book, which is useful either way.
+
 ### 3.7 Role split across the series
 
 | ID | Requirement |
