@@ -32,7 +32,7 @@ def note_name(module: str) -> str:
 
 def render_note(node: ModuleNode) -> str:
     """Return the Markdown for one module note."""
-    tag = node.package.replace(".", "/")
+    tag = node.group.replace(".", "/")
     lines = [
         "---",
         f"tags: [{tag}]",

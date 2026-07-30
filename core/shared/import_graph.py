@@ -48,6 +48,20 @@ class ModuleNode:
         return ".".join(parts[:-1]) if len(parts) > 1 else "root"
 
     @property
+    def is_package(self) -> bool:
+        """True when this module is a package's own ``__init__``."""
+        return self.path.name == "__init__.py"
+
+    @property
+    def group(self) -> str:
+        """Package used to tag and colour the note.
+
+        A package's ``__init__`` belongs to *itself*, not to its parent — so
+        ``domain/__init__.py`` colours as ``domain`` rather than as the root.
+        """
+        return self.name if self.is_package else self.package
+
+    @property
     def degree(self) -> int:
         """Total connections, in and out."""
         return len(self.imports) + len(self.imported_by)

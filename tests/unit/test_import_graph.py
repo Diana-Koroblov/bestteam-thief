@@ -88,6 +88,20 @@ def test_package_property(sample: Path) -> None:
     assert graph["app"].package == "root"
 
 
+def test_package_init_groups_with_itself(sample: Path) -> None:
+    """`domain/__init__.py` colours as domain, not as the parent package."""
+    graph = build_graph(sample)
+    assert graph["app.domain"].is_package is True
+    assert graph["app.domain"].group == "app.domain"
+
+
+def test_plain_module_groups_with_its_package(sample: Path) -> None:
+    """A normal module colours with the package that contains it."""
+    graph = build_graph(sample)
+    assert graph["app.domain.board"].is_package is False
+    assert graph["app.domain.board"].group == "app.domain"
+
+
 def test_degree_counts_both_directions(sample: Path) -> None:
     """Degree drives the 'busiest modules' table."""
     graph = build_graph(sample)

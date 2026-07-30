@@ -61,6 +61,54 @@ uv run python scripts/scan_secrets.py      # no API keys or private keys
 uv run pytest                              # coverage >= 85%
 ```
 
+## Reference implementation — reverse engineering
+
+Before writing our own agent we analysed the course's reference simulator
+([`rmisegal/Game-P2P-Cop-Chase`](https://github.com/rmisegal/Game-P2P-Cop-Chase)) by turning it into
+a knowledge graph, following the technique from lecture L07.
+
+![Module dependency graph of the reference implementation](assets/reference-graph.png)
+
+`scripts/make_graph_vault.py` parses every module with Python's `ast` and emits an Obsidian vault —
+one note per module, one wikilink per **internal** import. Standard-library and third-party imports
+are dropped, because the question is how the pieces depend on each other, not what gets installed.
+**60 modules, 123 internal edges, 2,949 lines of code.**
+
+*Orphan nodes are hidden in the figure.* Every one of them is an empty `__init__.py` — packaging
+scaffolding with no dependencies in either direction. We checked before hiding them: the generated
+index lists every unimported module, and the set is exactly the package initialisers plus
+`__main__`, so no real code is concealed by the filter.
+
+| Colour | Package | Modules | Role |
+|---|---|---|---|
+| Red | `domain` | 12 | Board, rules, scent, belief, crypto, negotiation |
+| Green | `peer` | 10 | Runtime, handshake, turn loop, sealing |
+| Gold | `gui` | 10 | Live view and replay |
+| Light green | `infra` | 5 | MCP transport, LLM providers, email |
+| Teal | `report` | 6 | The four JSON artefacts |
+| Blue | `sdk` | 3 | Public facade |
+| Navy | `shared` | 6 | Config, gatekeeper, rate limiter |
+| Purple | `strategy` | 3 | Trash-talk providers |
+| Magenta | root | 5 | `constants`, `exceptions`, `cli`, `__main__` |
+
+### What the graph showed us
+
+**The hubs are the leaves.** `exceptions` (imported by 14) and `constants` (11) are the most depended
+upon modules in the codebase and depend on nothing themselves — cross-cutting concerns sitting
+correctly at the bottom of the dependency order.
+
+**`peer.runtime` is the orchestrator**, with 16 connections, more than any other node. It matches the
+Orchestrator pattern the rulebook prescribes in Chapter 8: a single component that reaches every
+subsystem while the peripheral modules do not reach each other.
+
+**No dead code.** The only modules nothing imports are the package `__init__` files and `__main__` —
+every other module is reachable from an entry point.
+
+Reading the code alongside the graph also produced four documented divergences between the
+simulator and the rulebook, recorded in [`docs/CONTRADICTIONS.md`](docs/CONTRADICTIONS.md) as C-005
+through C-009 — including a decay formula that yields 0.80 where the book specifies 0.81, which the
+mandatory pre-match worked example (M#23) is designed to catch.
+
 ## Documentation
 
 | Document | Contents |

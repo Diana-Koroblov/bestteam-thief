@@ -102,8 +102,8 @@ working; ≥4 league matches booked; 10 per-algorithm PRDs written; CI green.
 - [x] 0.5.1 [D] - Clone and read `rmisegal/Game-P2P-Cop-Chase` | DoD: **Done 28/07.** Confirmed genuinely two-process (refuting a claimed monolith). Four divergences found and logged: C-005 (field transmitted, not sampled), C-007 (subtractive vs multiplicative decay), C-008 (scent field unsealed), C-009 (Board defaults to king moves). Still to do: run a live match in two terminals.
 - [ ] 0.5.2 [D] - Graphify knowledge graph of the reference repo | DoD: Graph screenshot in `assets/` + three architectural findings written up for the README. *(P2)*
   - [x] 0.5.2.a [D] - `core/shared/import_graph.py` + `scripts/make_graph_vault.py` | DoD: **Done 28/07.** AST-based; only internal imports become edges; relative imports resolve; a broken file never aborts the walk. 13 unit tests. Verified against the reference repo: **60 modules, 123 internal edges, 2 949 code lines.**
-  - [ ] 0.5.2.b 🧑 [D] - Open the vault in Obsidian and screenshot Graph View | DoD: `assets/reference-graph.png` committed.
-  - [ ] 0.5.2.c [D] - Write up three architectural findings for the README | DoD: Drawn from `_index.md` — the hub modules, the layering, the entry points.
+  - [ ] 0.5.2.b 🧑 [D] - Open the vault in Obsidian and screenshot Graph View | DoD: `assets/reference-graph.png` committed. Two display settings first: filter out the generated summary note with `-file:_index` (otherwise it appears as a hub that does not exist in the real architecture), and turn off **Show orphans** (they are all empty `__init__.py` files). Both are noted in the README caption.
+  - [x] 0.5.2.c [D] - Write up three architectural findings for the README | DoD: **Done 28/07.** Section added to both READMEs: hubs are the dependency-free leaves (`exceptions` 14, `constants` 11); `peer.runtime` is the orchestrator at 16 connections; no dead code. Plus the colour key and a pointer to C-005…C-009.
 - [ ] 0.5.3 [D] - Read the reference repo's `RESEARCH-REPORT-Performance-Analysis.md` | DoD: Provider rate limits and fallback design understood; informs task 4.5.
 
 ### ✅ Phase 0 Quality Gate
