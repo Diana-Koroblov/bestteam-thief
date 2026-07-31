@@ -20,6 +20,7 @@ from core.domain.movement import get_legal_moves
 from core.infra.mcp_server import ServerSpec, build_server_spec
 from core.protocol.schemas import Role
 from core.protocol.tools import build_guarded_tools
+from core.runtime.brain_loader import load_brain
 from core.runtime.orchestrator import Orchestrator
 from core.runtime.peer_runtime import PeerRuntime
 from core.shared.config_manager import load_config
@@ -57,7 +58,10 @@ class PeerSDK:
         """
         self._config = load_config(config_dir)
         self._orchestrator = Orchestrator.from_config(self._config, role)
-        self._runtime = PeerRuntime(orchestrator=self._orchestrator)
+        # Loaded eagerly: a bad strategy path must fail here, where the only
+        # cost is an error message, not on turn one of a real match.
+        brain = load_brain(self._config.get(f"strategy.{role.value}_class"), role.value)
+        self._runtime = PeerRuntime(orchestrator=self._orchestrator, brain=brain)
 
     @property
     def role(self) -> Role:
@@ -86,6 +90,11 @@ class PeerSDK:
             name=self._config.get("identity.contact_label", "peer"),
             port=port or self._config.require("network.listen_port"),
         )
+
+    @property
+    def brain_name(self) -> str:
+        """Return the strategy this peer will play with."""
+        return self._runtime.brain.name if self._runtime.brain else "none"
 
     def connect(self, base_url: str) -> None:
         """Attach the single opponent for this match."""

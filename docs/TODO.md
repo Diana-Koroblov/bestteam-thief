@@ -239,7 +239,7 @@ conditions fire correctly; scoring matches Appendix F; coverage ≥85 % on `core
 ---
 
 ## Phase 2: FastMCP Infrastructure (Layer 2)
-**Priority:** P0 | **Status:** Not Started ☐ | **Target:** 2 Aug
+**Priority:** P0 | **Status:** ✅ Complete — M2 observed 31/07 on Diana's machine | **Target:** 2 Aug
 **DoD:** Two fully separate processes exchange a geometric message over localhost and decode it
 correctly; the Orchestrator is the only inter-module path; no import path joins the live roles.
 
@@ -305,12 +305,12 @@ correctly; the Orchestrator is the only inter-module path; no import path joins 
   - `OpponentClient` now uses `fastmcp.Client`. `call()` is async, and a `transport` field accepts an in-process FastMCP server — which is what makes a genuine protocol round trip testable with no socket, and will also drive self-play.
   - All exception classification moved into one `classify()` function, so a new failure mode has exactly one place to be mapped instead of being absorbed by whichever `except` was nearest.
   - 10 tests over the real protocol: commit → ack, two full commit/reveal turns, geometry surviving the encoding (C-010), barrier declaration (M#15), out-of-order reveal refused, nonce-in-reveal refused (M#18), handshake match and mismatch (M#11), a real transport failure arriving typed, and every tool actually reachable via `list_tools`.
-  - **Deviation from the DoD, stated plainly:** this uses FastMCP's in-process transport rather than two OS subprocesses. Everything except the socket is the production path — real server, real client, real protocol, real registration. Two genuine processes over a real port is **2.QG.4**, which needs Itay's machine anyway; splitting it that way avoids a flaky port-binding test in CI while still proving the protocol works.
+  - **Deviation from the DoD, stated plainly:** this uses FastMCP's in-process transport rather than two OS subprocesses. Everything except the socket is the production path — real server, real client, real protocol, real registration. Two genuine processes over a real port is **2.QG.4** — which turned out to need only two terminals on one machine, not a second machine. Splitting it that way avoids a flaky port-binding test in CI while still proving the protocol works.
 
 ### ✅ Phase 2 Quality Gate
-- [ ] 2.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.
-- [ ] 2.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC.
-- [ ] 2.QG.3 [D] - `uv run pytest --cov` | DoD: All pass; coverage ≥85 %.
+- [x] 2.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations. — gate 1 of `ship.py`, so it cannot regress unnoticed.
+- [x] 2.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC. — gate 2 of `ship.py`.
+- [x] 2.QG.3 [D] - `uv run pytest --cov` | DoD: All pass; coverage ≥85 %. — **486 pass, 95.46 %.**
 - [x] 2.QG.4 [D] - **Milestone M2 observed** | DoD: A message leaving peer A over localhost is received and decoded correctly at peer B, in two separate terminals. — **observed 31/07 on Diana's machine.**
   - `uv run python -m core peer --role thief --serve` in one terminal, `--role police --handshake --opponent http://127.0.0.1:8082/mcp` in the other. Two OS processes, two config directories, a real uvicorn server and a real `fastmcp.Client` over TCP. Negotiate agreed on `629839fe...`, the commit was acknowledged, the reveal returned `{'received': True, 'step': 0}`.
   - ⚠️ I had told Diana this gate needed Itay's machine. **Wrong** — the DoD says *localhost, two terminals*, which is one machine. A second machine is only needed to prove an *opponent's independently written code* interoperates, which is the warm-up match (0.3.2), not this.
@@ -318,25 +318,38 @@ correctly; the Orchestrator is the only inter-module path; no import path joins 
 
 ### 🔎 Findings from the M2 server log — Diana sent the raw output, which is the only reason these were caught
 - [x] 2.5.1 [D] - Strip the trailing slash from the opponent URL | DoD: `OpponentClient.target` normalises `/mcp/` to `/mcp`; unit-tested.
-  - The log showed a **307 Temporary Redirect before every single 200**. FastMCP serves at `/mcp`, so `/mcp/` costs an extra round trip on every request. Invisible on localhost; against a real opponent it doubles the network cost of every message inside a 30-second budget.
-- [ ] 2.5.2 [D] - **Hold one MCP session open for the whole match** ⏰ | DoD: A series of N game messages opens **one** session, not N. Measured from the server log.
-  - The log shows `POST initialize → POST/GET notifications → POST call → DELETE teardown` **repeated for each of the three messages**. `OpponentClient.call()` opens and tears down a full MCP session per call, so one game message costs roughly **six HTTP exchanges**.
-  - Three reasons this matters, in increasing order of seriousness: latency inside the 30 s response window; ~1,200 HTTP exchanges per 210-move series instead of ~210; and — the real one — **our own Gatekeeper's DOS detector (7.1.2.c, M#29) is designed to lock the pipe on exactly this pattern.** An opponent running the same code would look to us like an attack, and we would look like one to them.
-  - Fix: make `OpponentClient` an async context manager holding one `fastmcp.Client` session for the match, opened at the handshake and closed at the final reveal. Deliberately **not** rushed at the end of a long session — it touches every call site and deserves its own pass.
+  - The log showed a **307 Temporary Redirect before every single 200**. FastMCP serves at `/mcp`, so `/mcp/` cost an extra round trip on every request. Invisible on localhost; against a real opponent it doubled the network cost of every message inside a 30-second budget. Confirmed fixed on Diana's machine: the second log is all 200s.
+- [x] 2.5.3 [D] - Exit quietly on Ctrl-C | DoD: `server stopped.` instead of a ten-frame asyncio/anyio traceback.
+  - Ctrl-C is the *normal* way to stop a server. A tool that prints a frightening traceback during routine use teaches whoever is watching to ignore tracebacks — the habit that hides a real one mid-match.
+- [ ] 2.5.2 [D] - Hold one MCP session open for the whole match — **downgraded 31/07, measure before changing**
+  - **My original justification was wrong, and Diana caught it by asking what the rulebook actually says.** I claimed our Gatekeeper's DOS detector (M#29) would lock the pipe on this pattern. It would not: Ch. 9.3 figure 13 shows the pipeline as `Outgoing report → Quota Manager → Token Bucket → DOS Detector → **Gmail API**`, and its stated purpose is «מונע השעיית החשבון בידי ספק השירות». It guards **outgoing email and LLM calls**, never peer MCP traffic. Nothing in the Gatekeeper ever sees an opponent request.
+  - **The rulebook is silent on MCP connection lifecycle** — no session rule, no keep-alive, no reuse requirement. The only related mandates are the Deadline Tracker (Ch. 8.4.1, already satisfied) and the Watchdog (Ch. 8.4.2). The one weak signal is the book's own watchdog example calling `controlled_shutdown()  # release MCP connections, close logs` — you cannot release what you never held — but that is a comment in an example, not a rule.
+  - **It is a trade, not a pure win.** A session per call is *more* resilient: each call reconnects, so a dead connection heals itself. A persistent session adds a stale-session failure mode needing reconnect logic. Six requests per message is the price of that resilience.
+  - **What genuinely remains:** latency. Six round trips instead of one inside a 30 s budget — negligible on localhost, roughly 1.2 s vs 0.2 s per message over ngrok at ~200 ms a trip. Real, not fatal.
+  - **Decision: Phase 3 first**, then measure per-message latency over a real tunnel, and change this only if the number justifies accepting the new failure mode.
 
 ---
 
 ## Phase 3: Baseline Strategy (Layer 3)
-**Priority:** P1 | **Status:** Not Started ☐ | **Target:** 3 Aug
+**Priority:** P1 | **Status:** In Progress ⏳ (3.1–3.4 done; 3.5 self-play next) | **Target:** 3 Aug
 **DoD:** Given a known target, the agent computes and walks the shortest legal path unaided.
 
-- [ ] 3.1.1 [D] - `core/domain/brain_base.py` — abstract `BrainBase` | DoD: `_pick_move(observation)` abstract; `_decide_move()` overridable for the Cop's barrier choice. (Appendix F §5)
-- [ ] 3.1.2 [D] - Brain loading from `[strategy] police_class` / `thief_class` in `package.module:Class` form | DoD: Empty section falls back to the built-in baseline; a bad path raises at startup, not mid-match.
-- [ ] 3.2.1 [D] - `police/brain.py` baseline — BFS shortest path to a known target | DoD: Respects barriers and bounds; deterministic on a fixed board.
-- [ ] 3.2.2 [I] - `thief/brain.py` baseline — distance maximisation | DoD: Never voluntarily enters a cell with no exit other than the one it came from.
-- [ ] 3.3.1 [D] - Wire the brain into `PeerRuntime` between hint-decode and commit-pack | DoD: Exactly the insertion point Ch. 6 specifies; verified by a call-order test.
-- [ ] 3.3.2 [D] - Guard: the LLM is never consulted for a movement decision | DoD: An architecture test asserts no import of `core.infra.llm` from any brain module. (M#25)
-- [ ] 3.4.1 [D] - Unit tests for both baselines | DoD: Fixed-board scenarios with asserted move sequences.
+- [x] 3.1.1 [D] - `core/domain/brain_base.py` — abstract `BrainBase` | DoD: `_pick_move(observation)` abstract; `decide()` overridable for the Cop's barrier choice. (Appendix F §5)
+  - **`Observation` deliberately excludes the opponent's position.** In a real match nobody has it. Passing it here would produce a strategy that wins in self-play and collapses against a real peer — and we would not find out until a graded match. A test asserts the field does not exist.
+  - `Decision.__post_init__` refuses a decision that moves *and* places a barrier. Ch. 3.4 makes them mutually exclusive, so an illegal combination is unconstructable rather than caught later.
+  - `most_likely_opponent()` breaks ties on coordinates, not dict order, so two peers replaying the same belief reach the same cell. Order-dependent ties would make a log unverifiable.
+- [x] 3.1.2 [D] - Brain loading from `[strategy] police_class` / `thief_class` in `package.module:Class` form | DoD: Empty section falls back to the built-in baseline; a bad path raises at startup, not mid-match. — `core/runtime/brain_loader.py`, loaded eagerly in `PeerSDK.__init__`.
+  - Four distinct failures, each named: malformed path, missing module, missing class, not a `BrainBase`. All raise `BrainLoadError` **at startup**, where the only cost is a message — a typo discovered on turn one is a technical loss worth 0 to both teams.
+- [x] 3.2.1 [D] - `police/brain.py` baseline — BFS shortest path to a known target | DoD: Respects barriers and bounds; deterministic on a fixed board. — plus `core/domain/pathfinding.py` (`shortest_path`, `distance_map`, `first_step_towards`).
+  - **Places no barriers, on purpose.** A baseline that walled badly could strand itself (see `connectivity.py`), and every later A/B would then be measuring "better than a self-trapping cop" — not a useful floor. Barrier strategy arrives in Phase 4 with the belief filter that makes it safe.
+  - Holds position when it believes nothing, and says so when the thief is unreachable. Walking into a wall repeatedly would hide a lost sub-game in the log.
+- [x] 3.2.2 [I] - `thief/brain.py` baseline — distance maximisation | DoD: Never voluntarily enters a cell with no exit other than the one it came from. — **written by [D] rather than [I]**, so Itay is not blocking Phase 3; his review still wanted.
+  - Scored on three keys in order: **not a dead end** (the DoD), then distance, then **region size**. Raw distance alone would send the thief into a large-looking corner a single wall can seal — space matters more than metres.
+- [x] 3.3.1 [D] - Wire the brain into `PeerRuntime` between hint-decode and commit-pack | DoD: Exactly the insertion point Ch. 6 specifies; verified by a call-order test. — `PeerRuntime.observe()` / `.decide()`, tested in `tests/unit/test_brain_seam.py`.
+  - `belief()` returns a **uniform** posterior for now. A placeholder with the right *shape*: Phase 4 replaces the contents with the Bayesian update and no brain has to change, because the type it already consumes is correct.
+- [x] 3.3.2 [D] - Guard: the LLM is never consulted for a movement decision | DoD: An architecture test asserts no import of `core.infra.llm` from any brain module. (M#25)
+  - Three graph tests: no brain reaches anything matching `llm|groq|ollama|anthropic|openai`; no brain reaches `core.infra` or `core.protocol` (a strategy that could send its own messages could bypass commit-reveal); and a third asserting both brains are actually **in** the graph, so the first two cannot pass by inspecting nothing.
+- [x] 3.4.1 [D] - Unit tests for both baselines | DoD: Fixed-board scenarios with asserted move sequences. — 27 tests in `tests/unit/test_brains.py`, including a full six-move corner-to-centre walk and a determinism check running each brain 25 times on one observation.
 
 ### 3.5 Self-play harness — **moved here from Phase 8**
 Strategy is the grade, and you cannot tune what you cannot measure. Every change from this point on

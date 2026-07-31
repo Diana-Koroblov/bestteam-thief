@@ -216,3 +216,4 @@ def test_the_final_reveal_happens_once(runtime: PeerRuntime) -> None:
     runtime.on_final_reveal(FinalReveal(step=1, role=Role.THIEF, nonces={"0": "n0"}))
     with pytest.raises(ProtocolError, match="already received"):
         runtime.on_final_reveal(FinalReveal(step=1, role=Role.THIEF, nonces={"0": "other"}))
+

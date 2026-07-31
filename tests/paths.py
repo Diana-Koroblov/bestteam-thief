@@ -17,7 +17,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-__all__ = ["REPO_ROOT", "CONFIG_ROOT", "ALL_ROLES", "PRESENT_ROLES", "role_dir", "shared_config"]
+__all__ = [
+    "REPO_ROOT",
+    "CONFIG_ROOT",
+    "ALL_ROLES",
+    "PRESENT_ROLES",
+    "role_dir",
+    "shared_config",
+    "brain_class",
+    "needs_brain",
+]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -48,3 +57,33 @@ def shared_config(role: str | None = None) -> dict:
     caller does not care which one it gets, the first present role is fine.
     """
     return json.loads((role_dir(role or PRESENT_ROLES[0]) / "game.json").read_text("utf-8"))
+
+
+# The role package each role's brain lives in.
+_BRAIN_MODULES = {"police": ("police.brain", "PoliceBrain"), "thief": ("thief.brain", "ThiefBrain")}
+
+
+def brain_class(role: str):
+    """Return the brain class for *role*, or None when that role is not shipped.
+
+    A published repository holds one role package, so importing the other at
+    module level takes the whole suite down at collection — the same failure
+    the split-repository gate caught for `config/` paths. Tests ask for a class
+    and skip when it is absent.
+    """
+    module_name, class_name = _BRAIN_MODULES[role]
+    try:
+        module = __import__(module_name, fromlist=[class_name])
+    except ImportError:
+        return None
+    return getattr(module, class_name, None)
+
+
+def needs_brain(role: str):
+    """Return a skip marker for tests that require *role*'s brain."""
+    import pytest
+
+    return pytest.mark.skipif(
+        brain_class(role) is None,
+        reason=f"the {role!r} package is not published to this repository (ADR-001)",
+    )

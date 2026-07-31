@@ -148,6 +148,46 @@ def test_the_ui_reaches_nothing_but_the_facade(graph: dict) -> None:
             assert edge.startswith(("core.ui", "core.domain", "core.sdk")), f"{name} -> {edge}"
 
 
+# --- M#25: movement is never decided by a language model -------------------
+
+
+def test_no_brain_can_reach_a_language_model(graph: dict) -> None:
+    """Ch. 6: «הכרעת המהלך היא תמיד אלגוריתמית ובקוד פייתון».
+
+    A model hallucinates in Cartesian space — it will propose a move into a
+    wall — and an illegal move is a technical loss (M#13). The model's job is
+    the verbal layer only. Checked on the graph so no brain can acquire the
+    dependency quietly.
+    """
+    forbidden = ("llm", "groq", "ollama", "anthropic", "openai")
+    for name, node in graph.items():
+        if not (name.endswith("brain") or "brain" in name):
+            continue
+        for edge in node.imports:
+            assert not any(word in edge.lower() for word in forbidden), f"{name} -> {edge}"
+
+
+def test_a_brain_never_reaches_the_transport_or_the_protocol(graph: dict) -> None:
+    """A strategy that could send its own messages could bypass commit-reveal."""
+    for name, node in graph.items():
+        if "brain" not in name:
+            continue
+        for edge in node.imports:
+            assert not edge.startswith(("core.infra", "core.protocol")), f"{name} -> {edge}"
+
+
+def test_the_brains_are_actually_in_the_graph(graph: dict) -> None:
+    """Otherwise the two tests above pass by looking at nothing.
+
+    Asserts the brains *this repository ships*, not both: a published repo holds
+    one role package. Demanding both would fail in every real repository, which
+    is the same mistake the split-repository gate exists to catch.
+    """
+    shipped = {f"{role}.brain" for role in ("police", "thief") if (ROOT / role).is_dir()}
+    assert shipped, "no role package present at all"
+    assert shipped <= set(graph)
+
+
 def test_the_graph_is_not_empty(graph: dict) -> None:
     """Guards against a silent walk failure turning every test above green."""
     assert len(graph) > 25

@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from core.domain.board import Position
+from core.domain.brain_base import BrainBase, Decision, Observation
 from core.protocol.schemas import (
     Ack,
     BarrierDeclaration,
@@ -45,11 +47,69 @@ class PeerRuntime:
     """
 
     orchestrator: Orchestrator
+    brain: BrainBase | None = None
     agreed: bool = False
     commits: dict[int, str] = field(default_factory=dict)
     reveals: dict[int, Reveal] = field(default_factory=dict)
     barriers: list[BarrierDeclaration] = field(default_factory=list)
     opponent_nonces: dict[str, str] = field(default_factory=dict)
+
+    def observe(self) -> Observation:
+        """Build what the brain is allowed to see.
+
+        Deliberately **excludes the opponent's position**. In a real match
+        nobody has it; handing it over here would produce a strategy that
+        works in self-play and collapses against a real peer. The brain gets a
+        belief distribution instead — uniform until Phase 4 supplies a real
+        posterior — so it is written against the information it will actually
+        have from the start.
+        """
+        state = self.orchestrator.state
+        quota = self.orchestrator.config.require("movement_and_barriers.max_barriers")
+        return Observation(
+            board=self.orchestrator.board,
+            own_position=self.orchestrator.own_position,
+            barriers=state.barriers,
+            step=state.step,
+            barriers_remaining=quota - state.barriers_placed,
+            belief=self.belief(),
+            hints=tuple(reveal.hint for reveal in self.reveals.values() if reveal.hint),
+        )
+
+    def belief(self) -> dict[Position, float]:
+        """Return a uniform posterior over every cell we could be wrong about.
+
+        A placeholder with a real shape: Phase 4 replaces the *contents* with a
+        Bayesian update from the scent field, and no brain has to change,
+        because the type it consumes is already the right one.
+        """
+        board = self.orchestrator.board
+        candidates = [
+            cell
+            for cell in board.cells()
+            if cell not in self.orchestrator.state.barriers
+            and cell != self.orchestrator.own_position
+        ]
+        if not candidates:
+            return {}
+        share = 1.0 / len(candidates)
+        return dict.fromkeys(candidates, share)
+
+    def decide(self) -> Decision:
+        """Ask the brain for this turn's decision.
+
+        Ch. 6 places this **between decoding the incoming hint and packing the
+        outgoing commit** — the hints are already recorded by ``on_reveal``, and
+        the caller seals whatever comes back. Keeping the brain on that seam is
+        what stops a strategy from ever seeing the opponent's sealed move.
+
+        Raises:
+            RuntimeError: No brain was loaded. Better than silently standing
+                still for 35 turns and losing on the clock.
+        """
+        if self.brain is None:
+            raise RuntimeError("no brain loaded; the peer cannot choose a move")
+        return self.brain.decide(self.observe())
 
     @property
     def own_role(self) -> Role:
