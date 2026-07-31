@@ -33,7 +33,9 @@ from core.ui.render import legend, render  # noqa: E402
 __all__ = ["main", "run_batch", "report"]
 
 
-def run_batch(games: int, cop_spec: str = "", thief_spec: str = "") -> list[SubGameResult]:
+def run_batch(
+    games: int, cop_spec: str = "", thief_spec: str = "", oracle: bool = False
+) -> list[SubGameResult]:
     """Play *games* sub-games from the negotiated opening and return the results."""
     config = load_config(ROOT / "config" / _role())
     board = Board(
@@ -51,7 +53,12 @@ def run_batch(games: int, cop_spec: str = "", thief_spec: str = "") -> list[SubG
     # that remembered the last game would make the batch measure one long game.
     return [
         play_sub_game(
-            load_brain(cop_spec, "cop"), load_brain(thief_spec, "thief"), rules, quota, start
+            load_brain(cop_spec, "cop"),
+            load_brain(thief_spec, "thief"),
+            rules,
+            quota,
+            start,
+            oracle,
         )
         for _ in range(games)
     ]
@@ -123,9 +130,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--cop", default="", help="Cop strategy, package.module:Class.")
     parser.add_argument("--thief", default="", help="Thief strategy.")
     parser.add_argument("--show", action="store_true", help="Print every turn of game 1.")
+    parser.add_argument(
+        "--oracle",
+        action="store_true",
+        help="Measurement only: give the cop the thief's true position, to measure "
+        "the ceiling a perfect belief would reach.",
+    )
     args = parser.parse_args(argv)
 
-    results = run_batch(args.games, args.cop, args.thief)
+    results = run_batch(args.games, args.cop, args.thief, args.oracle)
+    if args.oracle:
+        print("\n*** ORACLE MODE: the cop is given the thief's true position. ***"
+              "\n    This is the ceiling, not a playable strategy - it measures what a"
+              "\n    perfect belief would be worth. Phase 4 is judged against it.")
     if args.show:
         config = load_config(ROOT / "config" / _role())
         _show_game(results[0], Board(grid_size=config.require("board_and_agents.grid_size")))

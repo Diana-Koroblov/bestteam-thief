@@ -346,7 +346,7 @@ correctly; the Orchestrator is the only inter-module path; no import path joins 
 ---
 
 ## Phase 3: Baseline Strategy (Layer 3)
-**Priority:** P1 | **Status:** In Progress ⏳ (3.1–3.4 done; 3.5 self-play next) | **Target:** 3 Aug
+**Priority:** P1 | **Status:** ✅ Complete — M3 observed 31/07; ablation switches deferred to Phase 4 | **Target:** 3 Aug
 **DoD:** Given a known target, the agent computes and walks the shortest legal path unaided.
 
 - [x] 3.1.1 [D] - `core/domain/brain_base.py` — abstract `BrainBase` | DoD: `_pick_move(observation)` abstract; `decide()` overridable for the Cop's barrier choice. (Appendix F §5)
@@ -401,10 +401,14 @@ Twenty sub-games, baseline against baseline:
 The number says plainly where the cop's grade actually comes from — the **belief filter in Phase 4**, not from pathfinding. `test_the_baseline_cop_does_not_yet_catch_the_thief` records it as a test, so when the belief filter starts working that test fails and we notice.
 
 ### ✅ Phase 3 Quality Gate
-- [ ] 3.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.
-- [ ] 3.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC.
-- [ ] 3.QG.3 [D] - `uv run pytest --cov` | DoD: All pass; coverage ≥85 %.
-- [ ] 3.QG.4 [D] - **Milestone M3 observed** | DoD: Agent computes and walks the shortest path to a known target with no manual intervention.
+- [x] 3.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations. — gate 1 of `ship.py`.
+- [x] 3.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC. — it rejected one of my own test files during this phase; split, not compressed.
+- [x] 3.QG.3 [D] - `uv run pytest --cov` | DoD: All pass; coverage ≥85 %. — **535 pass, 95.3 %.**
+- [x] 3.QG.4 [D] - **Milestone M3 observed** | DoD: Agent computes and walks the shortest path to a known target with no manual intervention. — `uv run python scripts/selfplay.py --games 20 --oracle --show`.
+  - Self-play alone could **not** show this: with a uniform belief the cop has no target to walk to. So the harness gained an `--oracle` flag that collapses the belief to the thief's true cell — a *known* target, exactly what the DoD asks for.
+  - Result: **win rate 1.000, capture in a mean of 10 steps**, no manual intervention.
+  - **The flag is worth more than the checkbox.** The gap between oracle and normal play — 1.000 against 0.000 — is precisely what a perfect belief is worth. Phase 4's filter is now judged against a measured ceiling instead of an opinion.
+  - Guarded: `oracle` is a harness parameter only. `PeerRuntime` has no equivalent, asserted by a test, so a perfect belief can never leak into a real match.
 
 ---
 

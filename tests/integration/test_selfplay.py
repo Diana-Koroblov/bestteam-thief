@@ -126,3 +126,43 @@ def test_the_baseline_cop_does_not_yet_catch_the_thief(played) -> None:
     When this test starts failing, the belief filter is working.
     """
     assert played.outcome.verdict is Verdict.SURVIVAL
+
+
+# --- the ceiling (M3) -------------------------------------------------------
+
+
+@BOTH_BRAINS
+def test_a_perfect_belief_catches_the_thief_every_time(rules: Rules, start: GameState) -> None:
+    """**Milestone M3, and the measurement that makes Phase 4 judgeable.**
+
+    Given the thief's true position the cop walks a shortest path and captures
+    in ~10 steps, unaided. Two things follow:
+
+    * M3's DoD — "computes and walks the shortest path to a known target with no
+      manual intervention" — is satisfied, and *observable* via `--oracle`.
+    * The gap between this and normal play (win rate 1.000 against 0.000) is
+      exactly what a perfect belief is worth. Phase 4's filter is judged against
+      that ceiling rather than against an opinion.
+    """
+    results = [
+        play_sub_game(
+            brain_class("police")(), brain_class("thief")(), rules, 14, start, oracle=True
+        )
+        for _ in range(5)
+    ]
+    assert all(r.outcome.verdict is Verdict.CAPTURE for r in results)
+    assert all(r.steps < rules.survival_threshold for r in results)
+
+
+@BOTH_BRAINS
+def test_the_oracle_is_a_harness_flag_that_no_brain_can_request(rules: Rules) -> None:
+    """It must never be reachable from a real match.
+
+    `PeerRuntime` has no equivalent parameter, so the only way to obtain a
+    perfect belief is for the harness to hand one over — and the harness never
+    runs in a graded game.
+    """
+    import inspect
+
+    assert "oracle" not in inspect.signature(PeerRuntime.observe).parameters
+    assert "oracle" not in inspect.signature(PeerRuntime.belief).parameters

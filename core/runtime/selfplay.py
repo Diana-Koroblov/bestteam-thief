@@ -65,15 +65,34 @@ def _uniform_belief(board: Board, barriers: frozenset[Position], own: Position) 
     return dict.fromkeys(cells, 1.0 / len(cells)) if cells else {}
 
 
-def _observe(state: GameState, board: Board, own: Position, remaining: int) -> Observation:
-    """Build one side's view. Never contains the opponent's true position."""
+def _observe(
+    state: GameState,
+    board: Board,
+    own: Position,
+    remaining: int,
+    known: Position | None = None,
+) -> Observation:
+    """Build one side's view.
+
+    Args:
+        known: **Measurement only.** When set, the belief collapses to a point
+            mass on that cell — a perfect-information agent.
+
+    ``known`` exists to measure the *ceiling*: how well a strategy plays when
+    its belief is perfect. The gap between that and normal play is exactly what
+    the Phase 4 belief filter is worth, which turns "is the filter good?" into a
+    number instead of an opinion.
+
+    A brain cannot ask for this. The harness passes it, never the agent, and
+    ``PeerRuntime`` has no equivalent — so it can never leak into a real match.
+    """
     return Observation(
         board=board,
         own_position=own,
         barriers=state.barriers,
         step=state.step,
         barriers_remaining=remaining,
-        belief=_uniform_belief(board, state.barriers, own),
+        belief={known: 1.0} if known else _uniform_belief(board, state.barriers, own),
     )
 
 
@@ -96,6 +115,7 @@ def play_sub_game(
     rules: Rules,
     quota: int,
     start: GameState,
+    oracle: bool = False,
 ) -> SubGameResult:
     """Play one sub-game to a terminal state and return what happened.
 
@@ -105,6 +125,9 @@ def play_sub_game(
         rules: Terminal conditions, built from the negotiated config.
         quota: ``max_barriers``.
         start: The opening position.
+        oracle: **Measurement only.** Give the Cop the Thief's true position,
+            to measure the ceiling a perfect belief would reach. Never used in
+            a real match; see ``_observe``.
     """
     board = rules.board
     barriers = BarrierManager(max_barriers=quota, board=board)
@@ -116,7 +139,8 @@ def play_sub_game(
         if not are_connected(state.cop, state.thief, state.barriers, board):
             result.cop_separations += 1
 
-        cop_move = cop.decide(_observe(state, board, state.cop, barriers.remaining))
+        seen = state.thief if oracle else None
+        cop_move = cop.decide(_observe(state, board, state.cop, barriers.remaining, seen))
         thief_move = thief.decide(_observe(state, board, state.thief, 0))
         result.reasons.append((cop_move.reason, thief_move.reason))
 
