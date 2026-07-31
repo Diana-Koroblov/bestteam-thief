@@ -77,6 +77,18 @@ working; ≥4 league matches booked; 10 per-algorithm PRDs written; CI green.
 
 - [ ] 0.3.1 🧑 [B] - Contact 6–8 teams; agree dates and roles | DoD: ≥4 confirmed slots in a shared calendar with team names, contacts and times. (M#31)
 - [ ] 0.3.2 🧑 [B] - Book one **warm-up** (uncounted) match for ~8 Aug | DoD: A friendly team confirmed for protocol shakedown. (M#52)
+  - **📋 Checklist to run *during* the warm-up — these can only be done against a real opponent over a real tunnel, and the match is the one chance to collect them:**
+  - [ ] 0.3.2.a - **Measure per-message latency** (this is task **2.5.4**, and it decides **2.5.2**) | DoD: median and worst-case seconds per game message written into `LEAGUE_LOG.md`.
+    - Read it straight off the server log: each game message currently costs a full MCP session — `POST initialize · POST notify · GET · POST call · POST · DELETE`. Time the gap between the first and last line of one such block.
+    - **Act only if worst case > ~5 s** — a sixth of the 30 s response budget spent on transport alone. Then, and only then, rewrite `OpponentClient` to hold one session for the match. Below 5 s, close 2.5.4 and leave 2.5.2 as decided.
+  - [ ] 0.3.2.b - **Confirm the coordinate convention with a worked example** (C-010, negotiation item N18) | DoD: both sides state in writing that `[0,1]` is one cell **East** of `[0,0]`.
+    - Mirrored coordinates make the log audit report forgery against two honest teams. This is the cheapest possible thing to check and the most expensive to discover late.
+  - [ ] 0.3.2.c - **Verify their `num_games`** | DoD: their config says **6**, not 1.
+    - The reference implementation ships `num_games: 1` (C-001). Anyone who copied it will propose 1, and Appendix F marks it **fixed** — accepting it means *both* teams deviate from a fixed value.
+  - [ ] 0.3.2.d - **Exchange the scent worked example** (N3, C-007) | DoD: they confirm 0.9 decays to **0.81** after one turn, not 0.80.
+    - 0.80 means they built on the reference's subtractive decay. Catching it before the match also tells us which implementation they are running.
+  - [ ] 0.3.2.e - **Agree the 3–3 role split** (C-011, N17) | DoD: written into the negotiation payload.
+  - [ ] 0.3.2.f - **Record their tunnel URL and whether `/mcp` needs the trailing slash** | DoD: noted in `LEAGUE_LOG.md`; ours strips it either way (2.5.1).
 - [x] 0.3.3 [D] - Create `docs/LEAGUE_LOG.md` — one row per opponent: date, role, result, reports sent, commit hash | DoD: Table skeleton committed; filled as matches complete. (M#37)
 
 ### 0.4 Specification documents
@@ -321,12 +333,15 @@ correctly; the Orchestrator is the only inter-module path; no import path joins 
   - The log showed a **307 Temporary Redirect before every single 200**. FastMCP serves at `/mcp`, so `/mcp/` cost an extra round trip on every request. Invisible on localhost; against a real opponent it doubled the network cost of every message inside a 30-second budget. Confirmed fixed on Diana's machine: the second log is all 200s.
 - [x] 2.5.3 [D] - Exit quietly on Ctrl-C | DoD: `server stopped.` instead of a ten-frame asyncio/anyio traceback.
   - Ctrl-C is the *normal* way to stop a server. A tool that prints a frightening traceback during routine use teaches whoever is watching to ignore tracebacks — the habit that hides a real one mid-match.
-- [ ] 2.5.2 [D] - Hold one MCP session open for the whole match — **downgraded 31/07, measure before changing**
-  - **My original justification was wrong, and Diana caught it by asking what the rulebook actually says.** I claimed our Gatekeeper's DOS detector (M#29) would lock the pipe on this pattern. It would not: Ch. 9.3 figure 13 shows the pipeline as `Outgoing report → Quota Manager → Token Bucket → DOS Detector → **Gmail API**`, and its stated purpose is «מונע השעיית החשבון בידי ספק השירות». It guards **outgoing email and LLM calls**, never peer MCP traffic. Nothing in the Gatekeeper ever sees an opponent request.
+- [x] 2.5.2 [D] - **Decision: keep one MCP session per call.** Reviewed 31/07, no code change. | DoD: the reasoning is recorded and the trigger for revisiting is written down.
+  - This is a **decision, not pending work**. Nothing is blocked and nothing is half-finished; the current behaviour is what we intend to ship unless 2.5.4 says otherwise.
+  - **My original justification for changing it was wrong, and Diana caught it by asking what the rulebook actually says.** I claimed our Gatekeeper's DOS detector (M#29) would lock the pipe on this pattern. It would not: Ch. 9.3 figure 13 shows the pipeline as `Outgoing report → Quota Manager → Token Bucket → DOS Detector → **Gmail API**`, and its stated purpose is «מונע השעיית החשבון בידי ספק השירות». It guards **outgoing email and LLM calls**, never peer MCP traffic. Nothing in the Gatekeeper ever sees an opponent request.
   - **The rulebook is silent on MCP connection lifecycle** — no session rule, no keep-alive, no reuse requirement. The only related mandates are the Deadline Tracker (Ch. 8.4.1, already satisfied) and the Watchdog (Ch. 8.4.2). The one weak signal is the book's own watchdog example calling `controlled_shutdown()  # release MCP connections, close logs` — you cannot release what you never held — but that is a comment in an example, not a rule.
-  - **It is a trade, not a pure win.** A session per call is *more* resilient: each call reconnects, so a dead connection heals itself. A persistent session adds a stale-session failure mode needing reconnect logic. Six requests per message is the price of that resilience.
-  - **What genuinely remains:** latency. Six round trips instead of one inside a 30 s budget — negligible on localhost, roughly 1.2 s vs 0.2 s per message over ngrok at ~200 ms a trip. Real, not fatal.
-  - **Decision: Phase 3 first**, then measure per-message latency over a real tunnel, and change this only if the number justifies accepting the new failure mode.
+  - **Reusing a session is a trade, not a win.** A session per call is *more* resilient: each call reconnects, so a dead connection heals itself. A persistent session adds a stale-session failure mode needing reconnect logic. Six requests per message is the price of that resilience, and resilience is worth more than speed when a frozen turn is a technical loss worth 0 to both teams.
+  - **What remains true:** six round trips instead of one inside a 30 s budget. Negligible on localhost; roughly 1.2 s vs 0.2 s per message over ngrok at ~200 ms a trip. Real, nowhere near fatal.
+- [ ] 2.5.4 [D] - Measure per-message latency over a real tunnel ⏰ **do this during the warm-up match (0.3.2)** | DoD: median and worst-case seconds per game message recorded in `LEAGUE_LOG.md`.
+  - **The only thing that would reopen 2.5.2.** Trigger to act: worst-case per-message latency above ~5 s, i.e. a sixth of the 30 s response budget spent on transport alone. Below that, leave it.
+  - Costs nothing extra: the warm-up match has to happen anyway, and the numbers come from the server log we already print.
 
 ---
 
@@ -355,11 +370,33 @@ correctly; the Orchestrator is the only inter-module path; no import path joins 
 Strategy is the grade, and you cannot tune what you cannot measure. Every change from this point on
 is A/B'd against the baseline rather than trusted. Costs nothing: no MCP, no LLM, no tokens.
 
-- [ ] 3.5.1 [D] - Headless match runner: engine + two brains in one process, no network, no LLM | DoD: 100 sub-games complete in seconds; seeded and reproducible.
-- [ ] 3.5.2 [D] - Per-turn ASCII board render | DoD: Shows positions, barriers, belief peak, thief exit count. Watchable in the terminal, free. Better than the GUI for debugging.
-- [ ] 3.5.3 [D] - A/B report: win rate by role, steps to capture, captures per barrier spent, which win condition fired | DoD: Printed as a table with the seed recorded.
-- [ ] 3.5.4 [D] - **Cop self-separation counter** | DoD: Reports how often the cop stranded believed thief-mass outside its own component. **Must be 0.** (PRD advanced §3.2)
-- [ ] 3.5.5 [D] - Ablation switches for each tactic | DoD: Any tactic can be toggled off from config, so its contribution is measurable in isolation.
+- [x] 3.5.1 [D] - Headless match runner: engine + two brains in one process, no network, no LLM | DoD: 100 sub-games complete in seconds; seeded and reproducible. — `core/runtime/selfplay.py` + `scripts/selfplay.py`.
+  - **It is not a referee.** It applies the same `core.domain` rules both peers enforce independently. Rules of its own would make every measurement meaningless.
+  - Both agents decide **simultaneously**, as commit-reveal requires. Deciding sequentially would let the second brain react to the first and quietly inflate whichever role moved last.
+  - `_uniform_belief()` is deliberately identical to `PeerRuntime.belief()`, and a test asserts the harness and the live runtime build the same observation. A harness that fed brains better information than a real match provides would measure a strategy nobody can play — and we would find out in a graded match.
+- [x] 3.5.2 [D] - Per-turn ASCII board render | DoD: Shows positions, barriers, belief peak, thief exit count. Watchable in the terminal, free. — `scripts/selfplay.py --show`, reusing `core/ui/render.py`.
+  - Prints **both sides' reasons** under each board, so a surprising game explains itself instead of being an unmotivated sequence of moves.
+- [x] 3.5.3 [D] - A/B report: win rate by role, steps to capture, captures per barrier spent, which win condition fired | DoD: Printed as a table. — `scripts/selfplay.py --games N`.
+  - Scores through `core.domain.scoring`, so the table is tied to Appendix F rather than inventing its own arithmetic.
+  - No seed recorded because **nothing is random yet** — both baselines are deterministic and a batch of 20 produces 20 identical games. A seed will be needed the moment a tactic samples anything; noted rather than faked.
+- [x] 3.5.4 [D] - **Cop self-separation counter** | DoD: Reports how often the cop stranded believed thief-mass outside its own component. **Must be 0.** (PRD advanced §3.2) — reported per batch and printed as a loud warning when non-zero.
+  - Currently 0 trivially, because the baseline places no barriers. The counter exists **now** so that the moment barrier strategy arrives, a self-trapping cop appears as a number rather than as a mysterious run of losses.
+- [ ] 3.5.5 [D] - Ablation switches for each tactic | DoD: Any tactic can be toggled off from config, so its contribution is measurable in isolation. — **deferred to Phase 4, honestly: there are no tactics to ablate yet.** Building switches for behaviours that do not exist would be scaffolding around nothing. `scripts/selfplay.py --cop/--thief` already swaps whole strategies, which is the coarse version.
+
+### 📊 First measurement — the baseline is not a pursuit strategy
+Twenty sub-games, baseline against baseline:
+
+| metric | value |
+|---|---|
+| cop win rate | **0.000** |
+| mean steps | 35.0 |
+| barriers spent | 0 |
+| cop separations | 0 |
+| cop / thief points | 100 / 200 |
+
+**This is the harness working, not failing.** With a *uniform* belief the cop has no information: every cell is equally likely, so the "peak" is an artefact of tie-breaking rather than a sighting. It walks to a corner and waits while the thief runs out the clock.
+
+The number says plainly where the cop's grade actually comes from — the **belief filter in Phase 4**, not from pathfinding. `test_the_baseline_cop_does_not_yet_catch_the_thief` records it as a test, so when the belief filter starts working that test fails and we notice.
 
 ### ✅ Phase 3 Quality Gate
 - [ ] 3.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.
