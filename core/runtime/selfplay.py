@@ -20,12 +20,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from core.domain.barriers import BarrierManager, PlacementOutcome
+from core.domain.belief import mask, predict, uniform, update_from_scent
 from core.domain.board import Board, Position
 from core.domain.brain_base import BrainBase, Decision, Observation
 from core.domain.connectivity import are_connected, exit_count
 from core.domain.game_state import GameState
 from core.domain.movement import resolve_move
 from core.domain.rules import Outcome, Rules, Verdict
+from core.domain.scent import decay, emit, merge
 
 __all__ = ["SubGameResult", "play_sub_game"]
 
@@ -54,15 +56,32 @@ class SubGameResult:
     reasons: list[tuple[str, str]] = field(default_factory=list)
 
 
-def _uniform_belief(board: Board, barriers: frozenset[Position], own: Position) -> dict:
-    """Return the same uniform posterior the live runtime supplies.
+@dataclass
+class Side:
+    """One peer's private knowledge: what it emitted, and what it believes.
 
-    Deliberately identical to ``PeerRuntime.belief()``. A harness that fed
-    brains better information than a real match provides would measure a
-    strategy nobody can actually play.
+    Held per side because in a real match neither peer can see the other's
+    filter. Sharing one belief object between them would silently make the
+    harness measure a game nobody is playing.
     """
-    cells = [c for c in board.cells() if c not in barriers and c != own]
-    return dict.fromkeys(cells, 1.0 / len(cells)) if cells else {}
+
+    belief: dict[Position, float]
+    trail: dict[Position, float] = field(default_factory=dict)
+
+    def emit_and_age(self, at: Position, board: Board, rate: float, model: str) -> None:
+        """Lay this turn's deposit over the decayed remains of earlier ones."""
+        self.trail = merge(decay(self.trail, rate, model), emit(at, board))
+
+    def observe(self, opponent_trail, board, barriers, own) -> None:
+        """Predict, then update on the opponent's transmitted field.
+
+        Prediction comes first: the opponent moved since we last looked, so the
+        prior must be widened *before* new evidence narrows it. Updating against
+        a stale prior is how a filter becomes confidently wrong.
+        """
+        self.belief = predict(self.belief, board, barriers)
+        self.belief = update_from_scent(self.belief, opponent_trail, board)
+        self.belief = mask(self.belief, barriers, own)
 
 
 def _observe(
@@ -70,6 +89,7 @@ def _observe(
     board: Board,
     own: Position,
     remaining: int,
+    belief: dict[Position, float],
     known: Position | None = None,
 ) -> Observation:
     """Build one side's view.
@@ -92,7 +112,7 @@ def _observe(
         barriers=state.barriers,
         step=state.step,
         barriers_remaining=remaining,
-        belief={known: 1.0} if known else _uniform_belief(board, state.barriers, own),
+        belief={known: 1.0} if known else belief,
     )
 
 
@@ -132,6 +152,9 @@ def play_sub_game(
     board = rules.board
     barriers = BarrierManager(max_barriers=quota, board=board)
     state = start
+    rate, model = 0.10, "multiplicative"
+    cop_side = Side(belief=uniform(board))
+    thief_side = Side(belief=uniform(board))
     result = SubGameResult(outcome=Outcome(Verdict.SURVIVAL, "not started"))
     result.history.append(state)
 
@@ -139,9 +162,19 @@ def play_sub_game(
         if not are_connected(state.cop, state.thief, state.barriers, board):
             result.cop_separations += 1
 
+        # Both agents emit, then each reads only the opponent's trail (Ch. 4).
+        cop_side.emit_and_age(state.cop, board, rate, model)
+        thief_side.emit_and_age(state.thief, board, rate, model)
+        cop_side.observe(thief_side.trail, board, state.barriers, state.cop)
+        thief_side.observe(cop_side.trail, board, state.barriers, state.thief)
+
         seen = state.thief if oracle else None
-        cop_move = cop.decide(_observe(state, board, state.cop, barriers.remaining, seen))
-        thief_move = thief.decide(_observe(state, board, state.thief, 0))
+        cop_move = cop.decide(
+            _observe(state, board, state.cop, barriers.remaining, cop_side.belief, seen)
+        )
+        thief_move = thief.decide(
+            _observe(state, board, state.thief, 0, thief_side.belief)
+        )
         result.reasons.append((cop_move.reason, thief_move.reason))
 
         before = state

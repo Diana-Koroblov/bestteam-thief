@@ -4,12 +4,18 @@ Both agents emit; each reads only the **opponent's** field (Ch. 4). That
 asymmetry is the whole information channel — the scent is the one signal that
 cannot lie, because the hint can (M#22) and the position is never shown.
 
-**The emission table is hardcoded, not computed.** M#23 makes the scent model
-part of the signed pre-match agreement, and that exchange is a worked example:
-both peers must produce byte-identical numbers or the digest comparison fails
-for no reason at all. A closed form invites two implementations to round
-differently at the third decimal. The Gaussian that reproduces this table is
-``0.9·exp(−0.377·d²)`` — worth knowing, not worth shipping.
+**The emission table is hardcoded because the book publishes a table, not a
+formula.** Ch. 4.3 defines the deposit only as *"determined by the radial
+proximity of the cell to the agent's emission centre"* — 0.9 at the centre, 0
+when far — and then prints 25 numbers in a figure. No equation is given. (The
+*decay* rule is stated explicitly, and ``decay()`` implements it verbatim.)
+
+So ``d²`` below is an **index**, not a model: it selects which published value
+applies. A Gaussian ``0.9·exp(−0.377·d²)`` happens to reproduce all six values,
+but that is our own reverse-engineering — run once to confirm the figure is
+genuinely radial rather than arbitrary — and it is deliberately not used.
+Shipping it would mean shipping a *reconstruction* of a spec the book never
+wrote, and M#23 requires both peers to produce byte-identical numbers.
 
 Values read from the rulebook's figure, Ch. 4, "5×5 scent emission field".
 """

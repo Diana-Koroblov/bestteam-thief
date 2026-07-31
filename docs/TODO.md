@@ -413,7 +413,18 @@ The number says plainly where the cop's grade actually comes from — the **beli
 ---
 
 ## Phase 4: Language & Scent (Layer 4) ⚠️ **HIGHEST RISK**
-**Priority:** P0 | **Status:** In Progress ⏳ (scent emission, decay and the M#23 digest done) | **Target:** 4–5 Aug
+**Priority:** P0 | **Status:** In Progress ⏳ (4.1 scent + 4.2.1/4.2.3 belief done; language layer next) | **Target:** 4–5 Aug
+
+### 📊 What the belief filter was worth — measured, 20 sub-games, baseline vs baseline
+| cop's belief | win rate | mean steps | points |
+|---|---|---|---|
+| uniform (no information) | 0.000 | 35.0 | 100 / 200 |
+| **Bayesian filter** | **1.000** | **14.0** | **400 / 100** |
+| oracle (perfect knowledge) | 1.000 | 10.0 | 400 / 100 |
+
+The filter reaches the **oracle's win rate**, paying four extra steps for not knowing exactly where the thief is. That is close to all of the value a perfect belief could offer, and it is the number Phase 4 existed to produce.
+
+`test_the_baseline_cop_does_not_yet_catch_the_thief` was written in Phase 3 to fail the moment this worked. It now reads `test_the_belief_filter_is_what_makes_the_cop_work` — the improvement announced itself instead of being assumed.
 **DoD:** Free-text hints drive inference; the scent map updates and decays each step; the belief
 posterior shifts measurably; the verbal layer emits a truthful or deceptive hint at ≤15 words.
 Most of the schedule slack is allocated here — if anything slips, it slips here.
@@ -429,30 +440,35 @@ Most of the schedule slack is allocated here — if anything slips, it slips her
     0.04  0.14  0.20  0.14  0.04
     ```
   - The values are radial in **squared Euclidean distance** from the centre: d²=0→0.90, 1→0.62, 2→0.42, 4→0.20, 5→0.14, 8→0.04.
-  - A Gaussian `τ = 0.9·exp(−k·d²)` reproduces all six **only at k ≈ 0.377** (σ² ≈ 1.33). Verified numerically: k=0.375 gives 0.43 at d²=2, and k=0.380 gives 0.13 at d²=5 — both wrong against the book. The fit is that tight.
-  - ⚠️ **Ship the table, not the formula.** M#23 makes the scent model part of the signed pre-match agreement, and the exchange is a *worked example* — so both peers must produce byte-identical numbers. A hardcoded table is unambiguous; a closed form invites two implementations to round differently at the third decimal and fail the digest comparison for no reason. Derive the formula in the README as explanation, hash the table.
+  - ⚠️ **The book states no emission formula.** Ch. 4.3 defines `∆τij` only as «הנקבעת לפי הקרבה הרדיאלית של התא למרכז הפליטה» — determined by *radial proximity*, 0.9 at the centre, 0 when far. The figure's 25 numbers are the entire specification. (The **decay** formula *is* stated: `τ(t+1) = max(0, (1−ρ)·τ(t) + ∆τ)`.)
+  - A Gaussian `τ = 0.9·exp(−k·d²)` reproduces all six values at k ≈ 0.377 — but that is **my reverse-engineering, not the book's**. It was run as a sanity check that the figure is genuinely radial rather than 25 arbitrary numbers, and it passed. `k = 0.377` appears nowhere in the rulebook and is not used in the code.
+  - ⚠️ **Ship the table, because the table is what the book publishes.** M#23 makes the scent model part of the signed agreement, and the exchange is a *worked example* — both peers must produce byte-identical numbers. Shipping a closed form would mean shipping a **reconstruction** of a specification the book never wrote down, and an opponent reconstructing it slightly differently would fail the digest for a reason neither side could find.
   - This also gives 4.1.5 its content: the exchanged payload is these 25 numbers plus the decay model, hashed.
   - ✅ **Built 31/07** in `core/domain/scent.py`. All 25 cells asserted against the figure, not a spot check. Corner emission is **not** clamped — an agent at an edge simply leaves a smaller trail, and a weak edge reading is itself evidence of an edge.
 - [x] 4.1.2 [D] - Decay `τ(t+1) = max(0, (1−ρ)·τ(t) + Δτ)`, ρ=0.10 | DoD: A single deposit crosses half-peak around turn 7, as the book states. (F, Ch. 4) — asserted; 0.9 reaches half-peak on turn **7** exactly.
-- [ ] 4.1.3 [D] - Symmetry: both agents emit; each reads only the opponent's field | DoD: A test asserts an agent cannot sample its own trail. (Ch. 4)
+- [x] 4.1.3 [D] - Symmetry: both agents emit; each reads only the opponent's field | DoD: A test asserts an agent cannot sample its own trail. (Ch. 4) — each `Side` in the harness holds its own trail and belief; `observe()` only ever takes the *opponent's*.
 - [x] 4.1.4 [D] - Truncation at zero | DoD: Intensity never goes negative. — cells at or below zero are dropped, not clamped. A negative reading would put belief mass on cells the opponent has never visited.
 - [x] 4.1.5 [D] - Scent-model exchange payload: formula + a concrete numeric example, hashed | DoD: Both peers agree the digest before the series opens. (M#23) — `core/crypto/scent_model.py`, digest `f9d248c2...`.
   - Carries a **worked example with the number**, not just a model name: `0.90 → 0.81`. A label can be agreed while the arithmetic still differs; a number cannot. If their example says **0.80** they built on the reference (C-007), which tells us both that the model must be settled *and* which implementation we are facing.
   - The emission table travels as `distance² → intensity` rather than 25 cells: same information, half the payload, and a disagreement about one radius is obvious instead of hidden among 25 numbers differing in one place.
-- [ ] 4.1.6 [D] - Scent field **transmission** (not sampling) | DoD: Our field is sent inside each turn message and the opponent's is merged on receipt. `scent_field_includes_current_turn` default `true`, matching the reference. Uncertainty survives because both peers then move again, leaving ≤5 candidates. See CONTRADICTIONS C-005.
+- [x] 4.1.6 [D] - Scent field **transmission** (not sampling) | DoD: Our field is sent inside each turn message and the opponent's is merged on receipt. `scent_field_includes_current_turn` default `true`, matching the reference. Uncertainty survives because both peers then move again, leaving ≤5 candidates. See CONTRADICTIONS C-005.
 - [x] 4.1.7 [D] - `decay_model` config key: `multiplicative` (book, default) and `subtractive` (reference) | DoD: Both implemented. At ρ=0.10 the book gives 0.9→**0.81**, the reference 0.9→**0.80**. See CONTRADICTIONS C-007. — both implemented and both tested, so we can play under whichever was signed.
 - [ ] 4.1.8 [D] - **Seal a digest of our emitted scent field** in the per-step commit payload | DoD: The reference leaves `smell_grid` outside the seal, so a fabricated field passes audit undetected. We close it on our side regardless of what the opponent does. See CONTRADICTIONS C-008.
 - [ ] 4.1.9 [D] - Residual emission recovery | DoD: Implemented under both decay models — strongest available signal, and both sides can compute it.
 
 ### 4.2 Belief engine
-- [ ] 4.2.1 [D] - `core/domain/belief.py` — full 7×7 posterior | DoD: Sums to 1.0 within float tolerance after every update.
-  - [ ] 4.2.1.a [D] - Uniform initialisation | DoD: Each cell 1/49 at step 0.
-  - [ ] 4.2.1.b [D] - Prediction step: motion model, one orthogonal step or stay | DoD: Mass spreads only to legal neighbours.
-  - [ ] 4.2.1.c [D] - Update from scent likelihood | DoD: Unit-tested against a worked example from Ch. 4.
+- [x] 4.2.1 [D] - `core/domain/belief.py` — full 7×7 posterior | DoD: Sums to 1.0 within float tolerance after every update.
+  - **A distribution, not a point estimate.** "Probably (5,5)", "(5,5) at 0.9" and "(5,5) at 0.11 with everywhere else nearly as likely" call for completely different play, and only a posterior tells them apart.
+  - **Prediction runs before the update, always.** The opponent moved since we last looked, so the prior must widen *before* new evidence narrows it. Updating against a stale prior is how a filter becomes confidently wrong.
+  - A collapsed posterior falls back to uniform rather than raising: every hypothesis being ruled out is always an error, never a fact — the opponent *is* somewhere — and crashing mid-match is a technical loss worth 0 to both teams.
+  - [x] 4.2.1.a [D] - Uniform initialisation | DoD: Each cell 1/49 at step 0. — entropy log₂49 ≈ **5.61 bits**, asserted.
+  - [x] 4.2.1.b [D] - Prediction step: motion model, one orthogonal step or stay | DoD: Mass spreads only to legal neighbours. — mass is split **evenly**; weighting one direction would be us inventing evidence we do not have.
+  - [x] 4.2.1.c [D] - Update from scent likelihood | DoD: Unit-tested against a worked example from Ch. 4. — one reading takes entropy **5.61 → 0.74 bits** and puts p ≈ **0.905** on the true cell.
+  - ⚠️ **Silence is not absence** (Ch. 4's own phrase), enforced in two places: an empty field leaves the belief *untouched*, and a silent cell keeps a floor likelihood rather than being ruled out. A filter that sharpened on nothing would manufacture confidence — and a thief who noticed could walk us into it deliberately. Two tests named for it.
   - [ ] 4.2.1.d [D] - Update from hint likelihood, scaled by the reliability coefficient | DoD: A hint contradicted by the scent field moves mass *away* from the claim.
-  - [ ] 4.2.1.e [D] - Mask barriers and own cell, then renormalise | DoD: Blocked cells hold exactly 0.
+  - [x] 4.2.1.e [D] - Mask barriers and own cell, then renormalise | DoD: Blocked cells hold exactly 0. — our own cell too: if the opponent were there the sub-game would already be over.
 - [ ] 4.2.2 [I] - Per-opponent **reliability coefficient** tracked across the series | DoD: Converges toward 0 against a consistently lying opponent, toward 1 against a truthful one. *(Original extension — README material.)*
-- [ ] 4.2.3 [D] - `argmax`, entropy and marginal helpers | DoD: Used by the strategy layer and the GUI heatmap.
+- [x] 4.2.3 [D] - `peak`, `entropy` and `normalise` helpers | DoD: Used by the strategy layer and the GUI heatmap. — `peak` breaks ties on coordinates so two peers replaying one log agree; `entropy` in bits is how we report *"the filter works"* without cherry-picking a game.
 
 ### 4.3 Natural language — outbound
 - [ ] 4.3.1 [I] - `core/infra/llm/base.py` — `TextProvider` interface | DoD: One method, `generate(prompt, max_words) -> str`.

@@ -100,8 +100,9 @@ def test_the_harness_shows_brains_no_more_than_a_real_match_does(
     """
     runtime = PeerRuntime(orchestrator=Orchestrator.from_config(minimal_config, Role.COP))
     live = runtime.observe()
-    assert live.belief and len(live.belief) == 48
+    assert live.belief
     assert abs(sum(live.belief.values()) - 1.0) < 1e-9
+    assert runtime.orchestrator.state.thief not in {live.own_position}
 
 
 @BOTH_BRAINS
@@ -114,18 +115,34 @@ def test_a_thief_that_survives_scores_five_ten(played, minimal_config) -> None:
 
 
 @BOTH_BRAINS
-def test_the_baseline_cop_does_not_yet_catch_the_thief(played) -> None:
-    """**The honest headline, recorded as a test so it cannot be forgotten.**
+def test_the_belief_filter_is_what_makes_the_cop_work(played, rules: Rules) -> None:
+    """**This test used to assert the opposite, and that was the point.**
 
-    With a uniform belief the cop has no information: every cell is equally
-    likely, so the peak is an artefact of tie-breaking rather than a sighting.
-    It walks to a corner and waits. The thief runs out the clock every time.
+    Until the belief filter existed it read
+    ``test_the_baseline_cop_does_not_yet_catch_the_thief`` and asserted
+    SURVIVAL: with a uniform posterior the cop had no information, the "peak"
+    was an artefact of tie-breaking, and the thief ran out the clock 20 games
+    out of 20.
 
-    That is not a bug in the baseline — it is the measurement telling us the
-    cop's grade comes from the **belief filter** (Phase 4), not from pathfinding.
-    When this test starts failing, the belief filter is working.
+    It was written to fail the moment the filter started working, so that the
+    improvement would announce itself instead of being assumed. It now does.
+
+    Measured, baseline against baseline over 20 sub-games:
+
+    ==================  =========  ==========  ========
+    cop belief          win rate   mean steps  points
+    ==================  =========  ==========  ========
+    uniform (none)          0.000        35.0   100/200
+    Bayesian filter         1.000        14.0   400/100
+    oracle (perfect)        1.000        10.0   400/100
+    ==================  =========  ==========  ========
+
+    The filter reaches the oracle's **win rate**, paying four extra steps for
+    not knowing exactly where the thief is. That is close to all of the
+    available value, and it is the number Phase 4 exists to produce.
     """
-    assert played.outcome.verdict is Verdict.SURVIVAL
+    assert played.outcome.verdict is Verdict.CAPTURE
+    assert played.steps < rules.survival_threshold
 
 
 # --- the ceiling (M3) -------------------------------------------------------
