@@ -76,10 +76,19 @@ def module_name(path: Path, source_root: Path) -> str:
     return ".".join(parts)
 
 
-def discover_modules(source_root: Path) -> dict[str, Path]:
-    """Map every importable module under *source_root* to its file."""
+def discover_modules(source_root: Path, packages: tuple[str, ...] | None = None) -> dict[str, Path]:
+    """Map every importable module under *source_root* to its file.
+
+    Args:
+        source_root: Directory the dotted names are relative to.
+        packages: Limit the walk to these top-level packages. Passing them
+            matters for more than speed: an architecture graph that includes
+            the test suite is not an architecture graph, because tests reach
+            across subsystems on purpose.
+    """
+    roots = [source_root / name for name in packages] if packages else [source_root]
     found: dict[str, Path] = {}
-    for path in sorted(source_root.rglob("*.py")):
+    for path in sorted(item for root in roots if root.exists() for item in root.rglob("*.py")):
         if any(part in EXCLUDED_DIR_NAMES for part in path.parts):
             continue
         name = module_name(path, source_root)
@@ -133,11 +142,18 @@ def _imports_of(tree: ast.AST, current: str, known: set[str], is_package: bool) 
     return edges
 
 
-def build_graph(source_root: Path) -> dict[str, ModuleNode]:
-    """Return every module under *source_root*, with internal edges resolved."""
+def build_graph(
+    source_root: Path, packages: tuple[str, ...] | None = None
+) -> dict[str, ModuleNode]:
+    """Return every module under *source_root*, with internal edges resolved.
+
+    Args:
+        source_root: Directory the dotted names are relative to.
+        packages: Optional top-level packages to limit the walk to.
+    """
     from core.shared.loc_counter import count_code_lines
 
-    files = discover_modules(source_root)
+    files = discover_modules(source_root, packages)
     known = set(files)
     graph: dict[str, ModuleNode] = {}
 

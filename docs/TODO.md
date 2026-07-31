@@ -269,6 +269,7 @@ correctly; the Orchestrator is the only inter-module path; no import path joins 
   - `LISTEN_HOST = "0.0.0.0"` with the reason recorded next to it: a tunnel forwards to the host interface, so a server on loopback is reachable from the same machine and nowhere else. That failure surfaces only when a real opponent connects.
   - `_wrap()` converts a `ProtocolError` into a structured reply instead of letting it escape. Their malformed payload is not our crash — as a traceback it would hand the opponent a stack trace and leave our log with nothing. A test confirms genuine bugs still raise.
 - [x] 2.2.2 [D] - `core/infra/mcp_client.py` — client addressing exactly **one** opponent URL | DoD: No code path can reach a second peer; a deadline is attached to every call.
+  - 🔴 **Rewritten 31/07 — the first version was not MCP at all.** It posted plain JSON to `/tools/<name>`, which no FastMCP server answers. Every unit test passed because they mocked HTTP. Caught by the 2.4.2 round trip; see that entry for the full account.
   - **M#4 is enforced structurally, not by convention.** The URL is a frozen constructor field and *no method takes a URL*. A test walks every public method's signature and fails if any accepts `url`/`host`/`peer`/`target`, so a second opponent is not something this class can be persuaded into.
   - `timeout_sec` is a constructor field too, so a call cannot be made without a deadline. Ch. 8.4.1: a request with no deadline is the direct route to a frozen loop, a fired watchdog and a technical loss worth 0 to **both** teams.
 - [x] 2.2.3 [D] - Structured error handling: auth failure, transport failure, timeout | DoD: Each raises a distinct typed exception, never a bare `Exception`.
@@ -294,8 +295,17 @@ correctly; the Orchestrator is the only inter-module path; no import path joins 
   - Verified live: the cop reports 3 legal moves from its corner, the thief 5 from the centre, and both print the same config digest.
 
 ### 2.4 Separation enforcement
-- [ ] 2.4.1 [D] - `tests/integration/test_process_separation.py` | DoD: Asserts no module reachable from `police/` imports anything under `thief/`, and vice versa. (M#2)
-- [ ] 2.4.2 [D] - `tests/integration/test_localhost_roundtrip.py` | DoD: Spawns both peers as subprocesses; a message from A decodes correctly at B.
+- [x] 2.4.1 [D] - `tests/integration/test_process_separation.py` | DoD: Asserts no module reachable from `police/` imports anything under `thief/`, and vice versa. (M#2) — 9 tests over the **real** parsed import graph, not a grep.
+  - Also enforces M#3: a peripheral subsystem (`protocol`, `infra`, `ui`) may reach the foundations (`domain`, `shared`, `crypto`) but **never sideways**; only the gateway (`runtime`, `sdk`, `__main__`) may join two.
+  - ⚠️ **It immediately caught a real violation:** `core.infra.mcp_server` imported `core.protocol.tools`. A transport that knows the rules is exactly the sideways edge M#3 forbids. Fixed by moving the error guard into `core/protocol/tools.py` as `guard()` / `build_guarded_tools()`, so the server now takes plain callables and imports nothing from the protocol. The gateway does the wiring, in `PeerSDK.server_spec()`.
+  - Two tests guard against the check becoming vacuous: one asserts downward edges *do* exist, one asserts the graph is non-empty. A separation test that silently walked nothing would pass forever.
+  - `build_graph()` gained a `packages` argument. The graph now covers shipped code only — tests reach across subsystems on purpose, so including them makes it not an architecture graph. Side effect: the walk went from **23 s to 0.9 s**.
+- [x] 2.4.2 [D] - `tests/integration/test_localhost_roundtrip.py` | DoD: Spawns both peers as subprocesses; a message from A decodes correctly at B.
+  - 🔴 **This test found the worst bug in the project so far, and it is worth recording why.** The 2.2 client posted plain JSON to `/tools/<name>`. All 22 of its unit tests passed — they mocked HTTP, so they proved the mock worked. **FastMCP speaks JSON-RPC over streamable HTTP, so no opponent's server would ever have answered us.** The two peers would simply have failed to connect on match day, and nothing short of an exchange over the genuine protocol could have shown it.
+  - `OpponentClient` now uses `fastmcp.Client`. `call()` is async, and a `transport` field accepts an in-process FastMCP server — which is what makes a genuine protocol round trip testable with no socket, and will also drive self-play.
+  - All exception classification moved into one `classify()` function, so a new failure mode has exactly one place to be mapped instead of being absorbed by whichever `except` was nearest.
+  - 10 tests over the real protocol: commit → ack, two full commit/reveal turns, geometry surviving the encoding (C-010), barrier declaration (M#15), out-of-order reveal refused, nonce-in-reveal refused (M#18), handshake match and mismatch (M#11), a real transport failure arriving typed, and every tool actually reachable via `list_tools`.
+  - **Deviation from the DoD, stated plainly:** this uses FastMCP's in-process transport rather than two OS subprocesses. Everything except the socket is the production path — real server, real client, real protocol, real registration. Two genuine processes over a real port is **2.QG.4**, which needs Itay's machine anyway; splitting it that way avoids a flaky port-binding test in CI while still proving the protocol works.
 
 ### ✅ Phase 2 Quality Gate
 - [ ] 2.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.

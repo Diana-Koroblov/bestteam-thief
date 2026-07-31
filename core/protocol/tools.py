@@ -191,5 +191,34 @@ TOOL_BUILDERS: dict[str, Callable[[PeerHandler], Callable[..., Any]]] = {
 
 
 def build_tools(handler: PeerHandler) -> dict[str, Callable[..., Any]]:
-    """Return every tool bound to *handler*, ready to register with a server."""
+    """Return every tool bound to *handler*, raw — errors still propagate."""
     return {name: builder(handler) for name, builder in TOOL_BUILDERS.items()}
+
+
+def guard(name: str, tool: Callable[..., Any]) -> Callable[..., Any]:
+    """Return *tool* with protocol errors turned into a structured reply.
+
+    A ``ProtocolError`` is the opponent's malformed payload, not our crash. It
+    comes back as data naming the problem, so they can fix it and our log
+    records what we actually received. Letting it escape would give them a
+    stack trace and us nothing.
+
+    Lives here rather than in the transport so that the server can take plain
+    callables and import nothing from this layer — the transport must never
+    learn the rules (M#3).
+    """
+
+    def guarded(payload: dict[str, Any]) -> dict[str, Any]:
+        try:
+            return tool(payload)
+        except ProtocolError as error:
+            return {"error": "protocol", "tool": name, "detail": str(error)}
+
+    guarded.__name__ = name
+    guarded.__doc__ = tool.__doc__
+    return guarded
+
+
+def build_guarded_tools(handler: PeerHandler) -> dict[str, Callable[..., Any]]:
+    """Return every tool bound to *handler* and safe to expose on a server."""
+    return {name: guard(name, tool) for name, tool in build_tools(handler).items()}

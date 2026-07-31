@@ -1,14 +1,18 @@
-"""The client that talks to our opponent — and to nobody else.
+"""The MCP client that talks to our opponent — and to nobody else.
 
-M#4 requires each peer to address exactly one other peer. That is enforced here
-structurally: the URL is set once at construction and there is **no method that
-takes a URL**. A second opponent is not something this class can be persuaded
-to do; it would require a second client, which the runtime never builds.
+**Corrected 31/07.** The first version posted plain JSON to ``/tools/<name>``.
+That is not MCP, and no opponent's server would have answered it: FastMCP speaks
+JSON-RPC over streamable HTTP, so the two peers would have failed to connect at
+all. The project is specified over MCP; the client now uses ``fastmcp.Client``.
+
+M#4 is enforced structurally: the target is set once at construction and there
+is **no method that takes a URL**. A second opponent is not something this class
+can be persuaded to do.
 
 Every call carries a deadline (Ch. 8.4.1). A request without one is the direct
 route to a frozen game loop: the process waits, the watchdog fires, and the
 match is a technical loss worth 0 to *both* teams. So the deadline is a
-constructor argument, not an optional parameter someone can forget.
+constructor field, not an optional argument someone can forget.
 """
 
 from __future__ import annotations
@@ -18,7 +22,13 @@ from typing import Any
 
 import httpx
 
-from core.infra.errors import AuthError, DeadlineError, RemoteToolError, TransportError
+from core.infra.errors import (
+    AuthError,
+    DeadlineError,
+    PeerError,
+    RemoteToolError,
+    TransportError,
+)
 
 __all__ = ["OpponentClient"]
 
@@ -29,65 +39,83 @@ class OpponentClient:
 
     Attributes:
         base_url: The opponent's public MCP endpoint, from the handshake.
-        timeout_sec: The agreed response window (``response_timeout_sec``, 30 s
-            by default). Applies to every call without exception.
-        team: Our team name, sent so the opponent can recognise us.
+        timeout_sec: The agreed response window (``response_timeout_sec``).
+            Applies to every call without exception.
+        team: Our team name, sent as metadata so the opponent can recognise us.
+        transport: An in-process FastMCP server, used instead of *base_url* when
+            set. Exists so the round-trip can be exercised over the **real** MCP
+            protocol with no socket — and so both our own roles can play each
+            other locally during self-play.
     """
 
     base_url: str
     timeout_sec: float
     team: str = ""
+    transport: Any = None
 
-    def call(self, tool: str, payload: dict[str, Any]) -> dict[str, Any]:
+    @property
+    def target(self) -> Any:
+        """Return whatever ``fastmcp.Client`` should connect to."""
+        return self.transport if self.transport is not None else self.base_url
+
+    async def call(self, tool: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Invoke *tool* on the opponent and return its reply.
 
         Args:
             tool: The remote tool name, e.g. ``receive_commit``.
             payload: The message body, already canonical.
 
-        Returns:
-            The decoded reply.
-
         Raises:
             DeadlineError: No answer inside ``timeout_sec``. Not retryable —
                 the window is spent, and another attempt walks into the watchdog.
-            AuthError: 401 or 403. Not retryable; retrying an unauthenticated
-                peer just gives a stranger a second attempt.
-            TransportError: The request never completed, or the reply was not
-                JSON. Retryable within the gatekeeper's backoff budget.
+            AuthError: The peer refused our credentials. Not retryable; retrying
+                an unauthenticated peer just gives a stranger a second attempt.
+            TransportError: The call never completed. Retryable within the
+                gatekeeper's backoff budget.
             RemoteToolError: The opponent answered with a structured error. The
                 network worked; our payload did not.
         """
-        url = f"{self.base_url.rstrip('/')}/tools/{tool}"
-        try:
-            response = httpx.post(
-                url,
-                json=payload,
-                timeout=self.timeout_sec,
-                headers={"X-Team": self.team} if self.team else None,
-            )
-        except httpx.TimeoutException as error:
-            raise DeadlineError(tool, self.timeout_sec) from error
-        except httpx.HTTPError as error:
-            raise TransportError(f"{tool!r} could not reach {url}: {error}") from error
+        from fastmcp import Client
 
-        return self._decode(tool, response)
+        try:
+            async with Client(self.target) as session:
+                result = await session.call_tool(
+                    tool, {"payload": payload}, timeout=self.timeout_sec
+                )
+        except Exception as error:  # noqa: BLE001 - every path re-raises as a typed failure
+            raise self.classify(tool, error, self.timeout_sec) from error
+
+        return self._decode(tool, result.data)
 
     @staticmethod
-    def _decode(tool: str, response: httpx.Response) -> dict[str, Any]:
-        """Turn an HTTP response into a reply or the right typed failure."""
-        if response.status_code in (401, 403):
-            raise AuthError(f"{tool!r} was refused: HTTP {response.status_code}")
-        if response.status_code >= 400:
-            raise TransportError(f"{tool!r} returned HTTP {response.status_code}")
+    def classify(tool: str, error: Exception, timeout_sec: float) -> PeerError:
+        """Map any failure onto the type that says what to do next.
 
-        try:
-            body = response.json()
-        except ValueError as error:
-            raise TransportError(f"{tool!r} returned a non-JSON body") from error
+        One function so the mapping is testable without a network, and so a new
+        failure mode has exactly one place to be classified rather than being
+        absorbed by whichever ``except`` happened to be nearest.
+        """
+        if isinstance(error, (TimeoutError, httpx.TimeoutException)):
+            return DeadlineError(tool, timeout_sec)
+        if isinstance(error, httpx.HTTPStatusError):
+            status = error.response.status_code
+            if status in (401, 403):
+                return AuthError(f"{tool!r} was refused: HTTP {status}")
+            return TransportError(f"{tool!r} returned HTTP {status}")
+        # FastMCP raises its own ToolError when the tool failed on the opponent's
+        # side. That is a remote refusal, not a network fault, and the difference
+        # decides whether retrying makes any sense at all.
+        if type(error).__name__ in ("ToolError", "McpError"):
+            return RemoteToolError(tool, str(error))
+        return TransportError(f"{tool!r} failed: {type(error).__name__}: {error}")
 
-        if isinstance(body, dict) and body.get("error") == "protocol":
-            raise RemoteToolError(tool, body.get("detail", "no detail given"))
-        if not isinstance(body, dict):
-            raise TransportError(f"{tool!r} returned {type(body).__name__}, expected an object")
-        return body
+    @staticmethod
+    def _decode(tool: str, data: Any) -> dict[str, Any]:
+        """Turn a tool result into a reply, or the right typed failure."""
+        if isinstance(data, dict) and data.get("error") == "protocol":
+            raise RemoteToolError(tool, data.get("detail", "no detail given"))
+        if not isinstance(data, dict):
+            raise TransportError(
+                f"{tool!r} returned {type(data).__name__}, expected an object"
+            )
+        return data

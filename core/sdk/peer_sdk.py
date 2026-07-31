@@ -17,7 +17,9 @@ from pathlib import Path
 
 from core.domain.connectivity import exit_count, region_size
 from core.domain.movement import get_legal_moves
+from core.infra.mcp_server import ServerSpec, build_server_spec
 from core.protocol.schemas import Role
+from core.protocol.tools import build_guarded_tools
 from core.runtime.orchestrator import Orchestrator
 from core.runtime.peer_runtime import PeerRuntime
 from core.shared.config_manager import load_config
@@ -71,6 +73,19 @@ class PeerSDK:
     def runtime(self) -> PeerRuntime:
         """Return the handler an MCP server registers its tools against."""
         return self._runtime
+
+    def server_spec(self, port: int | None = None) -> ServerSpec:
+        """Return this peer's server definition, tools already built and guarded.
+
+        This is the join M#3 puts in the gateway: the protocol builds the tools,
+        the transport registers them, and neither imports the other. The wiring
+        happens here because here is the one place allowed to know both.
+        """
+        return build_server_spec(
+            tools=build_guarded_tools(self._runtime),
+            name=self._config.get("identity.contact_label", "peer"),
+            port=port or self._config.require("network.listen_port"),
+        )
 
     def connect(self, base_url: str) -> None:
         """Attach the single opponent for this match."""
