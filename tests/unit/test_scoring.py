@@ -11,8 +11,6 @@ import pytest
 
 from core.domain.rules import Outcome, Verdict
 from core.domain.scoring import ScoreTable, aggregate, score
-from core.shared.config_manager import load_config
-from tests.paths import PRESENT_ROLES, role_dir
 
 TABLE = ScoreTable(
     capture_cop=20,
@@ -28,9 +26,13 @@ SURVIVAL = Outcome(Verdict.SURVIVAL, "35 steps")
 TECHNICAL = Outcome(Verdict.TECHNICAL_LOSS, "timeout")
 
 
-def test_the_shipped_config_matches_appendix_f() -> None:
-    """The values we will actually play with, not the ones in this test file."""
-    assert ScoreTable.from_config(load_config(role_dir(PRESENT_ROLES[0]))) == TABLE
+def test_the_shipped_config_matches_appendix_f(score_table: ScoreTable) -> None:
+    """The values we will actually play with, not the ones in this test file.
+
+    Everything below uses the local ``TABLE``; this one test ties it back to the
+    config, so a drift in the shipped file fails here rather than in the league.
+    """
+    assert score_table == TABLE
 
 
 # --- one sub-game (T1.16) ---------------------------------------------------

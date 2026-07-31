@@ -16,12 +16,6 @@ from core.domain.rules import Outcome, Rules, Verdict
 BOARD = Board(grid_size=7)
 
 
-@pytest.fixture
-def rules() -> Rules:
-    """The rules under our negotiated defaults."""
-    return Rules(board=BOARD, survival_threshold=35)
-
-
 # --- capture by co-location (T1.13) ----------------------------------------
 
 
@@ -172,15 +166,26 @@ def test_outcome_is_immutable() -> None:
 # --- construction from config ----------------------------------------------
 
 
-def test_rules_are_built_from_the_negotiated_config() -> None:
+def test_rules_are_built_from_the_negotiated_config(minimal_config, board_7x7: Board) -> None:
     """Every terminal condition traces to a signed value, not to a literal."""
-    from core.shared.config_manager import load_config
-    from tests.paths import PRESENT_ROLES, role_dir
+    built = Rules.from_config(minimal_config, board_7x7)
+    assert built.survival_threshold == 35
+    assert built.resolution == "after_moves"
+    assert built.stay_counts_as_move is False
+    assert built.swap_is_capture is True
+    assert built.board.grid_size == minimal_config.require("board_and_agents.grid_size")
 
-    config = load_config(role_dir(PRESENT_ROLES[0]))
-    rules = Rules.from_config(config, Board(grid_size=config.require("board_and_agents.grid_size")))
-    assert rules.survival_threshold == 35
-    assert rules.resolution == "after_moves"
-    assert rules.stay_counts_as_move is False
-    assert rules.swap_is_capture is True
-    assert rules.board.grid_size == 7
+
+def test_the_configured_start_positions_are_not_already_terminal(
+    rules: Rules, minimal_config, game_state_factory
+) -> None:
+    """A sanity check on the negotiated opening: the game must be playable.
+
+    Cheap, and it would catch a proposal that starts both agents on the same
+    cell — which under our capture rule would end the sub-game at step 0.
+    """
+    start = game_state_factory(
+        cop=tuple(minimal_config.require("board_and_agents.cop_start")),
+        thief=tuple(minimal_config.require("board_and_agents.thief_start")),
+    )
+    assert rules.verdict(start) is None

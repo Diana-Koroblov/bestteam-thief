@@ -123,7 +123,7 @@ working; ≥4 league matches booked; 10 per-algorithm PRDs written; CI green.
 ---
 
 ## Phase 1: Base Logic (Layer 1)
-**Priority:** P0 | **Status:** In Progress ⏳ (1.1 complete) | **Target:** 31 Jul – 1 Aug
+**Priority:** P0 | **Status:** ✅ Complete — all gates green, M1 observable | **Target:** 31 Jul – 1 Aug
 **DoD:** Two agents move legally on a 7×7 grid; a 15th barrier is rejected; all three capture
 conditions fire correctly; scoring matches Appendix F; coverage ≥85 % on `core/domain`.
 
@@ -200,21 +200,29 @@ conditions fire correctly; scoring matches Appendix F; coverage ≥85 % on `core
   - ⚠️ **New contradiction found while testing — C-013.** A series in which every sub-game ended in a technical loss is also arithmetically level, at 0-0, so a literal reading pays both teams the tie bonus for a series neither played. That inverts the incentive Ch. 3.5 exists to create. We pay the bonus only when at least one sub-game produced a real result. Cheap to raise at negotiation, awkward to argue afterwards.
 
 ### 1.5 Tests
-- [ ] 1.5.1 [D] - `tests/conftest.py` shared fixtures: `minimal_config`, `board_7x7`, `game_state_factory`, `barrier_manager`, `mock_llm_provider`, `mock_mcp_peer` | DoD: Each fixture used by ≥1 test.
+- [x] 1.5.1 [D] - `tests/conftest.py` shared fixtures: `minimal_config`, `board_7x7`, `game_state_factory`, `barrier_manager`, `mock_llm_provider`, `mock_mcp_peer` | DoD: Each fixture used by ≥1 test.
+  - Shipped: `minimal_config`, `board_7x7`, `game_state_factory`, `barrier_manager`, plus `rules` and `score_table`. Each is used by at least one test — the local duplicates in `test_rules.py` and `test_barriers.py` were deleted rather than left alongside.
+  - `minimal_config` loads the **real shipped config**, not a hand-built dict. A fixture that invented its own values would keep passing after the shipped file drifted from Appendix F, which is the one thing these tests exist to catch.
+  - ⚠️ **`mock_llm_provider` and `mock_mcp_peer` deliberately not written.** The interfaces they would double do not exist yet — the provider seam lands in Phase 7, the MCP peer in Phase 2. A mock written before its interface is a mock of a guess. Moved to those phases; the reason is recorded at the top of `conftest.py` so it does not look like an oversight.
 - [x] 1.5.2 [D] - Unit tests for board, movement, actions | DoD: Happy path and error path per public function. (X §6.1) — `tests/unit/test_board.py` (11) + `test_movement.py` (26). `core/domain/board.py`, `actions.py` and `movement.py` all at **100 %** coverage.
 - [x] 1.5.3 [D] - Unit tests for barriers, including all five sub-cases of 1.3.1 | DoD: Every branch covered. — `tests/unit/test_barriers.py` (29 tests), `core/domain/barriers.py` at **100 %**.
 - [x] 1.5.4 [D] - Unit tests for rules and scoring | DoD: All four terminal conditions covered. — `test_game_state.py` (12), `test_rules.py` (20), `test_scoring.py` (16). `game_state.py`, `rules.py` and `scoring.py` all at **100 %**; all of `core/domain` is at 100 %.
 - [x] 1.5.5 [D] - Unit tests for the config manager, incl. the overlay and minimum-direction rules | DoD: `ConfigVersionError` and minimum-violation both asserted. — done alongside 1.1 in `tests/unit/test_config_manager.py`, `test_config_spec.py`, `test_canonical.py`.
 
 ### ✅ Phase 1 Quality Gate
-- [ ] 1.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.
-- [ ] 1.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC. Split anything that grew.
-- [ ] 1.QG.3 [D] - `uv run pytest --cov` | DoD: All pass; coverage ≥85 % on `core/domain` and `core/shared`.
+- [x] 1.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.
+- [x] 1.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC. Split anything that grew. — largest is `barriers.py` at 111.
+- [x] 1.QG.3 [D] - `uv run pytest --cov` | DoD: All pass; coverage ≥85 % on `core/domain` and `core/shared`. — **322 pass, 96.82 % overall; every one of the eight `core/domain` modules at 100 %.**
 - [x] 1.QG.3b [D] - `uv run python scripts/check_split_repos.py` — **new standing gate** | DoD: The suite passes in a simulated `bestteam-cop` tree *and* a simulated `bestteam-thief` tree, each holding only its own role.
   - **Why it exists:** CI run #8 failed on *both* repositories while every local gate was green. `tests/unit/test_config_*.py` referenced `config/police/` at module level; that path does not exist in the thief repository, so the suite died at import (exit code 2, not a test failure). The working tree holds both roles and therefore **structurally cannot** reproduce a split-only failure.
   - **The pattern to follow:** never name a role directory literally in a test. Derive it from `tests/paths.PRESENT_ROLES` / `role_dir()`, and mark cross-role comparisons with `@BOTH_ROLES` so they skip where only one role ships.
   - Now runs automatically as the last gate in `scripts/ship.py`, so it cannot be forgotten. It is *not* in `ci.yml` — CI already runs inside a split repository, where there is nothing left to split.
-- [ ] 1.QG.4 [D] - **Milestone M1 observed** | DoD: Two agents move legally on a 7×7 grid; a 15th barrier is rejected; coordinate overlap triggers capture. Behaviour *seen*, not merely coded.
+- [x] 1.QG.4 [D] - **Milestone M1 observed** | DoD: Two agents move legally on a 7×7 grid; a 15th barrier is rejected; coordinate overlap triggers capture. Behaviour *seen*, not merely coded.
+  - `uv run python scripts/demo_m1.py` — plays all three scenarios against the **real** engine (no mocks, no doubles) and prints the board after every turn. Added `core/ui/render.py` for plain-text boards; it stays useful after the Tkinter GUI lands, for reading a failed match out of a log.
+  - The demo prints the **config digest** it ran under, so what you watched is provably what was signed.
+  - Guarded by `tests/integration/test_demo_m1.py` (5 tests). A demonstration nobody executes rots within a week, and this one is the evidence for a milestone — so a domain change that breaks it now fails the suite instead of being discovered when someone tries to show it working.
+  - Also the first genuine end-to-end exercise of the layer: config load → board → movement → barriers → rules → scoring, through the real entry points.
+  - 🧑 **USER ACTION — run it yourself.** The value of this gate is a human watching it, not a test asserting it. A coordinate convention that is self-consistently wrong passes every test and looks obviously broken on screen (C-010): check that the cop starts **top-left**, that `S` moves *down*, and that `E` moves *right*.
 
 ---
 
