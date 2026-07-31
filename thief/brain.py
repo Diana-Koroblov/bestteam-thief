@@ -28,6 +28,25 @@ __all__ = ["ThiefBrain"]
 # for the price of a single barrier, so it is refused unless nothing else exists.
 DEAD_END_EXITS = 1
 
+# The most exits any cell can have on a 4-connected grid.
+MAX_EXITS = 4
+
+# How many steps of distance one missing exit is worth giving up.
+#
+# **This constant exists because the first version did not have it.** Watching a
+# game showed the thief running to (6,6) and sitting there for 29 turns: the far
+# corner is the cell that maximises distance, and it is also the cell a Cop can
+# seal with **two** barriers under M#47. Raw distance chose the most dangerous
+# square on the board.
+#
+# At 2, a corner (2 exits) is discounted by 4 steps, so from the centre the thief
+# prefers (5,5) at distance 10 with four exits over (6,6) at distance 12 with
+# two. That is the trade we want: a little distance for a lot of room.
+#
+# The value is a starting point, not a result. Task 8.2.6 settles it by ablation
+# once there is a cop worth fleeing from.
+EXIT_WEIGHT = 2
+
 
 class ThiefBrain(BrainBase):
     """Moves away from the believed Cop position while keeping room to run."""
@@ -37,12 +56,15 @@ class ThiefBrain(BrainBase):
 
         Candidates are scored on three keys, in order:
 
-        1. **not a dead end** — the DoD's requirement, and the cheapest way to
-           lose a sub-game if ignored;
-        2. **distance from the believed Cop** — the obvious pressure;
-        3. **region size** — how much board remains reachable afterwards. This
-           is what stops the Thief fleeing into a large-looking corner that a
-           single wall will seal.
+        1. **not a dead end** — a hard veto. The DoD's requirement, and the
+           cheapest way to lose a sub-game if ignored;
+        2. **safety-adjusted distance** — distance from the believed Cop, minus
+           ``EXIT_WEIGHT`` for every exit the cell is missing. Raw distance is
+           what sent an earlier version into the corner; the penalty is what
+           makes the Thief pay for space it cannot leave;
+        3. **region size** — how much board remains reachable. Constant on an
+           open board, so it decides nothing until barriers appear — which is
+           exactly when it starts to matter.
 
         Ties break on the destination cell so that a replay is reproducible.
         """
@@ -58,7 +80,7 @@ class ThiefBrain(BrainBase):
             _, cell = entry
             exits = exit_count(cell, observation.barriers, observation.board)
             safe = 0 if exits <= DEAD_END_EXITS else 1
-            away = distances.get(cell, 0)
+            away = distances.get(cell, 0) - EXIT_WEIGHT * (MAX_EXITS - exits)
             room = region_size(cell, observation.barriers, observation.board)
             return (safe, away, room, cell)
 

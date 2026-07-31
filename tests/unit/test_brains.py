@@ -137,8 +137,43 @@ def test_the_thief_refuses_a_dead_end() -> None:
 
 
 @thief_only
-def test_the_thief_prefers_room_over_raw_distance() -> None:
-    """A far cell inside a small pocket is worse than a near cell in the open."""
+def test_the_thief_does_not_flee_into_a_corner() -> None:
+    """**Regression, found by Diana watching a game.**
+
+    The first version scored on raw distance, so from the centre it ran to
+    (6,6) — the farthest cell from a believed cop at (0,0), and also the cell a
+    cop seals with **two** barriers under M#47. It then sat there 29 turns.
+
+    Two things had failed silently: `region_size` is 49 for *every* cell on an
+    open board, so that key discriminated nothing; and the dead-end veto only
+    fires at one exit, so a two-exit corner passed. `EXIT_WEIGHT` is the fix.
+    """
+    from core.domain.actions import DELTAS
+
+    position = (3, 3)
+    brain = ThiefBrain()
+    for _ in range(12):
+        move = brain.decide(observe(position, belief=(0, 0))).move
+        delta = DELTAS[move]
+        position = (position[0] + delta[0], position[1] + delta[1])
+        assert exit_count(position, frozenset(), BOARD) > 2, f"entered {position}"
+
+
+@thief_only
+def test_the_thief_trades_distance_for_exits() -> None:
+    """From (5,4) with the cop believed at (0,0): (5,5) is nearer than (6,4).
+
+    Distance alone would pick the corner-ward move. The exit penalty makes the
+    open cell win, which is the whole point of the constant.
+    """
+    decision = ThiefBrain().decide(observe((5, 4), belief=(0, 0)))
+    landed = {Direction.E: (5, 5), Direction.S: (6, 4)}.get(decision.move)
+    assert landed is None or exit_count(landed, frozenset(), BOARD) == 4
+
+
+@thief_only
+def test_the_thief_still_refuses_a_pocket_when_barriers_exist() -> None:
+    """Region size decides nothing on an open board, and everything once walled."""
     walls = frozenset({(0, 2), (1, 1), (2, 0)})
     decision = ThiefBrain().decide(observe((3, 3), belief=(6, 6), barriers=walls))
     assert decision.move is not Direction.STAY
