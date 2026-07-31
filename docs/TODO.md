@@ -276,10 +276,22 @@ correctly; the Orchestrator is the only inter-module path; no import path joins 
   - Tested through `httpx.MockTransport` rather than live sockets — the whole request path runs, headers and timeouts included, with no port to make the suite flaky.
 
 ### 2.3 Runtime skeleton
-- [ ] 2.3.1 [D] - `core/runtime/orchestrator.py` — single gateway to all five subsystems | DoD: No peripheral module imports another; verified by an import-graph test. (M#3)
-- [ ] 2.3.2 [D] - `core/runtime/peer_runtime.py` — negotiate → turn loop → audit | DoD: Runs exactly one role, chosen by CLI flag.
-- [ ] 2.3.3 [D] - `core/sdk/peer_sdk.py` — the single public facade | DoD: `grep -r "from core.domain" core/ui/` returns nothing. (X §4.1)
-- [ ] 2.3.4 [D] - CLI entry point: `uv run python -m core peer --role police|thief` | DoD: Two separate OS processes, two separate config dirs. (M#1, M#4)
+- [x] 2.3.1 [D] - `core/runtime/orchestrator.py` — single gateway to all five subsystems | DoD: No peripheral module imports another; verified by an import-graph test. (M#3) — the graph test itself is 2.4.1, still open.
+  - Everything is built from the signed config — board size, start positions, terminal conditions, scoring. No literals, so what we play is provably what was agreed.
+  - `connect()` **refuses a second opponent** rather than replacing it silently (M#4). Silent replacement would let a second peer take over a match already in progress.
+  - `advance()` is the only way state changes, and it keeps the previous state. A transition that bypassed it would be invisible to the replay audit.
+- [x] 2.3.2 [D] - `core/runtime/peer_runtime.py` — negotiate → turn loop → audit | DoD: Runs exactly one role, chosen by CLI flag. — the **receiving** half; the turn loop needs a strategy and lands in Phase 3.
+  - **The ordering gate is the point.** A reveal with no matching commit is refused: accepting one would let the opponent see our move and then choose theirs, which is the single failure commit-reveal exists to prevent.
+  - Also refused: anything before the handshake agreed (M#11) · a second commit or reveal for a step already recorded · a message claiming **our own role** (otherwise we can be fed our own commitments and record them as theirs) · a barrier declared by the thief (Ch. 3.4) · a final reveal missing any committed step, since an unverifiable step is treated as forgery.
+  - A digest mismatch **refuses the match**. Two peers enforcing different physics produce a game the audit reports as forgery against two honest teams.
+  - `on_capture_claim` answers from the rules engine, never from what is convenient (M#21). A false denial is caught by the audit without exception.
+- [x] 2.3.3 [D] - `core/sdk/peer_sdk.py` — the single public facade | DoD: `grep -r "from core.domain" core/ui/` returns nothing. (X §4.1) — checked by a test that reads every file under `core/ui/`.
+  - `BoardView` is flat plain types only. A UI holding a live `GameState` would keep a reference to a position the engine has already replaced, and would render last turn while claiming to show this one.
+  - Exposes `own_room()` and `own_exits()` deliberately: those are the numbers that decide whether a barrier is safe to place.
+- [x] 2.3.4 [D] - CLI entry point: `uv run python -m core peer --role police|thief` | DoD: Two separate OS processes, two separate config dirs. (M#1, M#4)
+  - `--role` is **required with no default**. A process that guessed its own role could be started twice as the same side, and the resulting match would be unauditable.
+  - Asking a published repository for the role it does not ship fails with a message saying so, rather than a missing-file error three frames deep.
+  - Verified live: the cop reports 3 legal moves from its corner, the thief 5 from the centre, and both print the same config digest.
 
 ### 2.4 Separation enforcement
 - [ ] 2.4.1 [D] - `tests/integration/test_process_separation.py` | DoD: Asserts no module reachable from `police/` imports anything under `thief/`, and vice versa. (M#2)
