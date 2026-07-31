@@ -200,6 +200,14 @@ conditions fire correctly; scoring matches Appendix F; coverage ≥85 % on `core
   - The tie is decided on **cumulative points**, not sub-games won: 3 captures and 3 survivals is 75-45, not a draw.
   - ⚠️ **New contradiction found while testing — C-013.** A series in which every sub-game ended in a technical loss is also arithmetically level, at 0-0, so a literal reading pays both teams the tie bonus for a series neither played. That inverts the incentive Ch. 3.5 exists to create. We pay the bonus only when at least one sub-game produced a real result. Cheap to raise at negotiation, awkward to argue afterwards.
 
+### 1.4b Connectivity — added 31/07, not in the original plan
+- [x] 1.4.5 [D] - `core/domain/connectivity.py` — `reachable`, `are_connected`, `region_size`, `exit_count` | DoD: 100 % covered; the corridor self-trap is a named test case.
+  - **Why it was added mid-phase.** Diana looked at the demo's scenario 2 and asked whether the cop realises it is now blocked. It does not — and nothing in the codebase could have told it. Rows 0 and 2 fully walled leaves the cop in a **7-cell corridor** with the thief loose in the other 28. The cop can never reach it again, the thief runs out the clock, and barriers are permanent so nothing recovers it.
+  - Ch. 3.4 warns about exactly this — *"מבלי לחסום בטעות את נתיבי הגישה של עצמו"* — and we had the warning in three documents but no primitive that could enforce it.
+  - **The distinction the module exists to protect:** *separation* is the failure, *confinement* is the win. A small region shared with the thief is a winning position; a large region the cop cannot enter is a lost one. They look similar on a board and are opposite in value, so it is computed, never eyeballed. Both cases are tests.
+  - `exit_count` is the endgame counter (drive it to 1, then the last wall captures under M#47). `region_size` is the honest measure of thief freedom — a thief with four open neighbours inside a nine-cell room is nearly caught, and a test pins that.
+  - Feeds the cop's connectivity constraint and the exit-count-1 win condition in `PRD_strategy_advanced.md`; Phase 4 now has its geometry ready.
+
 ### 1.5 Tests
 - [x] 1.5.1 [D] - `tests/conftest.py` shared fixtures: `minimal_config`, `board_7x7`, `game_state_factory`, `barrier_manager`, `mock_llm_provider`, `mock_mcp_peer` | DoD: Each fixture used by ≥1 test.
   - Shipped: `minimal_config`, `board_7x7`, `game_state_factory`, `barrier_manager`, plus `rules` and `score_table`. Each is used by at least one test — the local duplicates in `test_rules.py` and `test_barriers.py` were deleted rather than left alongside.

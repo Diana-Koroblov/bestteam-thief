@@ -7,7 +7,7 @@ doubles, the same `core.domain` modules a match will use — and prints the boar
 after every turn:
 
     1. both agents moving legally on a 7x7 grid;
-    2. the barrier quota running out, and the 15th placement being refused;
+    2. the barrier quota running out - and a wall that seals the cop away;
     3. the Cop stepping onto the Thief, and the capture firing;
     4. the five legal barrier targets, and the cheap diagonal cut they allow.
 
@@ -29,6 +29,7 @@ sys.path.insert(0, str(ROOT))
 from core.domain.actions import Direction  # noqa: E402
 from core.domain.barriers import BarrierManager  # noqa: E402
 from core.domain.board import Board  # noqa: E402
+from core.domain.connectivity import are_connected, region_size  # noqa: E402
 from core.domain.game_state import GameState  # noqa: E402
 from core.domain.movement import get_legal_moves, resolve_move  # noqa: E402
 from core.domain.rules import Rules  # noqa: E402
@@ -107,8 +108,20 @@ def _scenario_quota(board: Board, quota: int, max_moves: int) -> None:
     print(f"   and only on its own cell or an orthogonal neighbour. So {placed} walls cost")
     print(f"   {placed} turns minimum, plus {turns - placed} turns of walking between them")
     print(f"   for this shape = {turns} of {max_moves}, leaving {max_moves - turns} to chase.")
-    print("   A tighter shape near the thief costs far less. That is the real lesson:")
-    print("   the scarce resource is turns, so wall shape matters more than quota.")
+
+    walls = manager.barriers
+    cop_room = region_size(state.cop, walls, board)
+    thief_room = region_size(state.thief, walls, board)
+    print("\n   *** BUT LOOK AT WHAT THIS WALL DID. ***")
+    print(f"   cop can reach {cop_room} cells; thief can reach {thief_room}.")
+    print(f"   connected: {are_connected(state.cop, state.thief, walls, board)}")
+    print(f"   The cop sealed ITSELF into a {cop_room}-cell corridor. It can never")
+    print("   reach the thief again, so the thief waits out the clock and wins on")
+    print("   survival. Barriers are permanent, so nothing recovers this.")
+    print("   This is the book's warning made concrete: «מבלי לחסום בטעות את נתיבי")
+    print("   הגישה של עצמו». The real lesson is not that walls cost turns - it is")
+    print("   that separation loses. Every placement must first ask: can I still")
+    print("   reach the thief afterwards? See core/domain/connectivity.py.")
 
     # An empty cell next to the Cop, so the refusal can only be about the quota.
     refused = manager.place((state.cop[0], state.cop[1] + 1), state.cop)

@@ -88,6 +88,20 @@ def test_the_demo_spends_the_quota_over_real_turns(capsys) -> None:
     assert "12 turns of walking between them" in printed
 
 
+def test_the_demo_names_the_self_trap_rather_than_hiding_it(capsys) -> None:
+    """Scenario 2's wall is a losing move, and the demo must say so.
+
+    Rows 0 and 2 fully walled leaves the cop in a 7-cell corridor with the thief
+    outside it. Presenting that as a plan would teach the wrong lesson; the
+    point is that separation loses.
+    """
+    demo.main()
+    printed = capsys.readouterr().out
+    assert "cop can reach 7 cells; thief can reach 28" in printed
+    assert "connected: False" in printed
+    assert "separation loses" in printed
+
+
 def test_the_demo_shows_a_capture_and_its_score(capsys) -> None:
     demo.main()
     printed = capsys.readouterr().out
