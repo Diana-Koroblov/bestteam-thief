@@ -244,15 +244,24 @@ conditions fire correctly; scoring matches Appendix F; coverage ≥85 % on `core
 correctly; the Orchestrator is the only inter-module path; no import path joins the live roles.
 
 ### 2.1 Protocol contracts
-- [ ] 2.1.1 [D] - `core/protocol/schemas.py` — message dataclasses | DoD: Commit, Ack, Reveal, FinalReveal, CaptureClaim, BarrierDeclaration, Negotiation all defined.
-- [ ] 2.1.2 [D] - `core/protocol/tools.py` — one factory per MCP tool | DoD: Factory pattern; a new tool needs one factory + one registration line.
-  - [ ] 2.1.2.a [D] - `receive_commit(hash, step)` | DoD: Stores the hash, returns an acknowledgement.
-  - [ ] 2.1.2.b [D] - `acknowledge(step)` | DoD: Confirms the opponent is locked.
-  - [ ] 2.1.2.c [D] - `receive_reveal(move, hint, intent, step)` | DoD: Nonce **not** accepted at this stage. (M#18)
-  - [ ] 2.1.2.d [D] - `final_reveal(nonces)` | DoD: Accepted only at end of match.
-  - [ ] 2.1.2.e [D] - `capture_claim()` / `capture_response()` | DoD: Truthful answer required. (M#21)
-  - [ ] 2.1.2.f [D] - `declare_barrier(cell)` | DoD: Exact cell declared. (M#15)
-  - [ ] 2.1.2.g [D] - `negotiate(config_hash, game_count, scent_model_hash)` | DoD: Handshake payload complete. (M#37)
+- [x] 2.1.1 [D] - `core/protocol/schemas.py` — message dataclasses | DoD: Commit, Ack, Reveal, FinalReveal, CaptureClaim, BarrierDeclaration, Negotiation all defined. **CaptureResponse added** — the claim and the answer are separate messages, and M#21 binds the answer.
+  - `KIND` is a `ClassVar`, not a field, so a `Commit` can never be constructed calling itself a `Reveal`. The wire still carries an explicit tag, added in `payload()`, so a receiver never infers the type from its shape.
+  - `payload()` converts tuples to lists, because JSON has no tuple: a peer that received a message and re-serialised it would otherwise hash different bytes from the peer that sent it. Tested by round-tripping through `digest()`.
+  - Every message carries its own `step` and `role`. A payload that cannot say which turn it belongs to cannot be audited, and replaying an old step is the cheapest attack available.
+- [x] 2.1.2 [D] - `core/protocol/tools.py` — one factory per MCP tool | DoD: Factory pattern; a new tool needs one factory + one registration line. — 6 factories in `TOOL_BUILDERS`, asserted by test.
+  - **Nothing in this layer imports FastMCP.** Each factory takes a handler and returns a plain callable, so the whole protocol is testable with no server, socket or event loop. The transport never learns the rules.
+  - Every tool validates before delegating, and raises `ProtocolError` — distinct from a transport failure, because a dropped connection is bad luck and a malformed payload is the opponent's bug. With no referee, *"your step 7 commit arrived with no digest"* is the entire remedy available to us, so it has to be quotable.
+  - [x] 2.1.2.a [D] - `receive_commit(hash, step)` | DoD: Stores the hash, returns an acknowledgement.
+  - [x] 2.1.2.b [D] - `acknowledge(step)` | DoD: Confirms the opponent is locked. — returned by `receive_commit` rather than a separate round trip.
+  - [x] 2.1.2.c [D] - `receive_reveal(move, hint, intent, step)` | DoD: Nonce **not** accepted at this stage. (M#18) — a payload carrying `nonce` is **actively rejected**, not merely ignored.
+  - [x] 2.1.2.d [D] - `final_reveal(nonces)` | DoD: Accepted only at end of match.
+  - [x] 2.1.2.e [D] - `capture_claim()` / `capture_response()` | DoD: Truthful answer required. (M#21)
+  - [x] 2.1.2.f [D] - `declare_barrier(cell)` | DoD: Exact cell declared. (M#15) — a malformed cell is refused; a declaration that cannot be read is not a declaration.
+  - [x] 2.1.2.g [D] - `negotiate(config_hash, game_count, scent_model_hash)` | DoD: Handshake payload complete. (M#37) — also carries `role_split` (C-011) and a `readings` map for the C-006 / C-010 mechanism choices, so every open reading is signed rather than assumed.
+- [x] 2.1.3 [D] - `core/crypto/commitment.py` — pulled forward, since the schemas are meaningless without it | DoD: `seal()` / `verify()` over `SHA256(state ‖ move ‖ intent ‖ nonce)`; 100 % covered.
+  - Tests are written as the three attacks the scheme exists to stop: **no time travel** (the state is in the hash, so a step-4 commit cannot be replayed at step 9), **no revision** (a changed move or intent fails), **no dictionary attack** (20 seals of the same move produce 20 digests).
+  - `secrets`, not `random` — a predictably seeded generator would let an opponent reproduce every nonce in the match.
+  - `commitment_payload()` is a single named function so the hashed field set can never drift between the peer that seals and the peer that verifies.
 
 ### 2.2 Transport
 - [ ] 2.2.1 [D] - `core/infra/mcp_server.py` — FastMCP server per peer | DoD: Tools registered via `@mcp.tool`; binds `0.0.0.0` so a tunnel can reach it. (Ch. 2)
