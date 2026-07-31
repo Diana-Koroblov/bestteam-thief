@@ -413,19 +413,34 @@ The number says plainly where the cop's grade actually comes from — the **beli
 ---
 
 ## Phase 4: Language & Scent (Layer 4) ⚠️ **HIGHEST RISK**
-**Priority:** P0 | **Status:** Not Started ☐ | **Target:** 4–5 Aug
+**Priority:** P0 | **Status:** In Progress ⏳ (scent emission, decay and the M#23 digest done) | **Target:** 4–5 Aug
 **DoD:** Free-text hints drive inference; the scent map updates and decays each step; the belief
 posterior shifts measurably; the verbal layer emits a truthful or deceptive hint at ≤15 words.
 Most of the schedule slack is allocated here — if anything slips, it slips here.
 
 ### 4.1 Scent engine
 - [ ] 4.1.1 [D] - `core/domain/scent.py` — 5×5 radial emission field, centre τ=0.9 | DoD: Reproduces the rulebook's figure values (0.9 / 0.62 / 0.42 / 0.20 / 0.14 / 0.04). (F)
-- [ ] 4.1.2 [D] - Decay `τ(t+1) = max(0, (1−ρ)·τ(t) + Δτ)`, ρ=0.10, applied at end of each **full** turn | DoD: A single deposit crosses half-peak around turn 7, as the book states. (F, Ch. 4)
+  - **📐 The exact grid, read off the book's figure (Ch. 4, "5×5 scent emission field, centre τ = 0.9"). Ship this table, not a formula:**
+    ```
+    0.04  0.14  0.20  0.14  0.04
+    0.14  0.42  0.62  0.42  0.14
+    0.20  0.62  0.90  0.62  0.20      <- centre = the emitting agent
+    0.14  0.42  0.62  0.42  0.14
+    0.04  0.14  0.20  0.14  0.04
+    ```
+  - The values are radial in **squared Euclidean distance** from the centre: d²=0→0.90, 1→0.62, 2→0.42, 4→0.20, 5→0.14, 8→0.04.
+  - A Gaussian `τ = 0.9·exp(−k·d²)` reproduces all six **only at k ≈ 0.377** (σ² ≈ 1.33). Verified numerically: k=0.375 gives 0.43 at d²=2, and k=0.380 gives 0.13 at d²=5 — both wrong against the book. The fit is that tight.
+  - ⚠️ **Ship the table, not the formula.** M#23 makes the scent model part of the signed pre-match agreement, and the exchange is a *worked example* — so both peers must produce byte-identical numbers. A hardcoded table is unambiguous; a closed form invites two implementations to round differently at the third decimal and fail the digest comparison for no reason. Derive the formula in the README as explanation, hash the table.
+  - This also gives 4.1.5 its content: the exchanged payload is these 25 numbers plus the decay model, hashed.
+  - ✅ **Built 31/07** in `core/domain/scent.py`. All 25 cells asserted against the figure, not a spot check. Corner emission is **not** clamped — an agent at an edge simply leaves a smaller trail, and a weak edge reading is itself evidence of an edge.
+- [x] 4.1.2 [D] - Decay `τ(t+1) = max(0, (1−ρ)·τ(t) + Δτ)`, ρ=0.10 | DoD: A single deposit crosses half-peak around turn 7, as the book states. (F, Ch. 4) — asserted; 0.9 reaches half-peak on turn **7** exactly.
 - [ ] 4.1.3 [D] - Symmetry: both agents emit; each reads only the opponent's field | DoD: A test asserts an agent cannot sample its own trail. (Ch. 4)
-- [ ] 4.1.4 [D] - Truncation at zero | DoD: Intensity never goes negative.
-- [ ] 4.1.5 [D] - Scent-model exchange payload: formula + a concrete numeric example, hashed | DoD: Both peers agree the digest before the series opens. (M#23)
+- [x] 4.1.4 [D] - Truncation at zero | DoD: Intensity never goes negative. — cells at or below zero are dropped, not clamped. A negative reading would put belief mass on cells the opponent has never visited.
+- [x] 4.1.5 [D] - Scent-model exchange payload: formula + a concrete numeric example, hashed | DoD: Both peers agree the digest before the series opens. (M#23) — `core/crypto/scent_model.py`, digest `f9d248c2...`.
+  - Carries a **worked example with the number**, not just a model name: `0.90 → 0.81`. A label can be agreed while the arithmetic still differs; a number cannot. If their example says **0.80** they built on the reference (C-007), which tells us both that the model must be settled *and* which implementation we are facing.
+  - The emission table travels as `distance² → intensity` rather than 25 cells: same information, half the payload, and a disagreement about one radius is obvious instead of hidden among 25 numbers differing in one place.
 - [ ] 4.1.6 [D] - Scent field **transmission** (not sampling) | DoD: Our field is sent inside each turn message and the opponent's is merged on receipt. `scent_field_includes_current_turn` default `true`, matching the reference. Uncertainty survives because both peers then move again, leaving ≤5 candidates. See CONTRADICTIONS C-005.
-- [ ] 4.1.7 [D] - `decay_model` config key: `multiplicative` (book, default) and `subtractive` (reference) | DoD: Both implemented. At ρ=0.10 the book gives 0.9→**0.81**, the reference 0.9→**0.80** — the M#23 worked example catches the mismatch before a move is played. See CONTRADICTIONS C-007.
+- [x] 4.1.7 [D] - `decay_model` config key: `multiplicative` (book, default) and `subtractive` (reference) | DoD: Both implemented. At ρ=0.10 the book gives 0.9→**0.81**, the reference 0.9→**0.80**. See CONTRADICTIONS C-007. — both implemented and both tested, so we can play under whichever was signed.
 - [ ] 4.1.8 [D] - **Seal a digest of our emitted scent field** in the per-step commit payload | DoD: The reference leaves `smell_grid` outside the seal, so a fabricated field passes audit undetected. We close it on our side regardless of what the opponent does. See CONTRADICTIONS C-008.
 - [ ] 4.1.9 [D] - Residual emission recovery | DoD: Implemented under both decay models — strongest available signal, and both sides can compute it.
 
