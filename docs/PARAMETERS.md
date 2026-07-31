@@ -356,8 +356,8 @@ it undefined caused a documented contradiction.
 | Key | Default | Why | Contradiction |
 |---|---|---|---|
 | `scoring.technical_loss` | 0 | Not in Table 17, but present in the reference config, and the mandatory rules assign 0 for a technical loss. Keeping it matches the reference and makes the sanction explicit. | — |
-| `capture.resolution` | `after_moves` | The book leaves the ordering of simultaneous moves and capture evaluation open. | C-006a |
-| `capture.stay_counts_as_move` | `false` | M#47 vs the survival counter. | C-006b |
+| `capture.resolution` | `after_moves` | The book leaves the ordering of simultaneous moves and capture evaluation open. | C-006b |
+| `capture.stay_counts_as_move` | `false` | M#47 vs the survival counter. | C-006a |
 | `capture.swap_is_capture` | `true` | Two agents crossing through each other. | C-006c |
 | `pheromones.decay_model` | `multiplicative` | The book's worked example gives 0.81; the reference implementation's subtractive decay gives 0.80. Whoever is silent about this loses the audit. | C-007 |
 | `pheromones.field_includes_current_turn` | `true` | Whether the emitted field includes the turn being committed. | C-005 |

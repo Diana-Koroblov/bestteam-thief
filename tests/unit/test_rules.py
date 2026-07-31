@@ -106,7 +106,7 @@ def test_moving_in_the_same_direction_is_not_a_swap(rules: Rules) -> None:
     assert rules.turn_verdict(before, after) is None
 
 
-# --- C-006a, when capture is evaluated --------------------------------------
+# --- C-006b, when capture is evaluated --------------------------------------
 
 
 def test_after_moves_ignores_a_cell_the_thief_has_vacated(rules: Rules) -> None:
@@ -129,7 +129,7 @@ def test_before_moves_judges_the_pre_move_snapshot(rules: Rules) -> None:
     assert rules.turn_verdict(before, after) is None
 
 
-# --- C-006b, whether STAY defeats M#47 --------------------------------------
+# --- C-006a, whether STAY defeats M#47 --------------------------------------
 
 
 def test_stay_counting_as_a_move_makes_sealing_in_unreachable() -> None:

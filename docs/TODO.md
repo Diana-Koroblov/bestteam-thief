@@ -160,7 +160,7 @@ conditions fire correctly; scoring matches Appendix F; coverage ≥85 % on `core
   - T1.17 verified — the same `(state, action)` on two independent `Board` instances yields identical results, **errors included**.
 - [x] 1.2.4 [D] - `get_legal_moves(pos, barriers, board)` | DoD: Returns exactly the passable neighbours plus STAY; empty-except-STAY case handled.
   - STAY is always present and always **first**, so a search tie broken by iteration order resolves the same way on both peers.
-  - Added `is_immobilised()` alongside it. The two are deliberately separate: STAY is always legal, so "has no legal move" is never true and cannot be the M#47 test. M#47 is **adjacency** — see C-006b.
+  - Added `is_immobilised()` alongside it. The two are deliberately separate: STAY is always legal, so "has no legal move" is never true and cannot be the M#47 test. M#47 is **adjacency** — see C-006a.
 
 ### 1.3 Barriers
 - [x] 1.3.1 [D] - `core/domain/barriers.py` — `BarrierManager` | DoD: File ≤150 lines. (M#15, M#46, F) — 111 LOC.
@@ -222,7 +222,10 @@ conditions fire correctly; scoring matches Appendix F; coverage ≥85 % on `core
   - The demo prints the **config digest** it ran under, so what you watched is provably what was signed.
   - Guarded by `tests/integration/test_demo_m1.py` (5 tests). A demonstration nobody executes rots within a week, and this one is the evidence for a milestone — so a domain change that breaks it now fails the suite instead of being discovered when someone tries to show it working.
   - Also the first genuine end-to-end exercise of the layer: config load → board → movement → barriers → rules → scoring, through the real entry points.
-  - 🧑 **USER ACTION — run it yourself.** The value of this gate is a human watching it, not a test asserting it. A coordinate convention that is self-consistently wrong passes every test and looks obviously broken on screen (C-010): check that the cop starts **top-left**, that `S` moves *down*, and that `E` moves *right*.
+  - 🧑 **USER ACTION — run it yourself.** ✅ **Done 31/07.** Diana ran it and questioned scenario 2, which was right to question — see below.
+  - **Scenario 2 was rewritten after that first run.** The original spent the quota by teleporting the Cop to each of the 14 cells, which rendered as `C` sitting inside a wall (`# # # # # # C`). Placing on your own cell *is* legal (Ch. 3.4 allows «התא שבו הוא עומד»), so the state was not illegal — but it was **unreachable by legal play**, and a demo whose whole job is to make behaviour trustworthy must not show a board no game could produce. The Cop now patrols row 1 and walls the rows above and below, one legal turn at a time.
+  - The rewrite made the scenario say something the old one could not: **14 walls cost 26 of 35 turns, leaving 9 to chase.** That is the `PARAMETERS.md` §4.1 argument — the scarce resource is turns, not barriers — visible on screen instead of asserted in a document.
+  - Two bugs surfaced in the rewrite and were fixed: the route only placed 12 barriers, and the "15th placement" was refused for `ALREADY_BLOCKED` rather than `QUOTA_EXHAUSTED`, so it was not demonstrating the quota at all. It now targets a free adjacent cell, so the refusal can only be about the quota. Three further tests pin all of this.
 
 ---
 

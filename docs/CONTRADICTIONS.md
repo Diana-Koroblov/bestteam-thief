@@ -1,218 +1,253 @@
-# Documented Contradictions and Interpretation Choices
+# Contradictions, Gaps and Interpretation Choices
 
-The rulebook grants academic freedom where it contradicts itself, on one condition: *state where you
-found the contradiction, what you chose, and why.* It guarantees that a documented, reasoned choice
-is not held against the team.
+The rulebook grants academic freedom where it contradicts itself, on one condition: *state where
+you found the contradiction, what you chose, and why.* A documented, reasoned choice is not held
+against the team.
 
 This file is that record. Each entry is also summarised in the README of both repositories.
 
 ---
 
-## C-001 — `num_games`: 1 in the sample config, 6 in Appendix F
+## 0. The test every entry must now pass
 
-| | |
-|---|---|
-| **Where** | Appendix F table 18 vs. the sample `config/game.json` in Appendix B |
-| **The conflict** | Appendix F lists `[number of sub-games]` = **6**, status *fixed*. The sample config ships `"num_games": 1`, annotated as a single example sub-game. |
-| **Our choice** | **6.** |
-| **Why** | The book states plainly that Appendix F is the sole source of truth for numeric values, and that where the book and the sample code repository disagree, the book governs. The sample's `1` is a development convenience for running a single sub-game; the accompanying text itself notes that a full league series requires the full count. |
-| **Effect** | `config/<role>/game.json` ships `"num_games": 6`. A negotiated match may raise it by mutual agreement; it is never lowered. |
+**Appendix F is the single source of truth for every quantitative value in this project.** It says
+so in its own opening line, and its status column defines exactly three regimes:
 
----
+| Status | Hebrew | What it means | Can there be a contradiction? |
+|---|---|---|---|
+| **Fixed** | קבוע | The value cannot change at all. Deviating disqualifies the team. | **No.** The value *is* the value. Anything printed elsewhere that disagrees is an error in that other place, not a conflict. |
+| **Minimum** | מינימום | May be raised by mutual agreement, never lowered. | **No.** A different figure elsewhere is a legal raised value, not a conflict. |
+| **Negotiable** | משא ומתן | «נקבע כולו בשלב המשא ומתן בין הצדדים, והערך המוצג הוא דוגמה בלבד» — decided entirely in negotiation; the printed value is **an example only**. | **No.** Choosing a value is negotiation, not resolving a contradiction. |
 
-## C-002 — Do docstrings count toward the 150-line limit?
+So a genuine contradiction can only exist where Appendix F is **silent** — that is, about *mechanisms
+and timing*, never about numbers.
 
-| | |
-|---|---|
-| **Where** | Excellence guide §3.2 vs. §3.3 |
-| **The conflict** | §3.2 caps every source file at 150 lines of code, excluding blank lines and comment lines. §3.3 *mandates* a detailed docstring on every module, class and function. The guide does not say which category a docstring falls into. |
-| **Our choice** | **Docstrings are documentation, not code, and are excluded from the count.** |
-| **Why** | Counting them would place the two requirements in direct opposition: the better a file is documented, the closer it would sit to the limit, creating an incentive to under-document exactly where the guide demands the opposite. Reading a docstring as a comment resolves the tension in the direction both sections point. |
-| **Scope of the exemption** | Only genuine docstrings — the leading string expression of a module, class or function. A triple-quoted string bound to a variable is data and counts as code. Implemented in `core/shared/loc_counter.py` via `ast`, and unit-tested. |
-| **Transparency** | `FileReport` carries both `code_lines` (the enforced metric) and `total_lines` (every physical line), so the raw size of a file is always visible and nothing is hidden by the interpretation. |
+**This document was re-audited on 31/07 against that test, and several entries failed it.** They
+were reclassified rather than deleted, because each still describes something real that has to be
+watched for — just not a contradiction in the rulebook.
 
----
+**What changed:** C-001, C-003, C-007 and C-009 are no longer contradictions. C-006a is a
+clarification the rulebook itself supplies. C-011 splits: half of it was never a conflict.
 
-## C-003 — Board size: 7×7 in Appendix F, 10×10 in the belief-map figure
+### Index by category
 
-| | |
-|---|---|
-| **Where** | Appendix F table 13 vs. figure 8 in Chapter 6 |
-| **The conflict** | Appendix F sets `[board size]` = 7 (minimum). The Bayesian belief-map illustration in Chapter 6 is drawn on a 10×10 grid and its caption reads "for example 10×10". |
-| **Our choice** | **7×7 as the default**, with the board size read from config and never hardcoded. |
-| **Why** | The book's own framing rule states that figures and examples illustrate but do not bind, and that Appendix F is the only binding source for quantities. 7 is a *minimum*, so a 10×10 board remains legal if both teams agree — our engine handles any size without a code change. |
-| **Effect** | `grid_size` is a config value. Tests parametrise over 5×5, 7×7 and 10×10 to keep the engine size-agnostic. |
+| Category | Entries | What to do about them |
+|---|---|---|
+| **A. Genuine gaps** — the rulebook does not define the behaviour anywhere | C-005, C-006b, C-006c, C-010, C-011b, C-013 | **Must be settled in the pre-match agreement.** Every one appears in `PRD_negotiation.md`. |
+| **B. Resolved by the rulebook** — looked ambiguous, settled on a closer reading | C-006a | Implemented as read. Flag kept only because an opponent may arrive with the other reading. |
+| **C. Reference-implementation defects** — the book is unambiguous, the reference diverges | C-001, C-007, C-009, C-008 | **Watch items.** Most opponents will build on the reference and inherit these. Detect at the handshake. |
+| **D. Not conflicts at all** — Appendix F status makes it a choice | C-003, C-011a | Nothing to resolve. Worth agreeing explicitly anyway. |
+| **E. Outside Appendix F's scope** — engineering and process, not game values | C-002, C-004, C-012 | Our own decisions, recorded for the reviewer. |
 
 ---
 
-## C-004 — Line endings and the byte-identical config requirement
+# Category A — Genuine gaps in the rulebook
 
-| | |
-|---|---|
-| **Where** | M#11 (shared config must be byte-identical on both sides) vs. cross-platform Git defaults |
-| **The problem** | Not a contradiction in the book, but a trap it does not mention. Git on Windows checks files out with CRLF by default; on macOS and Linux with LF. Two teams on different platforms would hold configs that are semantically identical but **byte-different**, so `config_sha256` would not match and the handshake would refuse the match before the first move. |
-| **Our choice** | Pin LF for all text files via `.gitattributes` (`* text=auto eol=lf`), published to both repositories. |
-| **Why** | M#11 is enforced on bytes, not meaning. The failure would appear only when playing an opponent on a different operating system — the worst possible moment to discover it. |
-| **Effect** | `.gitattributes` is in `SHARED_PATHS` and unit-tested. Opponents on any platform hash the same bytes. Also silences Git's CRLF warnings on Windows. |
-
----
+Appendix F is silent on all of these because none of them is a quantity. Each **must** be agreed
+before the first move, because two honest implementations will otherwise diverge mid-match and the
+log audit will blame both teams.
 
 ## C-005 — The scent field is transmitted, not sampled
 
-**Revised 28/07 after reading the reference implementation.** The original entry framed this as a
-question of *when the board is sampled*. That framing was wrong: nobody samples anything.
+| | |
+|---|---|
+| **Where** | Ch. 4 describes a decaying scent map; nothing states *how* a peer obtains the opponent's field |
+| **The gap** | There is no shared board. Each peer sends its own emitted field with its turn message, so what you receive is what the opponent chose to send. The book never says whether that field includes the sender's current-turn deposit or only the state before it. |
+| **Our choice** | The transmitted field **includes** the current turn's deposit. |
+| **Why** | It matches the reference implementation, so it is what most opponents will send. Uncertainty survives regardless: both peers move again afterwards, leaving ≥5 candidate cells. |
+| **Effect** | `pheromones.field_includes_current_turn = true`. Negotiation item **N13**. |
+
+## C-006b — M#46 timing: a barrier on a cell the thief is leaving
 
 | | |
 |---|---|
-| **Where** | Chapter 4 — "each agent can sample the board and receive the opponent's scent map" — vs. `Game-P2P-Cop-Chase/src/police_thief/domain/protocol.py` and `peer/turn_sender.py` |
-| **What the code actually does** | `TurnMessage` carries a `smell_grid` field. Each peer **sends its own scent field** to the opponent as part of every turn message; the receiver merges it with `SmellField.absorb()`. There is no board to sample and no shared world state — the field is a message payload. |
-| **Observed ordering** | `turn_sender.send()` does `deposit(current_position)` → `decay_all()` → `snapshot()` → send. So the transmitted field **includes the sender's current-turn deposit**. |
-| **Why uncertainty survives anyway** | The field arrives with the opponent's reveal, telling you where they were when they sent it. Both peers then commit their next move simultaneously. By the time your action lands they have moved again — leaving **≤5 candidate cells** (four orthogonal neighbours plus STAY, minus barriers and edges). |
-| **Our choice** | Match the reference: the transmitted field includes our current-turn deposit. Config key `scent_field_includes_current_turn`, default `true`. |
-| **Why** | Opponents who started from the reference simulator will behave this way, and matching them removes a whole class of dispute. It also preserves exactly the bounded uncertainty the rest of Chapter 4 and all of Chapter 6 depend on: enough that the belief map is real, little enough that the verbal hint has a job — disambiguating among the ≤5 candidates. That is what makes deception worth anything. |
-| **Effect** | Both modes implemented. The residual technique is still worth computing, but note it is far weaker against this implementation than against the book's formula — see C-007. Part of the M#23 exchange. |
+| **Where** | M#46 — a barrier on the cell where the thief stands *"at that moment"* — under commit-reveal, where neither side sees the other's action before choosing |
+| **The gap** | Cop commits "place at (6,6)" while the thief commits "move to (6,5)". Is the thief captured? *"At that moment"* could mean commit time or after resolution. Appendix F has no parameter for this, so nothing there settles it. |
+| **Our choice** | **Positions are evaluated after both actions apply.** A barrier on a vacated cell does not capture. |
+| **Why** | The alternative makes the cop overwhelming: any adjacency becomes a guaranteed capture and the thief can never escape once approached, which cannot be the intended balance. M#46 still matters under our reading — it catches a thief that chose STAY, which is common and predictable. |
+| **Effect** | `capture.resolution = "after_moves"`. Negotiation item **N15**. ⚠️ Integration note for Phase 3: `BarrierManager.place()` compares against whatever `thief_pos` the caller passes, so the turn loop must pass the **post-move** position under this setting. |
 
----
-
-## C-006 — Capture resolution under simultaneous commit
-
-Three related gaps, all invisible until the moment they decide a match. All three are
-implemented as config flags and settled in the pre-match agreement.
-
-### C-006a — Does STAY count as "a legal move" for M#47?
-
-| | |
-|---|---|
-| **Where** | M#47 vs. the move set in Appendix F |
-| **The conflict** | M#47 captures a thief "imprisoned without any legal move". Chapter 3 adds "(all adjacent cells blocked by barriers and/or board edges)". But the move set is fixed as `N, S, E, W, STAY` — so STAY is *always* legal, and under a literal reading M#47 could never fire. |
-| **Our choice** | Capture is defined by **adjacency**. All four orthogonal neighbours blocked → captured, regardless of STAY. |
-| **Why** | The parenthetical is explicit, and the alternative reading makes a mandatory rule dead on arrival. |
-| **Stakes** | A thief at `(6,6)` with barriers at `(5,6)` and `(6,5)`: captured (cop 20 / thief 5) under our reading, survives (cop 5 / thief 10) under the other. A 15-point swing on identical boards. |
-
-### C-006b — M#46 timing: barrier on a cell the thief is leaving
-
-| | |
-|---|---|
-| **Where** | M#46 — "a barrier placed on the cell where the thief stands **at that moment**" — under a commit-reveal protocol where neither side sees the other's action before choosing |
-| **The conflict** | If the cop commits "place at (6,6)" while the thief commits "move to (6,5)", is the thief captured? "At that moment" could mean commit time (capture) or after resolution (no capture). |
-| **Our choice** | **Positions are evaluated after both moves are applied.** A barrier placed on a vacated cell does not capture. |
-| **Why** | The alternative makes the cop overwhelming — any adjacency becomes a guaranteed capture and the thief can never escape once approached, which cannot be the intended balance. Under our reading M#46 still matters: it catches a thief that chose STAY, which is a real and predictable situation. |
-
-### C-006c — The swap
+## C-006c — The swap
 
 | | |
 |---|---|
 | **Where** | Not addressed anywhere in the rulebook |
-| **The conflict** | Cop at `(5,6)` moves to `(6,6)`; thief at `(6,6)` moves to `(5,6)`. They pass through each other and neither ends on the other's cell. Capture, or not? |
+| **The gap** | Cop at `(5,6)` moves to `(6,6)`; thief at `(6,6)` moves to `(5,6)`. They pass through each other and neither ends on the other's cell. Capture, or not? |
 | **Our choice** | **A swap counts as a capture.** |
-| **Why** | Standard in pursuit-evasion games, and the alternative gives the thief a free escape every time the cop closes to adjacency — which would break the endgame entirely. |
-
----
-
-## C-007 — The reference decay formula contradicts the book
-
-| | |
-|---|---|
-| **Where** | Chapter 4's formula vs. `Game-P2P-Cop-Chase/src/police_thief/domain/smell.py` |
-| **The book** | Multiplicative: `τ(t+1) = max(0, (1−ρ)·τ(t) + Δτ)`. Its own worked example states a centre cell at 0.9 decays to **0.81** after one turn at ρ = 0.10. |
-| **The reference code** | Subtractive: `self._values[cell] = max(0.0, round(self._values[cell] - self._decay, 3))`. The same cell decays to **0.80**. Merging is also `max(existing, new)` rather than additive, and the falloff is linear in Chebyshev distance (`intensity − intensity/(half+1) · ring`) rather than the radial values in the book's figure. |
-| **How far they diverge** | Book: 0.900 → 0.810 → 0.729 → … → 0.387 at step 9, asymptotic, never zero. Code: 0.900 → 0.800 → 0.700 → … → **0.000** at step 9. Different curve, different trail length, different half-life. |
-| **Our choice** | **Implement the book's formula.** Appendix D is explicit that where the repository deviates from the book, the book prevails. |
-| **Why this is the single most valuable finding so far** | It is exactly what M#23's mandatory worked numeric example exists to catch. Any opponent who started from the simulator will compute 0.80 where we compute 0.81 — and the pre-series exchange will surface that **before** the first move rather than as an unresolvable dispute afterwards. |
-| **Effect** | `decay_model` config key: `multiplicative` (book, our default) and `subtractive` (reference-compatible). We can play either way. The worked example we send is `τ=0.9, ρ=0.10, one turn → 0.81`; if the reply says 0.80 we know immediately which implementation they built on, which is also useful intelligence about the rest of their behaviour. |
-
----
-
-## C-008 — The scent field is transmitted but never sealed
-
-| | |
-|---|---|
-| **Where** | Chapter 4's claim vs. `domain/crypto.py` and `domain/protocol.py` |
-| **The book** | *"The scent map cannot lie — it is emitted by the very act of movement and cannot be falsified."* |
-| **The reference code** | The commitment is `SHA256(canonical_json(payload) | nonce)` over `state | move | verdict`. **`smell_grid` is not in the sealed payload** — it travels in the clear inside `TurnMessage`. A peer could transmit a fabricated field every turn and the end-of-game audit would recompute every commit successfully and report no tampering. |
-| **Consequence** | The one channel the whole belief model treats as unfalsifiable is, under this protocol, the *only* channel with no integrity guarantee at all. The verbal hint is sealed via `Intent`; the scent field is not. |
-| **Our choice** | **Include a digest of our emitted field in the sealed per-step payload**, and require the same of an opponent by agreement. We do not fabricate fields under any circumstance. |
-| **Why** | Sealing it costs one hash and closes the gap. Not sealing it means our own honest play is indistinguishable from a dishonest opponent's, and we would have no way to prove the difference at audit. |
-| **Effect** | `seal_scent_digest` config key, default `true`. If an opponent refuses, we still seal ours — it costs nothing and the log then contains evidence of our own integrity even if theirs does not. Raised during negotiation as a proposal, not a demand. |
-
----
-
-## C-009 — Reference `Board` defaults to 8-direction king movement
-
-| | |
-|---|---|
-| **Where** | `Game-P2P-Cop-Chase/src/police_thief/domain/board.py` |
-| **The problem** | `Board.__init__(self, size, moves=None)` falls back to `tuple(Direction)` — **all eight directions** — when no move set is supplied. The docstring is candid about it: *"the legacy 8-direction king movement is used when no move set is supplied."* The shipped config does pass the correct four, so the simulator itself is compliant. |
-| **Why it matters to us** | Diagonal movement is explicitly prohibited (M#14), with technical loss as the sanction. Any team reusing this class and forgetting the `moves` argument silently plays an illegal game — and would only discover it when an opponent rejects a move mid-match. |
-| **Our choice** | Our `Direction` enum contains **no diagonals at all**. An illegal move is unrepresentable rather than merely rejected. |
-| **Why** | Already recorded as a design decision in `PRD_1_base_logic.md` §6; this entry records the concrete trap it protects against, found in code we were invited to reuse. |
-| **Effect** | If we port anything from the reference `board.py`, the diagonal deltas are deleted rather than defaulted away. Test T1.3 asserts no diagonal exists in the enum. |
-
----
+| **Why** | Standard in pursuit-evasion games, and the alternative gives the thief a free escape every time the cop closes to adjacency, which would break the endgame entirely. |
+| **Effect** | `capture.swap_is_capture = true`. Negotiation item **N16**. |
 
 ## C-010 — A position tuple has no defined component order
 
 | | |
 |---|---|
-| **Where** | Appendix F, Table 13 rows 3–6 (p. 135) vs. every coordinate carried on the wire |
-| **The problem** | The book negotiates `axis_origin_corner` ("top-left") and `axis_start_index` (0), which fixes *where* cell (0,0) sits and *what* the axes count from. It never states whether a position is `(row, col)` or `(x, y)`. The published defaults hide the gap perfectly: the cop starts at `(0,0)` and the thief at `(3,3)`, and both are order-invariant. The first asymmetric coordinate in the game — `(0,1)` — is the point at which two honest implementations silently disagree, and by then every barrier declaration and capture claim is mirrored. |
-| **Why it matters** | Mirrored coordinates are not a gameplay bug, they are an **audit** bug. Our capture claim lands where their log says nothing happened; their barrier declaration lands on a cell we recorded as open. The `log-audit` reports board forgery, and the sanction is disqualification for **both** teams — including the honest one. |
-| **Our choice** | `(row, col)`, origin top-left, index from 0: `[r, c]` means row `r` from the top, column `c` from the left. Increasing `c` is **East**; increasing `r` is **South**. Fixed in `PRD_1_base_logic.md` and unrepresentable otherwise, since `Position` is a named 2-tuple, not a bare list. |
-| **Why** | It matches `axis_origin_corner = "top-left"`, matches the reference implementation, and matches the way the board is drawn in the book's figures. |
-| **Effect** | The negotiation payload carries a **worked example**, not a label: *"we read `[0, 1]` as row 0, column 1 — one cell East of the cop's start; confirm."* One sentence, exchanged before the first move. A disagreement here is the cheapest possible thing to detect and the most expensive to discover late. Added to `PRD_negotiation.md` as a mandatory confirmation item. |
+| **Where** | Appendix F Table 13 rows 3–6 negotiate *where* `(0,0)* sits and *what* the axes count from — but never whether a position is `(row, col)` or `(x, y)` |
+| **The gap** | The published defaults hide it perfectly: cop at `(0,0)`, thief at `(3,3)`, both order-invariant. The first asymmetric coordinate — `(0,1)` — is where two honest implementations silently disagree, and by then every barrier declaration and capture claim is mirrored. |
+| **Why it is not an Appendix F question** | Component order is not a value, so no status applies to it. It is a pure mechanism gap, which is exactly the kind Appendix F cannot cover. |
+| **Our choice** | `(row, col)`, origin top-left, index from 0. Increasing `col` is **East**; increasing `row` is **South**. `Position` is a 2-tuple used consistently throughout `core/domain`. |
+| **Effect** | The negotiation payload carries a **worked example**, not a label: *"we read `[0, 1]` as row 0, column 1 — one cell East of the cop's start; confirm."* Verified visually by `scripts/demo_m1.py`. **Needs a negotiation item — see N18.** |
 
----
-
-## C-011 — `survival_threshold` and `max_moves` can be negotiated apart
+## C-011b — How the sub-games divide between the two roles
 
 | | |
 |---|---|
-| **Where** | Appendix F, Table 15 rows 3–4 (p. 137) |
-| **The problem** | Both default to 35 and both carry status **minimum**, so either may be raised independently by agreement. The book never says they must stay equal. Raising `survival_threshold` to 40 while `max_moves` stays at 35 produces a game that terminates at step 35 with the thief having survived 35 of a required 40 — a state no win condition in Chapter 3.5 covers. Raising `max_moves` alone is merely inert: the thief has already won at 35. |
-| **Related gap** | Appendix F fixes `num_games = 6` (Table 18 row 1) but never says how the six sub-games divide between the two roles. We field both roles from two repositories, so an uneven split is expressible — and an opponent strong in one role has an obvious interest in one. |
-| **Our choice** | We treat `survival_threshold == max_moves` as an invariant of every configuration we propose or accept, and we insist on a **3–3** role split in the handshake. |
-| **Why** | The equal-value case is the only one the win conditions fully define. A team proposing them unequal has either an implementation bug or a trap, and either way we want to know before the match rather than during the audit. On the role split, 3–3 is the symmetric default and is easy to defend; conceding an uneven split gives away an edge for nothing. |
-| **Effect** | A validator rejects `survival_threshold != max_moves` before the digest is computed, so an illegal pair can never be signed. The role split is an explicit field in the negotiation payload. See `docs/PARAMETERS.md` §4.2 and §7. |
-
----
-
-## C-012 — Our LLM provider is not one of the book's four modes
-
-| | |
-|---|---|
-| **Where** | Appendix F, Table 21 (p. 142) vs. `config/<role>/game.toml` and ADR-003 |
-| **The problem** | Table 21 enumerates exactly four LLM modes — `template`, `ollama`, `claude_api`, `claude_cli` — and locates the selector at **`[trash_talk] provider`**. Our config ships `[llm] provider = "groq"`: a fifth provider, under a different section name. |
-| **Mitigating** | The same table states the choice is "פרטית לכל עמית, אינה חלק מקובץ התצורה המוסכם ואינה נתונה למשא ומתן" — private to each peer, outside the agreed config, and not negotiated. So this is not a rule breach and cannot disqualify us. |
-| **Why it still matters** | It is a gratuitous deviation from a reference table in a project graded partly on conformance, and it puts a network dependency inside the move loop for no competitive gain. Table 21 also notes that in `template` and `ollama` modes the entire six-sub-game series runs at **zero tokens**, and "כל התחרות עוברת לאיכות אלגוריתם התנועה" — the whole contest reduces to movement-algorithm quality, which is where our work actually is. |
-| **Our choice** | **Resolved 30 Jul.** The selector moved to `[trash_talk] provider` where the book puts it, and the **committed** value is `template` — the book's own default, zero tokens, no network in the move loop, so a fresh clone always runs. Each machine overrides via `P2P_LLM_PROVIDER` in `.env`: Diana `groq` (development only), Itay `ollama` (graded matches). `[llm]` keeps the per-provider settings, matching PLAN.md §7 and ADR-003. |
-| **Why** | Groq was never intended for a graded match — ADR-003 always hosted matches from Itay's machine on `ollama`, which is one of the book's four modes. So the deviation only ever existed in development, and putting `template` in the committed file removes it from the repository entirely. Note this was our own drift: ADR-003 already said `[trash_talk] provider`; the config written in task 1.1.4 said `[llm] provider`. |
-| **Effect** | `config/<role>/game.toml` and `.env-example` updated. Two consequences follow, tracked separately: matches now depend on **Itay's** ngrok domain rather than Diana's (TODO 0.2.4, 0.2.6 are blocking for the league, not optional), and a single hosting machine is a single point of failure — Diana's machine must stay match-capable on `template` as a fallback, since a no-show is a technical loss worth 0. |
-
----
+| **Where** | Appendix F Table 18 fixes `[מספר המשחקונים]` = 6, status **fixed**. Nothing anywhere says who plays cop in which of them. |
+| **The gap** | We field both roles from two repositories, so an uneven split is expressible. An opponent strong in one role has an obvious interest in one. |
+| **Our choice** | **3–3**, stated explicitly in the handshake. |
+| **Why** | It is the symmetric default and trivially defensible. Conceding an uneven split gives away an edge for nothing. |
+| **Effect** | Explicit field in the negotiation payload. Negotiation item **N17**. |
 
 ## C-013 — A series of technical losses is arithmetically a tie
 
 | | |
 |---|---|
 | **Where** | Appendix F Table 17 row 5 vs. Ch. 3.5 |
-| **The conflict** | Table 17 defines `tie_score` as *"ניקוד לכל צד כאשר הניקוד המצטבר של כל המשחקונים מול יריבה מסתיים בתיקו"* — points to **each** side when the cumulative total against an opponent ends level. Ch. 3.5 separately fixes a technical loss at 0-0 and explains why: *"ההפסד הטכני מאפס את שני הצדדים כאחד, ובכך מתמרץ את שניהם לשמור על תקינות פרוטוקולרית ולא לנצח בפסק זמן"*. A series in which every sub-game ended in a technical loss satisfies both: the totals are equal, at 0-0. Read literally, both teams collect `tie_score` for a series neither managed to play. |
-| **Why it matters** | It inverts the incentive the technical-loss rule exists to create. Two teams that both crash six times out of six would score better than one team that played honestly and lost narrowly. It also makes an empty series — no sub-games at all — worth 2 points a side. |
-| **Our choice** | The tie bonus is paid only when **at least one** sub-game produced a real result. A series of nothing but technical losses returns `TECHNICAL_LOSS` at 0-0, and so does an empty series. A series with *some* failures and a genuine level finish still pays the bonus normally. |
-| **Why** | It is the reading that cannot be gamed, and it is the one the Ch. 3.5 rationale plainly intends. Where a literal reading and a stated purpose disagree, the purpose is the safer thing to implement — we would rather under-claim two points than have a scoring dispute in the league table. |
-| **Effect** | `core/domain/scoring.aggregate()` filters technical losses before deciding the tie; three tests pin the behaviour. Worth raising during negotiation only if a series actually degenerates that way — it costs nothing to agree in advance and is awkward to argue afterwards. |
+| **The gap** | `tie_score` is **fixed** at 2, so the *value* is not in question — but *when a tie is declared* is not a quantity and Appendix F does not define it. Table 17 pays each side `tie_score` when the cumulative total ends level. A series where every sub-game ended in a technical loss is level, at 0-0. Read literally, both teams collect the bonus for a series neither played. |
+| **Why it matters** | It inverts the incentive Ch. 3.5 exists to create: *"ההפסד הטכני מאפס את שני הצדדים כאחד, ובכך מתמרץ את שניהם לשמור על תקינות פרוטוקולרית ולא לנצח בפסק זמן"*. Two teams that crashed six times each would outscore a team that played honestly and lost narrowly. |
+| **Our choice** | The tie bonus is paid only when **at least one** sub-game produced a real result. An all-technical-loss series, and an empty series, return 0-0. |
+| **Why** | It is the reading that cannot be gamed, and the one the Ch. 3.5 rationale plainly intends. Where a literal reading and a stated purpose disagree, implement the purpose. |
+| **Effect** | `core/domain/scoring.aggregate()` filters technical losses before deciding the tie; three tests pin it. **Needs a negotiation item — see N19.** |
+
+---
+
+# Category B — Resolved by the rulebook itself
+
+## C-006a — Does STAY count as "a legal move" for M#47?
+
+| | |
+|---|---|
+| **Where** | M#47 vs. the fixed move set in Appendix F Table 15 |
+| **The apparent conflict** | M#47 captures a thief "imprisoned without any legal move". The move set is **fixed** as `N, S, E, W, STAY`, so STAY is *always* legal — under a literal reading M#47 could never fire. |
+| **Resolved by** | The barrier law on **p. 21** states the definition in the rule text itself: *"גנב שנכלא ללא מהלך חוקי כלשהו (**כל התאים הצמודים חסומים במחסומים ו/או בשולי הלוח**) נחשב אף הוא ללכוד"*. The parenthetical **defines** "without any legal move" as adjacency, and names barriers *and board edges* as equivalent blockers. |
+| **Our choice** | Capture by **adjacency**: all four orthogonal neighbours blocked, regardless of STAY. Board edges count. |
+| **Status** | This is a clarification, not a contradiction — the rulebook answers it. The config flag `capture.stay_counts_as_move = false` is kept anyway, because an opponent who read only M#47 may arrive with the other reading, and the point of the pre-match agreement is that we never have to argue about it. |
+| **Stakes** | Thief at `(6,6)` with barriers at `(5,6)` and `(6,5)`: captured (20/5) under the correct reading, survives (5/10) under the other. A 15-point swing on identical boards. Negotiation item **N14**. |
+
+---
+
+# Category C — Reference-implementation defects
+
+The book is unambiguous in all four. The reference repository diverges. These are **watch items**:
+most opponents will build on that repository and inherit the divergence, so each is something to
+detect during the handshake rather than discover during the audit.
+
+## C-001 — The reference config ships `num_games: 1`
+
+| | |
+|---|---|
+| **Appendix F says** | Table 18 row 1: `[מספר המשחקונים]` = **6**, status **קבוע (fixed)**. Not raisable, not negotiable. |
+| **The reference ships** | `"num_games": 1` in `config/police/game.json` and in the sample run. |
+| **Reclassified 31/07** | **Not a contradiction.** A fixed value admits no conflict — the reference is simply non-conformant, and a team that plays a 1-sub-game series has deviated from a fixed value. |
+| **Our value** | 6, as Appendix F requires. |
+| **Why it stays in this document** | An opponent who copied the reference config will propose `num_games: 1`. Accepting it means **both** teams deviate from a fixed value. `core/shared/config_spec.py` flags it automatically as a FIXED-value breach before the digest is computed. |
+
+## C-007 — The reference decay formula diverges from the book
+
+| | |
+|---|---|
+| **Appendix F says** | Table 16: `[קצב דעיכת הריח]` = **0.10**, status **fixed**. The *rate* is settled. |
+| **The gap that remains** | The **formula** is not a quantity, so Appendix F cannot settle it. The book's worked example uses multiplicative decay `(1−ρ)·τ + Δτ`, giving 0.9 → **0.81**. The reference implements subtractive `τ − ρ`, giving 0.9 → **0.80**. |
+| **Reclassified 31/07** | Not a book contradiction — the book is self-consistent. It is a reference divergence sitting on a mechanism Appendix F does not cover. |
+| **Our choice** | The book's multiplicative model. Appendix D says the book prevails over the repository. |
+| **Effect** | `pheromones.decay_model = "multiplicative"`. The M#23 worked example (0.81 vs 0.80) catches the mismatch **before** the match and also reveals which implementation the opponent built on. Negotiation item **N13b**. |
+
+## C-008 — The reference transmits the scent field but never seals it
+
+| | |
+|---|---|
+| **Where** | Reference `smell_grid` handling vs. the commit-reveal payload |
+| **The problem** | The field is transmitted with each turn but left outside the commitment hash, so a fabricated field passes the log audit undetected. Appendix F has no parameter here; this is a protocol gap the reference makes concrete. |
+| **Our choice** | Seal a digest of the emitted field inside the per-step payload. |
+| **Why** | We seal ours whether or not the opponent agrees. It costs nothing, and the log then carries evidence of our own integrity even when theirs does not. |
+| **Effect** | `pheromones.seal_scent_digest = true`. Proposed at negotiation, not demanded. Negotiation item **N13c**. |
+
+## C-009 — Reference `Board` defaults to 8-direction king movement
+
+| | |
+|---|---|
+| **Appendix F says** | Table 15 row 1: `[מערך התנועה]` = four single orthogonal steps + STAY, **no diagonals**, status **fixed**. M#14 makes the sanction explicit. |
+| **The reference does** | `Board.__init__(self, size, moves=None)` falls back to `tuple(Direction)` — all eight directions — when no move set is passed. Its own docstring admits it: *"the legacy 8-direction king movement is used when no move set is supplied."* The shipped config does pass the correct four, so the simulator itself is compliant. |
+| **Reclassified 31/07** | **Not a contradiction.** The move set is fixed; this is a latent defect in code we were invited to reuse. |
+| **Our choice** | Our `Direction` enum contains **no diagonals at all** — an illegal move is unrepresentable rather than merely rejected. |
+| **Why it stays** | Any team porting that class and forgetting the `moves` argument plays an illegal game and only finds out when an opponent rejects a move mid-match. A test asserts `abs(Δrow) + abs(Δcol) ≤ 1` for every delta, so a careless port cannot reintroduce them here. |
+
+---
+
+# Category D — Not conflicts at all
+
+## C-003 — 7×7 in Appendix F, 10×10 in the belief-map figure
+
+| | |
+|---|---|
+| **Appendix F says** | Table 13 row 1: `[גודל הלוח]` = 7×7, status **מינימום (minimum)**. |
+| **Reclassified 31/07** | **Not a contradiction.** A minimum may be raised by mutual agreement, so a 10×10 figure illustrates a perfectly legal board. Nothing conflicts. |
+| **Our value** | 7×7, read from config and never hardcoded. `Board` refuses any size below 7 at construction, so an illegal proposal fails at startup. |
+| **Worth agreeing anyway** | Yes. A larger board is strongly thief-favouring — 14 barriers cover 28.6 % of a 7×7 but only 14 % of a 10×10. We decline increases and treat the request as information about how the opponent rates their own two roles. See `PARAMETERS.md` §4.3. |
+
+## C-011a — `survival_threshold` and `max_moves` can be raised apart
+
+| | |
+|---|---|
+| **Appendix F says** | Table 15 rows 3–4: both default to 35, both status **מינימום**. Either may be raised independently. |
+| **Reclassified 31/07** | **Not a contradiction.** Appendix F explicitly permits it. What it produces, though, is a *degenerate* configuration: `survival_threshold = 40` with `max_moves = 35` ends the game at step 35 with the thief having survived 35 of a required 40 — a state no win condition in Ch. 3.5 covers. Raising `max_moves` alone is merely inert. |
+| **Our choice** | We treat `survival_threshold == max_moves` as an invariant of every configuration we propose or accept. |
+| **Why** | The equal case is the only one the win conditions fully define. A team proposing them unequal has either an implementation bug or a trap, and either way we want to know before the match. |
+| **Effect** | `config_spec.invariant_violations()` refuses to sign an unequal pair — deliberately separate from `violations()`, because Appendix F itself is content with it. |
+
+---
+
+# Category E — Outside Appendix F's scope
+
+Engineering and process decisions. Appendix F governs game values; none of these is one.
+
+## C-002 — Do docstrings count toward the 150-line limit?
+
+| | |
+|---|---|
+| **Where** | Excellence guide §3.2 vs. §3.3 — not the rulebook, and not a game value |
+| **The conflict** | §3.2 caps every source file at 150 lines of code excluding blanks and comments. §3.3 *mandates* a detailed docstring on every module, class and function. Neither says which category a docstring falls into. |
+| **Our choice** | **Docstrings are documentation, not code, and are excluded.** |
+| **Why** | Counting them puts the two requirements in direct opposition: the better a file is documented, the closer it sits to the limit — an incentive to under-document exactly where the guide demands the opposite. |
+| **Scope** | Only genuine docstrings: the leading string expression of a module, class or function. A triple-quoted string bound to a variable is data and counts as code. Implemented via `ast` in `core/shared/loc_counter.py`. |
+| **Transparency** | `FileReport` carries both `code_lines` (enforced) and `total_lines` (every physical line), so nothing is hidden by the interpretation. |
+
+## C-004 — Line endings and the byte-identical config requirement
+
+| | |
+|---|---|
+| **Where** | M#11 (shared config byte-identical on both sides) vs. cross-platform Git defaults |
+| **The problem** | Not a contradiction, a trap the book does not mention. Git on Windows checks out CRLF, on macOS and Linux LF. Two teams on different platforms hold configs that are semantically identical but **byte-different**, so `config_sha256` will not match and the handshake refuses the match before the first move. |
+| **Our choice** | Pin LF for all text files via `.gitattributes` (`* text=auto eol=lf`), published to both repositories. |
+| **Why** | M#11 is enforced on bytes, not meaning. The failure appears only against an opponent on a different operating system — the worst possible moment to discover it. |
+| **Effect** | `.gitattributes` is in `SHARED_PATHS` and unit-tested. Also silences Git's CRLF warnings on Windows. |
+
+## C-012 — Our LLM provider is not one of the book's four modes
+
+| | |
+|---|---|
+| **Where** | Appendix F Table 21 vs. `config/<role>/game.toml` and ADR-003 |
+| **Why it is not an Appendix F conflict** | Table 21 states the choice is *"פרטית לכל עמית, אינה חלק מקובץ התצורה המוסכם ואינה נתונה למשא ומתן"* — private to each peer, outside the agreed config, not negotiated. It is a reference table, not a binding one. |
+| **The issue** | We shipped `[llm] provider = "groq"`: a fifth provider, under a section name the book does not use (it puts the selector at `[trash_talk] provider`). |
+| **Resolved 30/07** | Selector moved to `[trash_talk] provider`; the **committed** value is `template` — the book's own default, zero tokens, works on any machine. Each machine overrides via `P2P_LLM_PROVIDER` in `.env`: Diana `groq` (development only), Itay `ollama` (graded matches). Every graded match therefore runs one of the book's four modes at zero tokens. |
+| **Note** | This was our own drift: ADR-003 already specified `[trash_talk] provider`; the config written in task 1.1.4 said `[llm] provider`. |
 
 ---
 
 ## Template for future entries
+
+Before adding an entry, apply the §0 test: **is Appendix F silent on this?** If the value is
+*fixed*, *minimum* or *negotiable*, there is no contradiction — there is a value, a floor, or a
+negotiation. Only mechanisms and timing can genuinely conflict.
 
 ```markdown
 ## C-00N — short title
 
 | | |
 |---|---|
+| **Category** | A genuine gap / B resolved by the book / C reference defect / D not a conflict / E out of scope |
 | **Where** | chapter / appendix / file |
-| **The conflict** | what the two sources say |
+| **The gap** | what is undefined, and why Appendix F cannot settle it |
 | **Our choice** | what we implemented |
 | **Why** | the reasoning |
-| **Effect** | what changes in the code or config |
+| **Effect** | config key, code location, negotiation item |
 ```

@@ -70,7 +70,7 @@ def get_legal_moves(
     ``STAY`` is always present and always first. It is legal from every cell —
     an agent boxed in on all four sides can still stand still, which is exactly
     why "has no legal move" is *not* the test for the immobilised-thief rule.
-    See ``is_immobilised`` and CONTRADICTIONS C-006b.
+    See ``is_immobilised`` and CONTRADICTIONS C-006a.
 
     The list is deterministic in order (STAY, then N, S, E, W as they appear in
     ``DELTAS``) so that a search tie-broken by iteration order resolves the same
@@ -96,7 +96,7 @@ def is_immobilised(
     the absence of a legal move. STAY is always available, so an agent is never
     literally without an action; reading M#47 that way would make it
     unreachable. Our ``capture.stay_counts_as_move = false`` default encodes the
-    adjacency reading, negotiated per match (CONTRADICTIONS C-006b).
+    adjacency reading, negotiated per match (CONTRADICTIONS C-006a).
 
     Board edges count as blocking, so a thief in a corner needs only two
     barriers rather than four. ``Board.is_passable`` already treats an edge and

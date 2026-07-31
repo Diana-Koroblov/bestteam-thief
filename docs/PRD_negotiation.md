@@ -102,10 +102,17 @@ match.
 
 ### 3.6 Ambiguities that must be settled in writing
 
-Four gaps in the rulebook decide matches and are invisible until they do. Each is implemented as a
-config flag, so we can play under either reading without a code change — but the reading must be
-agreed **before** the first move, because with no referee a disagreement discovered mid-match is
-unresolvable, and under M#35 a disputed result can void the match and score **0 for both teams**.
+These gaps decide matches and are invisible until they do. Each is implemented as a config flag, so
+we can play under either reading without a code change — but the reading must be agreed **before**
+the first move, because with no referee a disagreement discovered mid-match is unresolvable, and
+under M#35 a disputed result can void the match and score **0 for both teams**.
+
+**Why only these.** Appendix F is the single source of truth for every quantitative value, and its
+status column already settles all of them: *fixed* cannot change, *minimum* may only be raised,
+*negotiable* is decided here and the printed figure is an example. So a value can never be in
+conflict — only **mechanisms and timing** can, and that is exactly what this table covers. See
+`CONTRADICTIONS.md` §0 for the full audit; several entries that once looked like contradictions
+turned out to be reference-implementation defects or simply parameters awaiting a choice.
 
 | # | Gap | Our proposed reading | Ref |
 |---|---|---|---|
@@ -115,6 +122,8 @@ unresolvable, and under M#35 a disputed result can void the match and score **0 
 | N14 | **STAY and M#47.** STAY is always a legal action, so "no legal move" read literally can never occur. | Capture is defined by **adjacency**: all four orthogonal neighbours blocked, regardless of STAY. | C-006a |
 | N15 | **M#46 timing.** Under commit-reveal, does a barrier capture a thief that simultaneously vacates the cell? | **No.** Positions are evaluated after both moves resolve. A barrier on a vacated cell does not capture. | C-006b |
 | N16 | **The swap.** Cop and thief exchange cells in the same turn; neither ends on the other's square. | **Capture.** | C-006c |
+| N18 | **Coordinate component order.** Appendix F negotiates *where* `(0,0)` sits and *what* the axes count from, but never whether a tuple is `(row, col)` or `(x, y)`. The published starts — `(0,0)` and `(3,3)` — are order-invariant, so the disagreement stays invisible until the first asymmetric coordinate. | **`(row, col)`, origin top-left, index from 0.** Confirm with a worked example, never a label: *"we read `[0,1]` as row 0, column 1 — one cell **East** of the cop's start."* | C-010 |
+| N19 | **A series in which every sub-game ends in a technical loss** is arithmetically level at 0-0, so a literal reading of Table 17 pays both teams `tie_score` for a series neither played. | **No bonus unless at least one sub-game produced a real result.** Ch. 3.5 zeroes both sides on a technical loss precisely so that neither can win by timeout; paying a bonus for six of them inverts that. | C-013 |
 
 Proposed clause, to be pasted into the agreement alongside the scent worked example:
 

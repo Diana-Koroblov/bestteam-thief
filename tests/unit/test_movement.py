@@ -186,7 +186,7 @@ def test_an_edge_cell_needs_three_barriers() -> None:
 
 
 def test_immobilised_does_not_depend_on_stay_being_available() -> None:
-    """C-006b: M#47 is adjacency, not "has no legal move". STAY always exists."""
+    """C-006a: M#47 is adjacency, not "has no legal move". STAY always exists."""
     walls = frozenset({(2, 3), (4, 3), (3, 2), (3, 4)})
     assert get_legal_moves(CENTRE, walls, BOARD) != []
     assert is_immobilised(CENTRE, walls, BOARD)

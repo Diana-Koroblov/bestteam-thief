@@ -8,7 +8,8 @@ after every turn:
 
     1. both agents moving legally on a 7x7 grid;
     2. the barrier quota running out, and the 15th placement being refused;
-    3. the Cop stepping onto the Thief, and the capture firing.
+    3. the Cop stepping onto the Thief, and the capture firing;
+    4. the five legal barrier targets, and the cheap diagonal cut they allow.
 
 The DoD for M1 is *"behaviour seen, not merely coded"*. The unit suite already
 asserts all of this; the point here is that a human can watch it happen, which
@@ -29,7 +30,7 @@ from core.domain.actions import Direction  # noqa: E402
 from core.domain.barriers import BarrierManager  # noqa: E402
 from core.domain.board import Board  # noqa: E402
 from core.domain.game_state import GameState  # noqa: E402
-from core.domain.movement import resolve_move  # noqa: E402
+from core.domain.movement import get_legal_moves, resolve_move  # noqa: E402
 from core.domain.rules import Rules  # noqa: E402
 from core.domain.scoring import ScoreTable, score  # noqa: E402
 from core.shared.config_manager import load_config  # noqa: E402
@@ -63,18 +64,56 @@ def _scenario_movement(board: Board, rules: Rules) -> None:
         print(f"   verdict: {rules.verdict(state) or 'game continues'}")
 
 
-def _scenario_quota(board: Board, quota: int) -> None:
-    """Spend the whole barrier quota, then watch the next placement bounce."""
+def _wall_route(board: Board) -> list[tuple[str, tuple[int, int]]]:
+    """Return a legal turn-by-turn plan for walling the rows above and below row 1.
+
+    The Cop patrols row 1. On a placement turn it walls the cell directly north
+    or south of itself — a legal orthogonal neighbour — and on a movement turn it
+    steps one cell east or west. It never stands on a barrier and never
+    teleports: every entry here is something one real turn could do.
+    """
+    span = list(range(board.grid_size))
+    plan: list[tuple[str, tuple[int, int]]] = []
+    for row, columns in ((0, span), (2, span[::-1])):
+        for index, col in enumerate(columns):
+            if index:
+                plan.append(("move", (1, col)))
+            plan.append(("place", (row, col)))
+    return plan
+
+
+def _scenario_quota(board: Board, quota: int, max_moves: int) -> None:
+    """Spend the whole barrier quota by legal play, then watch the next one bounce."""
     _banner(f"2. The barrier quota is hard ({quota} allowed)")
     manager = BarrierManager(max_barriers=quota, board=board)
-    for index in range(quota):
-        cell = (index // board.grid_size, index % board.grid_size)
-        manager.place(cell, cell)
-    state = GameState(cop=(1, 6), thief=(5, 5), barriers=manager.barriers)
-    _show(state, board, f"{manager.placed_count} placed, {manager.remaining} remaining")
+    state = GameState(cop=(1, 0), thief=(5, 5))
+    _show(state, board, "cop starts on row 1 and will wall the rows above and below")
 
-    refused = manager.place((2, 6), (1, 6))
-    print(f"\n   placement {quota + 1}: {refused.outcome.value} - {refused.reason.value}")
+    turns = 0
+    for action, cell in _wall_route(board):
+        if manager.remaining == 0:
+            break
+        turns += 1
+        if action == "move":
+            state = state.advanced(cop=cell)
+            continue
+        # A placement costs the Cop its move for the turn (Ch. 3.4).
+        if manager.place(cell, state.cop, thief_pos=state.thief).succeeded:
+            state = state.advanced(barriers=manager.barriers)
+
+    placed = manager.placed_count
+    _show(state, board, f"{placed} placed over {turns} turns")
+    print("\n   Ch. 3.4: a barrier is placed only on a turn the cop forgoes movement,")
+    print(f"   and only on its own cell or an orthogonal neighbour. So {placed} walls cost")
+    print(f"   {placed} turns minimum, plus {turns - placed} turns of walking between them")
+    print(f"   for this shape = {turns} of {max_moves}, leaving {max_moves - turns} to chase.")
+    print("   A tighter shape near the thief costs far less. That is the real lesson:")
+    print("   the scarce resource is turns, so wall shape matters more than quota.")
+
+    # An empty cell next to the Cop, so the refusal can only be about the quota.
+    refused = manager.place((state.cop[0], state.cop[1] + 1), state.cop)
+    print(f"\n   placement {quota + 1} on a free adjacent cell: {refused.outcome.value}")
+    print(f"   reason: {refused.reason.value}")
     print(f"   barriers on the board: {manager.placed_count} (unchanged)")
 
 
@@ -92,8 +131,37 @@ def _scenario_capture(board: Board, rules: Rules, table: ScoreTable) -> None:
     print(f"   score (cop, thief): {score(outcome, table)}")
 
 
+def _scenario_diagonal(board: Board) -> None:
+    """Five legal targets per turn, so a diagonal cut needs no walking at all."""
+    _banner("4. Five targets, and why that makes diagonals cheap")
+    cop = (3, 3)
+    manager = BarrierManager(max_barriers=14, board=board)
+
+    print("\n   Ch. 3.4 allows the cop's own cell OR any of the 4 orthogonal")
+    print("   neighbours - five targets, all reachable without moving.")
+    print("   So consecutive placements from one spot can be DIAGONAL to each")
+    print("   other, at 1 turn per barrier instead of the 1.9 of scenario 2.")
+
+    for cell in ((3, 3), (2, 3), (3, 4), (4, 3)):
+        manager.place(cell, cop)
+    state = GameState(cop=cop, thief=(5, 5), barriers=manager.barriers, step=4)
+    _show(state, board, f"{manager.placed_count} barriers in {manager.placed_count} turns, no movement")
+
+    escapes = [d.value for d, _ in get_legal_moves(cop, manager.barriers, board)]
+    print("\n   (2,3)-(3,4) and (3,4)-(4,3) touch only at corners: a diagonal chain,")
+    print("   which is the minimum vertex cut on a 4-connected grid.")
+    print(f"   cop escape routes: {escapes} - one exit deliberately left open.")
+
+    trapped = BarrierManager(max_barriers=14, board=board)
+    for cell in ((3, 3), (2, 3), (3, 4), (4, 3), (3, 2)):
+        trapped.place(cell, cop)
+    print(f"\n   Taking the 5th target traps the cop: escapes = "
+          f"{[d.value for d, _ in get_legal_moves(cop, trapped.barriers, board)]}")
+    print("   That is the book's warning - «מבלי לחסום בטעות את נתיבי הגישה של עצמו».")
+
+
 def main() -> int:
-    """Run all three scenarios against the real engine."""
+    """Run all four scenarios against the real engine."""
     config = load_config(ROOT / "config" / _role())
     board = Board(
         grid_size=config.require("board_and_agents.grid_size"),
@@ -103,8 +171,13 @@ def main() -> int:
 
     print(f"config: {config.shared_digest()[:16]}...  {legend()}")
     _scenario_movement(board, rules)
-    _scenario_quota(board, config.require("movement_and_barriers.max_barriers"))
+    _scenario_quota(
+        board,
+        config.require("movement_and_barriers.max_barriers"),
+        config.require("movement_and_barriers.max_moves"),
+    )
     _scenario_capture(board, rules, ScoreTable.from_config(config))
+    _scenario_diagonal(board)
     _banner("M1 observed")
     return 0
 

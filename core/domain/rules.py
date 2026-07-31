@@ -66,11 +66,11 @@ class Rules:
         resolution: ``after_moves`` (default) evaluates capture once both
             actions have applied, so a barrier dropped on a cell the Thief has
             just left does **not** capture. ``before_moves`` evaluates against
-            the pre-move snapshot. (C-006a)
+            the pre-move snapshot. (C-006b)
         stay_counts_as_move: When False (default), M#47 is decided by
             **adjacency** — all four orthogonal neighbours blocked. When True,
             STAY counts as an available move, which makes M#47 unreachable,
-            because STAY is legal from every cell. (C-006b)
+            because STAY is legal from every cell. (C-006a)
         swap_is_capture: When True (default), the two agents exchanging cells in
             one turn counts as a capture rather than passing through each
             other. (C-006c)
