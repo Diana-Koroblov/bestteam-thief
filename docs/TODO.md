@@ -264,9 +264,16 @@ correctly; the Orchestrator is the only inter-module path; no import path joins 
   - `commitment_payload()` is a single named function so the hashed field set can never drift between the peer that seals and the peer that verifies.
 
 ### 2.2 Transport
-- [ ] 2.2.1 [D] - `core/infra/mcp_server.py` — FastMCP server per peer | DoD: Tools registered via `@mcp.tool`; binds `0.0.0.0` so a tunnel can reach it. (Ch. 2)
-- [ ] 2.2.2 [D] - `core/infra/mcp_client.py` — client addressing exactly **one** opponent URL | DoD: No code path can reach a second peer; a deadline is attached to every call.
-- [ ] 2.2.3 [D] - Structured error handling: auth failure, transport failure, timeout | DoD: Each raises a distinct typed exception, never a bare `Exception`.
+- [x] 2.2.1 [D] - `core/infra/mcp_server.py` — FastMCP server per peer | DoD: Tools registered via `@mcp.tool`; binds `0.0.0.0` so a tunnel can reach it. (Ch. 2)
+  - Split into `build_server_spec()` (pure, testable) and `create_server()` (touches FastMCP). The FastMCP import is **lazy**, so every test in this layer runs with no server, socket or event loop — asserted by a test that reads the source.
+  - `LISTEN_HOST = "0.0.0.0"` with the reason recorded next to it: a tunnel forwards to the host interface, so a server on loopback is reachable from the same machine and nowhere else. That failure surfaces only when a real opponent connects.
+  - `_wrap()` converts a `ProtocolError` into a structured reply instead of letting it escape. Their malformed payload is not our crash — as a traceback it would hand the opponent a stack trace and leave our log with nothing. A test confirms genuine bugs still raise.
+- [x] 2.2.2 [D] - `core/infra/mcp_client.py` — client addressing exactly **one** opponent URL | DoD: No code path can reach a second peer; a deadline is attached to every call.
+  - **M#4 is enforced structurally, not by convention.** The URL is a frozen constructor field and *no method takes a URL*. A test walks every public method's signature and fails if any accepts `url`/`host`/`peer`/`target`, so a second opponent is not something this class can be persuaded into.
+  - `timeout_sec` is a constructor field too, so a call cannot be made without a deadline. Ch. 8.4.1: a request with no deadline is the direct route to a frozen loop, a fired watchdog and a technical loss worth 0 to **both** teams.
+- [x] 2.2.3 [D] - Structured error handling: auth failure, transport failure, timeout | DoD: Each raises a distinct typed exception, never a bare `Exception`.
+  - Four types, and the distinction decides what the runtime does next: `AuthError` **never** retry (that hands a stranger a second attempt) · `TransportError` retry within the backoff budget · `DeadlineError` **never** retry (the window is spent; another attempt walks into the watchdog) · `RemoteToolError` the network worked and our payload did not, so the opponent's detail is preserved verbatim.
+  - Tested through `httpx.MockTransport` rather than live sockets — the whole request path runs, headers and timeouts included, with no port to make the suite flaky.
 
 ### 2.3 Runtime skeleton
 - [ ] 2.3.1 [D] - `core/runtime/orchestrator.py` — single gateway to all five subsystems | DoD: No peripheral module imports another; verified by an import-graph test. (M#3)
