@@ -26,18 +26,18 @@ and timing*, never about numbers.
 were reclassified rather than deleted, because each still describes something real that has to be
 watched for — just not a contradiction in the rulebook.
 
-**What changed:** C-001, C-003, C-007 and C-009 are no longer contradictions. C-006a is a
-clarification the rulebook itself supplies. C-011 splits: half of it was never a conflict.
+**What changed:** C-001, C-007 and C-009 are no longer contradictions but reference-implementation
+defects. C-006a is a clarification the rulebook itself supplies. Three entries — C-003, the
+`survival_threshold` half of C-011, and C-012 — **left this document entirely**; see the appendix.
 
 ### Index by category
 
 | Category | Entries | What to do about them |
 |---|---|---|
-| **A. Genuine gaps** — the rulebook does not define the behaviour anywhere | C-005, C-006b, C-006c, C-010, C-011b, C-013 | **Must be settled in the pre-match agreement.** Every one appears in `PRD_negotiation.md`. |
+| **A. Genuine gaps** — the rulebook does not define the behaviour anywhere | C-005, C-006b, C-006c, C-010, C-011, C-013 | **Must be settled in the pre-match agreement.** Every one appears in `PRD_negotiation.md`. |
 | **B. Resolved by the rulebook** — looked ambiguous, settled on a closer reading | C-006a | Implemented as read. Flag kept only because an opponent may arrive with the other reading. |
 | **C. Reference-implementation defects** — the book is unambiguous, the reference diverges | C-001, C-007, C-009, C-008 | **Watch items.** Most opponents will build on the reference and inherit these. Detect at the handshake. |
-| **D. Not conflicts at all** — Appendix F status makes it a choice | C-003, C-011a | Nothing to resolve. Worth agreeing explicitly anyway. |
-| **E. Outside Appendix F's scope** — engineering and process, not game values | C-002, C-004, C-012 | Our own decisions, recorded for the reviewer. |
+| **D. Gaps outside the game rules** — engineering and process | C-002, C-004 | Our own decisions, recorded for the reviewer. |
 
 ---
 
@@ -87,7 +87,7 @@ log audit will blame both teams.
 | **Our choice** | `(row, col)`, origin top-left, index from 0. Increasing `col` is **East**; increasing `row` is **South**. `Position` is a 2-tuple used consistently throughout `core/domain`. |
 | **Effect** | The negotiation payload carries a **worked example**, not a label: *"we read `[0, 1]` as row 0, column 1 — one cell East of the cop's start; confirm."* Verified visually by `scripts/demo_m1.py`. **Needs a negotiation item — see N18.** |
 
-## C-011b — How the sub-games divide between the two roles
+## C-011 — How the sub-games divide between the two roles
 
 | | |
 |---|---|
@@ -173,32 +173,10 @@ detect during the handshake rather than discover during the audit.
 
 ---
 
-# Category D — Not conflicts at all
+# Category D — Gaps outside the game rules
 
-## C-003 — 7×7 in Appendix F, 10×10 in the belief-map figure
-
-| | |
-|---|---|
-| **Appendix F says** | Table 13 row 1: `[גודל הלוח]` = 7×7, status **מינימום (minimum)**. |
-| **Reclassified 31/07** | **Not a contradiction.** A minimum may be raised by mutual agreement, so a 10×10 figure illustrates a perfectly legal board. Nothing conflicts. |
-| **Our value** | 7×7, read from config and never hardcoded. `Board` refuses any size below 7 at construction, so an illegal proposal fails at startup. |
-| **Worth agreeing anyway** | Yes. A larger board is strongly thief-favouring — 14 barriers cover 28.6 % of a 7×7 but only 14 % of a 10×10. We decline increases and treat the request as information about how the opponent rates their own two roles. See `PARAMETERS.md` §4.3. |
-
-## C-011a — `survival_threshold` and `max_moves` can be raised apart
-
-| | |
-|---|---|
-| **Appendix F says** | Table 15 rows 3–4: both default to 35, both status **מינימום**. Either may be raised independently. |
-| **Reclassified 31/07** | **Not a contradiction.** Appendix F explicitly permits it. What it produces, though, is a *degenerate* configuration: `survival_threshold = 40` with `max_moves = 35` ends the game at step 35 with the thief having survived 35 of a required 40 — a state no win condition in Ch. 3.5 covers. Raising `max_moves` alone is merely inert. |
-| **Our choice** | We treat `survival_threshold == max_moves` as an invariant of every configuration we propose or accept. |
-| **Why** | The equal case is the only one the win conditions fully define. A team proposing them unequal has either an implementation bug or a trap, and either way we want to know before the match. |
-| **Effect** | `config_spec.invariant_violations()` refuses to sign an unequal pair — deliberately separate from `violations()`, because Appendix F itself is content with it. |
-
----
-
-# Category E — Outside Appendix F's scope
-
-Engineering and process decisions. Appendix F governs game values; none of these is one.
+Engineering and process. Appendix F governs game values; neither of these is one, but both are
+places where a source left something undetermined and we had to choose.
 
 ## C-002 — Do docstrings count toward the 150-line limit?
 
@@ -221,15 +199,25 @@ Engineering and process decisions. Appendix F governs game values; none of these
 | **Why** | M#11 is enforced on bytes, not meaning. The failure appears only against an opponent on a different operating system — the worst possible moment to discover it. |
 | **Effect** | `.gitattributes` is in `SHARED_PATHS` and unit-tested. Also silences Git's CRLF warnings on Windows. |
 
-## C-012 — Our LLM provider is not one of the book's four modes
+---
 
-| | |
-|---|---|
-| **Where** | Appendix F Table 21 vs. `config/<role>/game.toml` and ADR-003 |
-| **Why it is not an Appendix F conflict** | Table 21 states the choice is *"פרטית לכל עמית, אינה חלק מקובץ התצורה המוסכם ואינה נתונה למשא ומתן"* — private to each peer, outside the agreed config, not negotiated. It is a reference table, not a binding one. |
-| **The issue** | We shipped `[llm] provider = "groq"`: a fifth provider, under a section name the book does not use (it puts the selector at `[trash_talk] provider`). |
-| **Resolved 30/07** | Selector moved to `[trash_talk] provider`; the **committed** value is `template` — the book's own default, zero tokens, works on any machine. Each machine overrides via `P2P_LLM_PROVIDER` in `.env`: Diana `groq` (development only), Itay `ollama` (graded matches). Every graded match therefore runs one of the book's four modes at zero tokens. |
-| **Note** | This was our own drift: ADR-003 already specified `[trash_talk] provider`; the config written in task 1.1.4 said `[llm] provider`. |
+# Appendix — entries removed from this document
+
+Three entries were deleted in the 31/07 re-audit, not because they were wrong but because they were
+never contradictions. Each described a real decision; each now lives where that kind of decision
+belongs. The IDs are **retired** and will not be reused, so anything referring to them still
+resolves.
+
+| Retired | What it said | Why it was not a contradiction | Where it lives now |
+|---|---|---|---|
+| **C-003** | Board size 7×7 in Appendix F vs. a 10×10 belief-map figure | `[גודל הלוח]` is a **minimum**. A 10×10 figure illustrates a legal raised value; nothing conflicts. | `PARAMETERS.md` §4.3 — including the reason we decline increases: 14 barriers cover 28.6 % of a 7×7 but only 14 % of a 10×10, so a bigger board is strongly thief-favouring. |
+| **C-011a** | `survival_threshold` and `max_moves` can be raised apart | Both are **minimums**; Appendix F explicitly permits raising either. It produces a *degenerate* configuration, not a contradiction. | `PARAMETERS.md` §4.2 — the invariant `survival_threshold == max_moves`, enforced by `config_spec.invariant_violations()`, deliberately kept separate from `violations()` because Appendix F itself is content with the unequal pair. |
+| **C-012** | Our LLM provider was not one of the book's four modes | Table 21 states the choice is *"פרטית לכל עמית... ואינה נתונה למשא ומתן"* — private, outside the agreed config, not negotiated. It was our own configuration drift, not an ambiguity in any source. | `PARAMETERS.md` §5.2 — resolved 30/07: selector moved to `[trash_talk] provider`, committed value `template`, per-machine override via `P2P_LLM_PROVIDER`. |
+
+**The lesson worth keeping.** All three were logged early, when "anything that looked odd" went into
+this file. Applying the §0 test retrospectively removed a quarter of it. A document that lists
+non-contradictions as contradictions is worse than a shorter one: it invites a reviewer to conclude
+we had not understood which values were actually ours to choose.
 
 ---
 

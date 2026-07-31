@@ -141,12 +141,17 @@ def test_shipped_config_satisfies_our_invariants(legal_config: dict) -> None:
 
 
 def test_unequal_move_cap_and_survival_threshold_is_reported(legal_config: dict) -> None:
-    """C-011: legal under Appendix F, but the win conditions do not cover it."""
+    """Legal under Appendix F, but the win conditions do not cover it.
+
+    Not a contradiction — both values are minimums and raising either is
+    permitted. It is a degenerate configuration, so the guard is deliberately
+    separate from the Appendix F check. See docs/PARAMETERS.md 4.2.
+    """
     config = copy.deepcopy(legal_config)
     config["movement_and_barriers"]["survival_threshold"] = 40
     found = invariant_violations(config)
     assert len(found) == 1
-    assert "C-011" in found[0]
+    assert "PARAMETERS.md 4.2" in found[0]
     # Appendix F itself is content with the raised minimum. That is the point.
     assert violations(config) == []
 

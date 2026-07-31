@@ -142,7 +142,7 @@ def invariant_violations(config: dict) -> list[str]:
     """Return breaches of invariants Appendix F permits but the game cannot survive.
 
     These are legal under the letter of Appendix F and still produce a game with
-    no defined outcome, so we refuse to sign them. See CONTRADICTIONS C-011.
+    no defined outcome, so we refuse to sign them. See docs/PARAMETERS.md 4.2.
     """
     found: list[str] = []
     max_moves = dotted_get(config, "movement_and_barriers.max_moves", None)
@@ -151,6 +151,7 @@ def invariant_violations(config: dict) -> list[str]:
         found.append(
             f"survival_threshold ({survival}) != max_moves ({max_moves}): both are "
             "minimums and may be raised independently, but the win conditions are only "
-            "defined when they are equal. Raise them together or not at all (C-011)."
+            "defined when they are equal. Raise them together or not at all "
+            "(docs/PARAMETERS.md 4.2)."
         )
     return found

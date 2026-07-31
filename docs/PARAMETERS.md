@@ -138,7 +138,7 @@ data · ⚠️ must be explicitly confirmed in the handshake, cheap to get wrong
 
 | # | Book name | Our key | Status | Default | Decision | Stage |
 |---|---|---|---|---|---|---|
-| 21 | מספר המשחקונים | `network_and_league.num_games` | **Fixed** | **6** | 🔒 closes C-001 | — |
+| 21 | מספר המשחקונים | `network_and_league.num_games` | **Fixed** | **6** | 🔒 the reference ships 1; see C-001 | — |
 | 22 | תגמול גיוון | `network_and_league.diversity_reward` | Fixed | 10 | 🔒 — but see §5.1, this drives our whole league plan | — |
 | 23 | מינימום משחקים למעבר | `network_and_league.min_games_to_pass` | Fixed | 2 | 🔒 | — |
 | 24 | אומדן טוקנים לסדרה | `network_and_league.token_budget_per_series` | Negotiable | ~200 000 | ✅ keep — and see §5.2, we plan to spend 0 | S3 |
@@ -201,7 +201,7 @@ Both default to 35, both are minimums, both may be raised.
   cop's binding constraint is the clock and the thief's is not.
 - Raising **only** `max_moves` is meaningless — the thief has already won at step 35.
 - Raising **only** `survival_threshold` above `max_moves` creates a game that ends before
-  either win condition can fire. **Never agree to this.** (Logged as C-011.)
+  either win condition can fire. **Never agree to this.**
 
 **Rule we adopt: `survival_threshold == max_moves`, always, in every proposal we make or
 accept.** If an opponent proposes them unequal, that is either a bug in their
@@ -407,7 +407,7 @@ Each of these is a free read on how the opponent rates their own two roles. Log 
 two roles.** The book fixes `num_games = 6` and never says who plays cop. We field both
 roles, so the natural split is 3–3, but an opponent strong in one role has an obvious
 interest in an uneven one. **Pin it explicitly in the handshake and insist on 3–3.** Logged
-as C-011.
+as C-011 and carried as negotiation item N17.
 
 ---
 
