@@ -55,8 +55,17 @@ class OpponentClient:
 
     @property
     def target(self) -> Any:
-        """Return whatever ``fastmcp.Client`` should connect to."""
-        return self.transport if self.transport is not None else self.base_url
+        """Return whatever ``fastmcp.Client`` should connect to.
+
+        The trailing slash is stripped. FastMCP serves at ``/mcp``, so a URL
+        ending ``/mcp/`` makes every single request a **307 redirect followed by
+        the real request** — visible in the M2 server log as a 307 before each
+        200. Harmless on localhost, but it doubles the round trips against a
+        real opponent across the internet, on every message of every turn.
+        """
+        if self.transport is not None:
+            return self.transport
+        return self.base_url.rstrip("/") if self.base_url.endswith("/") else self.base_url
 
     async def call(self, tool: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Invoke *tool* on the opponent and return its reply.

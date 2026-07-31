@@ -43,6 +43,13 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     peer.add_argument("--opponent", help="The opponent's public MCP URL.")
     peer.add_argument("--dry-run", action="store_true", help="Load and report, then exit.")
+    peer.add_argument("--serve", action="store_true", help="Run the MCP server and wait.")
+    peer.add_argument("--port", type=int, help="Override the port from config.")
+    peer.add_argument(
+        "--handshake",
+        action="store_true",
+        help="Negotiate with --opponent, send one sealed move, print the replies.",
+    )
     return parser.parse_args(argv)
 
 
@@ -83,9 +90,80 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         print("\ndry run - configuration loaded, nothing started.")
         return 0
+    if args.serve:
+        return _serve(sdk, args.port)
+    if args.handshake:
+        return _handshake(sdk, args.opponent)
 
     print("\nthe turn loop arrives in Phase 3; this peer is wired but not yet playing.")
+    print("try --serve in one terminal and --handshake --opponent <url> in another.")
     return 0
+
+
+def _serve(sdk: PeerSDK, port: int | None) -> int:
+    """Run this peer's MCP server until interrupted.
+
+    Ctrl-C is the normal way to stop a server, so it exits quietly. Letting the
+    KeyboardInterrupt escape prints a ten-frame traceback through asyncio and
+    anyio, which teaches whoever is watching to ignore tracebacks — exactly the
+    habit that hides a real one during a match.
+    """
+    from core.infra.mcp_server import create_server
+
+    spec = sdk.server_spec(port)
+    # No trailing slash: FastMCP serves at /mcp, and /mcp/ costs a 307 redirect
+    # before every single request. The client strips it defensively too.
+    url = f"http://127.0.0.1:{spec.port}/mcp"
+    print(f"\nserving {len(spec.tools)} tools on http://{spec.host}:{spec.port}/mcp")
+    print(f"give the other terminal:  --opponent {url}")
+    print("ctrl-c to stop.\n")
+    try:
+        create_server(spec).run(transport="http", host=spec.host, port=spec.port)
+    except KeyboardInterrupt:
+        print("\nserver stopped.")
+    return 0
+
+
+def _handshake(sdk: PeerSDK, opponent: str | None) -> int:
+    """Negotiate with the opponent and send one sealed move (milestone M2).
+
+    Deliberately does the *whole* exchange rather than a bare ping: a handshake
+    that succeeds proves the digests match, the tools are registered and the
+    encoding survives — which is what M2 actually claims.
+    """
+    import asyncio
+
+    from core.crypto.commitment import seal
+
+    if not opponent:
+        raise SystemExit("--handshake needs --opponent <url>")
+    if sdk._orchestrator.opponent is None:  # noqa: SLF001 - the CLI is the gateway's caller
+        sdk.connect(opponent)
+
+    async def run() -> int:
+        client = sdk._orchestrator.opponent  # noqa: SLF001
+        agreed = await client.call(
+            "negotiate",
+            {"step": 0, "role": sdk.role.value, "config_digest": sdk.config_digest},
+        )
+        print(f"negotiate  -> agreed on {agreed['config_digest'][:16]}...")
+
+        view = sdk.board_view()
+        sealed = seal({"cop": list(view.cop), "thief": list(view.thief), "step": 0}, "S", "truth")
+        ack = await client.call(
+            "receive_commit", {"step": 0, "role": sdk.role.value, "digest": sealed.digest}
+        )
+        print(f"commit     -> {ack['kind']} for {ack['acknowledged_digest'][:16]}...")
+
+        reply = await client.call(
+            "receive_reveal",
+            {"step": 0, "role": sdk.role.value, "move": "S", "hint": "heading south"},
+        )
+        print(f"reveal     -> {reply}")
+        print("\nM2 observed: a message left this peer and decoded correctly at the other.")
+        return 0
+
+    return asyncio.run(run())
 
 
 if __name__ == "__main__":

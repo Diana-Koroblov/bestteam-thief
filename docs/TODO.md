@@ -311,7 +311,18 @@ correctly; the Orchestrator is the only inter-module path; no import path joins 
 - [ ] 2.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.
 - [ ] 2.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC.
 - [ ] 2.QG.3 [D] - `uv run pytest --cov` | DoD: All pass; coverage ≥85 %.
-- [ ] 2.QG.4 [D] - **Milestone M2 observed** | DoD: A message leaving peer A over localhost is received and decoded correctly at peer B, in two separate terminals.
+- [x] 2.QG.4 [D] - **Milestone M2 observed** | DoD: A message leaving peer A over localhost is received and decoded correctly at peer B, in two separate terminals. — **observed 31/07 on Diana's machine.**
+  - `uv run python -m core peer --role thief --serve` in one terminal, `--role police --handshake --opponent http://127.0.0.1:8082/mcp` in the other. Two OS processes, two config directories, a real uvicorn server and a real `fastmcp.Client` over TCP. Negotiate agreed on `629839fe...`, the commit was acknowledged, the reveal returned `{'received': True, 'step': 0}`.
+  - ⚠️ I had told Diana this gate needed Itay's machine. **Wrong** — the DoD says *localhost, two terminals*, which is one machine. A second machine is only needed to prove an *opponent's independently written code* interoperates, which is the warm-up match (0.3.2), not this.
+  - Added `--serve`, `--handshake` and `--port` to the CLI to make the gate runnable at all.
+
+### 🔎 Findings from the M2 server log — Diana sent the raw output, which is the only reason these were caught
+- [x] 2.5.1 [D] - Strip the trailing slash from the opponent URL | DoD: `OpponentClient.target` normalises `/mcp/` to `/mcp`; unit-tested.
+  - The log showed a **307 Temporary Redirect before every single 200**. FastMCP serves at `/mcp`, so `/mcp/` costs an extra round trip on every request. Invisible on localhost; against a real opponent it doubles the network cost of every message inside a 30-second budget.
+- [ ] 2.5.2 [D] - **Hold one MCP session open for the whole match** ⏰ | DoD: A series of N game messages opens **one** session, not N. Measured from the server log.
+  - The log shows `POST initialize → POST/GET notifications → POST call → DELETE teardown` **repeated for each of the three messages**. `OpponentClient.call()` opens and tears down a full MCP session per call, so one game message costs roughly **six HTTP exchanges**.
+  - Three reasons this matters, in increasing order of seriousness: latency inside the 30 s response window; ~1,200 HTTP exchanges per 210-move series instead of ~210; and — the real one — **our own Gatekeeper's DOS detector (7.1.2.c, M#29) is designed to lock the pipe on exactly this pattern.** An opponent running the same code would look to us like an attack, and we would look like one to them.
+  - Fix: make `OpponentClient` an async context manager holding one `fastmcp.Client` session for the match, opened at the handshake and closed at the final reveal. Deliberately **not** rushed at the end of a long session — it touches every call site and deserves its own pass.
 
 ---
 

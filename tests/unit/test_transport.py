@@ -135,6 +135,17 @@ def test_a_deadline_is_a_constructor_field_not_an_optional_argument() -> None:
     assert "timeout" not in inspect.signature(OpponentClient.call).parameters
 
 
+def test_a_trailing_slash_is_stripped_from_the_opponent_url() -> None:
+    """FastMCP serves at /mcp, so /mcp/ costs a 307 redirect on every request.
+
+    Seen in the M2 server log: a 307 before every 200. Locally that is noise;
+    against a real opponent it doubles the round trips for every message of
+    every turn, inside a 30-second budget.
+    """
+    assert OpponentClient("http://127.0.0.1:8082/mcp/", 30).target == "http://127.0.0.1:8082/mcp"
+    assert OpponentClient("http://127.0.0.1:8082/mcp", 30).target == "http://127.0.0.1:8082/mcp"
+
+
 def test_the_in_process_transport_wins_over_the_url_when_set() -> None:
     """Used for self-play and for the round-trip test; the URL stays for real matches."""
     sentinel = object()
