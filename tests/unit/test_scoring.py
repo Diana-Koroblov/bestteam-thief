@@ -47,7 +47,7 @@ def test_survival_pays_five_ten() -> None:
 
 
 def test_a_technical_loss_zeroes_both_sides() -> None:
-    """Ch. 3.5: «ההפסד הטכני מאפס את שני הצדדים כאחד».
+    """Ch. 3.5: "a technical loss zeroes both sides alike".
 
     Neither side profits from the other's crash or timeout, which is why no
     strategy should ever be built around stressing an opponent's clock.

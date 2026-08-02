@@ -1,7 +1,7 @@
 """Barrier placement: the Cop's only resource, and its rules.
 
-The rule, from Chapter 3.4: *"בתור שבו השוטר מוותר על תנועה הוא רשאי להציב
-מחסום בכל תא שבמרחק צעד אחד ממנו"* — on a turn where the Cop **forgoes
+The rule, from Chapter 3.4: *"on a turn where the Cop forgoes movement, it may
+place a barrier on any cell one step away from it"* — on a turn where the Cop **forgoes
 movement**, it may place a barrier on its own cell or one of the four
 orthogonally adjacent cells. The cell becomes impassable to **both** players for
 the rest of the sub-game, and there is no way to remove it.

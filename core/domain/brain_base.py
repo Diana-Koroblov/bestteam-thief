@@ -1,6 +1,7 @@
 """The interface every strategy implements. Movement is decided here, never by a model.
 
-Chapter 6 is unambiguous: *"הכרעת המהלך היא תמיד אלגוריתמית ובקוד פייתון"*. A
+Chapter 6 is unambiguous: *"the move decision is always algorithmic and in
+Python code"*. A
 language model hallucinates in Cartesian space — it will happily propose a move
 into a wall — and an illegal move is a technical loss (M#13). The model's whole
 job is the verbal layer. So no brain may import an LLM provider, and an

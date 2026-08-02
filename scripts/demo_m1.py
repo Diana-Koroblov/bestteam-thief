@@ -118,8 +118,9 @@ def _scenario_quota(board: Board, quota: int, max_moves: int) -> None:
     print(f"   The cop sealed ITSELF into a {cop_room}-cell corridor. It can never")
     print("   reach the thief again, so the thief waits out the clock and wins on")
     print("   survival. Barriers are permanent, so nothing recovers this.")
-    print("   This is the book's warning made concrete: «מבלי לחסום בטעות את נתיבי")
-    print("   הגישה של עצמו». The real lesson is not that walls cost turns - it is")
+    print("   This is the book's warning made concrete: 'without accidentally")
+    print("   blocking its own access routes'. The real lesson is not that walls")
+    print("   cost turns - it is")
     print("   that separation loses. Every placement must first ask: can I still")
     print("   reach the thief afterwards? See core/domain/connectivity.py.")
 
@@ -170,7 +171,8 @@ def _scenario_diagonal(board: Board) -> None:
         trapped.place(cell, cop)
     print(f"\n   Taking the 5th target traps the cop: escapes = "
           f"{[d.value for d, _ in get_legal_moves(cop, trapped.barriers, board)]}")
-    print("   That is the book's warning - «מבלי לחסום בטעות את נתיבי הגישה של עצמו».")
+    print("   That is the book's warning - 'without accidentally blocking its own")
+    print("   access routes' (Ch. 3.4).")
 
 
 def main() -> int:

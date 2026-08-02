@@ -20,6 +20,31 @@ from core.shared.system_info import describe, gpu_name, total_ram_gb
 
 REPO = Path(__file__).resolve().parents[2]
 
+# **Tests must not run git against the developer's live repository.**
+#
+# `commit_hash` shells out to `git status`, which takes `.git/index.lock`. A
+# suite that is interrupted mid-run then leaves that lock behind and blocks
+# every later `git add` - which is exactly what stopped three ship.py runs on
+# 02/08 before anyone traced it here. A throwaway repo has no such consequence.
+
+
+@pytest.fixture(scope="module")
+def scratch_repo(tmp_path_factory) -> Path:
+    """A real but disposable git repository, used instead of ours."""
+    import subprocess
+
+    repo = tmp_path_factory.mktemp("scratch_repo")
+    (repo / "file.txt").write_text("x", encoding="utf-8")
+    for args in (
+        ["init", "-q"],
+        ["config", "user.email", "test@example.com"],
+        ["config", "user.name", "Test"],
+        ["add", "-A"],
+        ["commit", "-qm", "initial"],
+    ):
+        subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
+    return repo
+
 
 # --- 6.3.1: hardware, and never failing ------------------------------------
 
@@ -61,13 +86,13 @@ def test_the_declaration_is_json_safe() -> None:
 # --- 6.3.2 / 6.3.3: what the declaration promises ---------------------------
 
 
-def _declaration(**overrides) -> StepZero:
+def _declaration(repo: Path | None = None, **overrides) -> StepZero:
     defaults = {
         "team_name": "bestteam",
         "role": "cop",
         "sub_game": 1,
         "llm_model": "llama3.1:8b",
-        "repo": REPO,
+        "repo": repo or REPO,
     }
     return build(**{**defaults, **overrides})
 
@@ -144,8 +169,9 @@ def test_warnings_are_returned_not_raised() -> None:
     assert isinstance(StepZero({"github_commit": "unknown"}, "x").warnings(), list)
 
 
-def test_the_commit_hash_reads_this_repository() -> None:
-    found = commit_hash(REPO)
+def test_the_commit_hash_reads_a_real_repository(scratch_repo: Path) -> None:
+    """Run against a throwaway clone, never the live repo - see the note above."""
+    found = commit_hash(scratch_repo)
     assert found == "unknown" or len(found.removesuffix(DIRTY_SUFFIX)) == 40
 
 

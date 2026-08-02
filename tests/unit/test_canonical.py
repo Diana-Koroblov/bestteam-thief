@@ -38,7 +38,7 @@ def test_list_order_is_preserved() -> None:
 
 def test_non_ascii_is_not_escaped() -> None:
     """Text is encoded as itself, so the bytes depend on the text alone."""
-    assert canonical_json({"team": "משטרה"}) == '{"team":"משטרה"}'
+    assert canonical_json({"team": "Ωμέγα"}) == '{"team":"Ωμέγα"}'
 
 
 def test_digest_matches_sha256_of_the_bytes() -> None:

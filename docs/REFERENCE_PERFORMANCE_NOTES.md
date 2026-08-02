@@ -37,14 +37,14 @@ to repeat.
 Two things were conflated:
 
 - **A hint is sent every turn, unconditionally.** Ch. 5.3.1: the agent chooses its move *and*
-  the hint together, and the sealed commit covers «הרמז המילולי, סיווג הכוונה, מספר הצעד
-  והתפקיד». A turn without a hint would break commit-reveal.
+  the hint together, and the sealed commit covers «the verbal hint, intent classification, the step number
+  and the role». A turn without a hint would break commit-reveal.
 - **`every_n_steps` governs how often the *model* runs**, not whether a hint is sent. On the
   turns the model is skipped, `template` writes the hint instead. The verbal channel never
   goes quiet.
 
-And the decisive point: the book frames this as a **budget** question — «הבחירה כיצד להפעילו
-היא בעיקר שאלת תקציב: כמה טוקנים מתוך [אומדן טוקנים לסדרה] אתם מוכנים להוציא על דיבור»
+And the decisive point: the book frames this as a **budget** question — «the choice of how to run it
+is primarily a budget question: how many tokens out of [Estimated tokens per series] you are willing to spend on talk»
 (Ch. 6.5.1). Our two providers spend **zero** tokens. `template` never calls a model at all;
 `ollama` is local, unmetered and rate-limit free. There is no budget to protect, so raising
 the interval buys nothing and costs two-thirds of our verbal variety — in a project where

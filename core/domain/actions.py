@@ -1,7 +1,7 @@
 """The complete set of legal actions. There is nothing else an agent may do.
 
 Appendix F Table 15 row 1 fixes the move set at four single orthogonal steps
-plus STAY, and marks it **קבוע** — fixed. Deviating disqualifies the team, and
+plus STAY, and marks it **fixed** (Appendix F: "kavua"). Deviating disqualifies the team, and
 M#14 makes the sanction concrete: a diagonal move is rejected by the opponent
 and forfeits the game.
 

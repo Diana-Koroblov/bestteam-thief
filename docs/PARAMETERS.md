@@ -14,22 +14,22 @@ and *when is it decided*.
 
 Appendix F opens with a sentence that governs everything below it:
 
-> "הערכים המוצגים בעמודת ״ערך לדוגמה״ הם המינימום המחייב"
+> "the values shown in the 'example value' column are the binding minimum"
 > — the values in the *example value* column are the binding minimum.
 
 And the status column has exactly three meanings (Appendix F §1, p. 139):
 
 | Status | Hebrew | What it permits | If breached |
 |---|---|---|---|
-| **Fixed** | קבוע | Nothing. The value cannot change at all. | "סטייה מן הערך הזה פוסלת את הקבוצה" — deviation **disqualifies the team**. |
-| **Minimum** | מינימום | Both sides may agree to move it **only in the direction that makes the game harder** (normally: raise it). Never below the example value. | Same disqualification exposure; and the audit sees it. |
-| **Negotiable** | משא ומתן | Any value both sides agree on. The printed value is an example only. | — |
+| **Fixed** | fixed | Nothing. The value cannot change at all. | "deviating from this value disqualifies the team" — deviation **disqualifies the team**. |
+| **Minimum** | minimum | Both sides may agree to move it **only in the direction that makes the game harder** (normally: raise it). Never below the example value. | Same disqualification exposure; and the audit sees it. |
+| **Negotiable** | negotiable | Any value both sides agree on. The printed value is an example only. | — |
 
 ### 1.1 The default rule — this is the answer to "what do we do now"
 
 Appendix F says the same sentence twice, once for *minimum* and once for *negotiable*:
 
-> "בהיעדר הגדרה מפורשת מוסכמת בין הצדדים, על הקוד להבטיח שהערך לדוגמה הוא ברירת המחדל"
+> "in the absence of an explicit definition agreed between the parties, the code must ensure the example value is the default"
 > — absent an explicit agreement between the parties, **the code must ensure the example
 > value is the default the team uses.**
 
@@ -47,8 +47,8 @@ Appendix F §2 (Mandatory Rules):
 
 - **Rule 1** — every value must appear in the config file, identical on both sides, and be
   cryptographically locked.
-- **Rule 2** — "בכל משחק חדש רשאית הקבוצה לשנות את ההגדרות, כל עוד הן תואמות להסכמה עם
-  הקבוצה היריבה" — **for each new game a team may change the settings**, provided the
+- **Rule 2** — "in each new game the team may change the settings, so long as they match the agreement with
+  the opposing team" - **for each new game a team may change the settings**, provided the
   opponent agrees.
 - **Rule 3** — each game's config file must have a **different name**, so any game can be
   reproduced.
@@ -93,68 +93,68 @@ data · ⚠️ must be explicitly confirmed in the handshake, cheap to get wrong
 
 | # | Book name | Our key | Status | Default | Decision | Stage |
 |---|---|---|---|---|---|---|
-| 1 | גודל הלוח | `board_and_agents.grid_size` | Minimum | 7×7 | 📊 keep 7×7 | S3 |
-| 2 | מספר הסוכנים | `board_and_agents.num_agents` | Fixed | 2 | 🔒 | — |
-| 3 | ראשית מערכת הצירים | `board_and_agents.axis_origin_corner` | Negotiable | top-left | ⚠️ keep, confirm explicitly | S3 |
-| 4 | אינדקס התחלת הצירים | `board_and_agents.axis_start_index` | Negotiable | 0 | ⚠️ keep, confirm explicitly | S3 |
-| 5 | עמדת פתיחה – גנב | `board_and_agents.thief_start` | Negotiable | centre (3,3) | ✅ keep | S3 |
-| 6 | עמדת פתיחה – שוטר | `board_and_agents.cop_start` | Negotiable | corner (0,0) | ✅ keep | S3 |
+| 1 | Board size | `board_and_agents.grid_size` | Minimum | 7×7 | 📊 keep 7×7 | S3 |
+| 2 | Number of agents | `board_and_agents.num_agents` | Fixed | 2 | 🔒 | — |
+| 3 | axis origin | `board_and_agents.axis_origin_corner` | Negotiable | top-left | ⚠️ keep, confirm explicitly | S3 |
+| 4 | Axis start index | `board_and_agents.axis_start_index` | Negotiable | 0 | ⚠️ keep, confirm explicitly | S3 |
+| 5 | starting position – Thief | `board_and_agents.thief_start` | Negotiable | centre (3,3) | ✅ keep | S3 |
+| 6 | starting position – Cop | `board_and_agents.cop_start` | Negotiable | corner (0,0) | ✅ keep | S3 |
 
 ### Table 14 — Arena and verbal hints
 
 | # | Book name | Our key | Status | Default | Decision | Stage |
 |---|---|---|---|---|---|---|
-| 7 | זירת המשחק | `world.map_area` | Negotiable | "New York" | ✅ keep | S3 |
-| 8 | מגבלת מילים ברמז | `world.hint_max_words` | Negotiable | 15 | ✅ keep | S3 |
+| 7 | Map area | `world.map_area` | Negotiable | "New York" | ✅ keep | S3 |
+| 8 | Hint word limit | `world.hint_max_words` | Negotiable | 15 | ✅ keep | S3 |
 
 ### Table 15 — Movement and barriers
 
 | # | Book name | Our key | Status | Default | Decision | Stage |
 |---|---|---|---|---|---|---|
-| 9 | מערך התנועה | `movement_and_barriers.move_set` | **Fixed** | 4 orthogonal + STAY, no diagonals | 🔒 **refuse any variant** | — |
-| 10 | מכסת המחסומים | `movement_and_barriers.max_barriers` | Minimum | 14 | 📊 keep 14 | S3 |
-| 11 | תקרת הצעדים | `movement_and_barriers.max_moves` | Minimum | 35 | 📊 keep 35 | S3 |
-| 12 | סף ההישרדות | `movement_and_barriers.survival_threshold` | Minimum | 35 | 📊 keep 35, **always equal to #11** | S3 |
+| 9 | Movement set | `movement_and_barriers.move_set` | **Fixed** | 4 orthogonal + STAY, no diagonals | 🔒 **refuse any variant** | — |
+| 10 | Barrier quota | `movement_and_barriers.max_barriers` | Minimum | 14 | 📊 keep 14 | S3 |
+| 11 | step ceiling | `movement_and_barriers.max_moves` | Minimum | 35 | 📊 keep 35 | S3 |
+| 12 | survival threshold | `movement_and_barriers.survival_threshold` | Minimum | 35 | 📊 keep 35, **always equal to #11** | S3 |
 
 ### Table 16 — Dynamic pheromones
 
 | # | Book name | Our key | Status | Default | Decision | Stage |
 |---|---|---|---|---|---|---|
-| 13 | עוצמת הריח במוקד | `pheromones.pheromone_center_intensity` | Fixed | 0.9 | 🔒 | — |
-| 14 | קצב דעיכת הריח | `pheromones.pheromone_decay` | Fixed | 0.10 | 🔒 | — |
-| 15 | גודל שדה הריח | `pheromones.pheromone_grid_size` | Fixed | 5×5 | 🔒 | — |
+| 13 | scent intensity at the centre | `pheromones.pheromone_center_intensity` | Fixed | 0.9 | 🔒 | — |
+| 14 | scent decay rate | `pheromones.pheromone_decay` | Fixed | 0.10 | 🔒 | — |
+| 15 | Scent field size | `pheromones.pheromone_grid_size` | Fixed | 5×5 | 🔒 | — |
 
 ### Table 17 — Scoring
 
 | # | Book name | Our key | Status | Default | Decision | Stage |
 |---|---|---|---|---|---|---|
-| 16 | ניקוד לכידה – שוטר | `scoring.capture_cop` | Fixed | 20 | 🔒 | — |
-| 17 | ניקוד לכידה – גנב | `scoring.capture_thief` | Fixed | 5 | 🔒 | — |
-| 18 | ניקוד הישרדות – שוטר | `scoring.survival_cop` | Fixed | 5 | 🔒 | — |
-| 19 | ניקוד הישרדות – גנב | `scoring.survival_thief` | Fixed | 10 | 🔒 | — |
-| 20 | ציון תיקו | `scoring.tie_score` | Fixed | 2 | 🔒 | — |
+| 16 | capture score – Cop | `scoring.capture_cop` | Fixed | 20 | 🔒 | — |
+| 17 | capture score – Thief | `scoring.capture_thief` | Fixed | 5 | 🔒 | — |
+| 18 | survival score – Cop | `scoring.survival_cop` | Fixed | 5 | 🔒 | — |
+| 19 | survival score – Thief | `scoring.survival_thief` | Fixed | 10 | 🔒 | — |
+| 20 | tie score | `scoring.tie_score` | Fixed | 2 | 🔒 | — |
 
 ### Table 18 — Network and league
 
 | # | Book name | Our key | Status | Default | Decision | Stage |
 |---|---|---|---|---|---|---|
-| 21 | מספר המשחקונים | `network_and_league.num_games` | **Fixed** | **6** | 🔒 the reference ships 1; see C-001 | — |
-| 22 | תגמול גיוון | `network_and_league.diversity_reward` | Fixed | 10 | 🔒 — but see §5.1, this drives our whole league plan | — |
-| 23 | מינימום משחקים למעבר | `network_and_league.min_games_to_pass` | Fixed | 2 | 🔒 | — |
-| 24 | אומדן טוקנים לסדרה | `network_and_league.token_budget_per_series` | Negotiable | ~200 000 | ✅ keep — and see §5.2, we plan to spend 0 | S3 |
-| 25 | מספר המשחקים המרבי לכל קבוצה | `network_and_league.max_games_per_team` | Fixed | 10 | 🔒 | — |
+| 21 | number of sub-games | `network_and_league.num_games` | **Fixed** | **6** | 🔒 the reference ships 1; see C-001 | — |
+| 22 | diversity reward | `network_and_league.diversity_reward` | Fixed | 10 | 🔒 — but see §5.1, this drives our whole league plan | — |
+| 23 | minimum Games to advance | `network_and_league.min_games_to_pass` | Fixed | 2 | 🔒 | — |
+| 24 | Estimated tokens per series | `network_and_league.token_budget_per_series` | Negotiable | ~200 000 | ✅ keep — and see §5.2, we plan to spend 0 | S3 |
+| 25 | Max games per team | `network_and_league.max_games_per_team` | Fixed | 10 | 🔒 | — |
 
 ### Table 19 — Gatekeeper, rate limiting and network protection
 
 | # | Book name | Our key | Status | Default | Decision | Stage |
 |---|---|---|---|---|---|---|
-| 26 | בקשות לדקה | `rate_limiter_gatekeeper.requests_per_minute` | Minimum | 30 | ✅ keep | S3 |
-| 27 | בקשות מקבילות | `rate_limiter_gatekeeper.concurrent_requests` | Minimum | 2 | ✅ keep | S3 |
-| 28 | השהיה לאחר שגיאה | `rate_limiter_gatekeeper.retry_backoff_sec` | Minimum | 5 s | ✅ keep | S3 |
-| 29 | ניסיונות חוזרים | `rate_limiter_gatekeeper.max_retries` | Minimum | 3 | ✅ keep | S3 |
-| 30 | עומק התור | `rate_limiter_gatekeeper.queue_depth` | Minimum | 100 | ✅ keep | S3 |
-| 31 | מגבלת זמן התגובה | `network_and_league.response_timeout_sec` | Negotiable | 30 s | ⚠️ keep, and budget 20 s internally | S3 |
-| 32 | סף כלב השמירה | `network_and_league.watchdog_timeout_sec` | Negotiable | 60 s | ⚠️ keep, must stay ≥ 2× #31 | S3 |
+| 26 | Requests per minute | `rate_limiter_gatekeeper.requests_per_minute` | Minimum | 30 | ✅ keep | S3 |
+| 27 | Concurrent requests | `rate_limiter_gatekeeper.concurrent_requests` | Minimum | 2 | ✅ keep | S3 |
+| 28 | Backoff after error | `rate_limiter_gatekeeper.retry_backoff_sec` | Minimum | 5 s | ✅ keep | S3 |
+| 29 | Retries | `rate_limiter_gatekeeper.max_retries` | Minimum | 3 | ✅ keep | S3 |
+| 30 | queue depth | `rate_limiter_gatekeeper.queue_depth` | Minimum | 100 | ✅ keep | S3 |
+| 31 | Response time limit | `network_and_league.response_timeout_sec` | Negotiable | 30 s | ⚠️ keep, and budget 20 s internally | S3 |
+| 32 | watchdog threshold | `network_and_league.watchdog_timeout_sec` | Negotiable | 60 s | ⚠️ keep, must stay ≥ 2× #31 | S3 |
 
 > **Why #31 and #32 sit under `network_and_league` in our JSON although the book prints
 > them in Table 19:** the reference implementation
@@ -180,7 +180,7 @@ made to raise it.** Refusing is always legal, and the result of refusing is 14.
 
 Now the part that changes the answer. From the barrier rule (Chapter 3.4):
 
-> "בתור שבו השוטר מוותר על תנועה הוא רשאי להציב מחסום"
+> "on a turn where the Cop forgoes movement it may place a barrier"
 > — **in a turn where the cop forgoes movement**, it may place a barrier.
 
 A barrier costs the cop its move. So on the default settings the cop has 35 turns and can
@@ -231,8 +231,8 @@ we should not accept.
 
 ### 4.4 `cop_start`, `thief_start` and the coordinate system — the cheap catastrophe
 
-You are right that these are examples, not fixtures. The book prints "פינה (0,0)" for the
-cop and "מרכז (3,3)" for the thief and marks both **negotiable**.
+You are right that these are examples, not fixtures. The book prints "corner (0,0)" for the
+cop and "centre (3,3)" for the thief and marks both **negotiable**.
 
 The defaults are deliberately thief-friendly: the thief starts on the highest-mobility
 square on the board with four exits and maximum cycle access; the cop starts in a corner
@@ -315,8 +315,8 @@ peer and not negotiated**:
 
 The book then says something worth reading twice:
 
-> "במצבי `template` ו-`ollama` ניתן לשחק את כל הסדרה בת [ מספר המשחקונים ] המשחקונים באפס
-> טוקנים, וכל התחרות עוברת לאיכות אלגוריתם התנועה."
+> "in  `template` -`ollama` the whole series of [ number of sub-games ] sub-games can be played at zero
+> tokens, and the entire contest shifts to the quality of the movement algorithm."
 > — in `template` and `ollama` modes the entire series can be played at zero tokens, and
 > **the whole competition reduces to the quality of the movement algorithm.**
 

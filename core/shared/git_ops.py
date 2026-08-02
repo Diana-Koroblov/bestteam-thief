@@ -99,5 +99,18 @@ def run_git(args: list[str], cwd: Path, dry_run: bool = False) -> str:
 
 
 def has_pending_changes(cwd: Path) -> bool:
-    """Return True when the working tree has staged or unstaged changes."""
-    return bool(run_git(["status", "--porcelain"], cwd).strip())
+    """Return True when the working tree has staged or unstaged changes.
+
+    **Uses ``--no-optional-locks``, and that flag is the whole point.**
+
+    A plain ``git status`` takes ``.git/index.lock`` in order to refresh cached
+    stat information. That is harmless when it completes — and when the process
+    is killed part-way, it leaves the lock behind and every later git command
+    fails with *"Unable to create index.lock: File exists"*.
+
+    We killed this process repeatedly on 02/08 (interrupted test runs, failed
+    ship.py gates) and spent three rounds blaming the editor. ``git`` provides
+    this flag for exactly the situation where a tool wants to *read* status
+    without ever writing the index; it is what VS Code uses for the same reason.
+    """
+    return bool(run_git(["--no-optional-locks", "status", "--porcelain"], cwd).strip())

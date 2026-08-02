@@ -5,7 +5,7 @@ Two mandatory rules meet here:
 * **M#2** — the Cop's code and the Thief's code must not share live state. The
   book is blunt that this is not a style question: a shared module holding live
   state is a back door through which one agent can read the other's local truth,
-  and it *"פוסל את הפתרון — גם אם המשחק עובד טכנית"*.
+  and it *"disqualifies the solution - even if the game works technically"*.
 * **M#3** — one gateway between subsystems, so "which module changed the state"
   has exactly one answer.
 
@@ -152,7 +152,7 @@ def test_the_ui_reaches_nothing_but_the_facade(graph: dict) -> None:
 
 
 def test_no_brain_can_reach_a_language_model(graph: dict) -> None:
-    """Ch. 6: «הכרעת המהלך היא תמיד אלגוריתמית ובקוד פייתון».
+    """Ch. 6: "the move decision is always algorithmic and in Python code".
 
     A model hallucinates in Cartesian space — it will propose a move into a
     wall — and an illegal move is a technical loss (M#13). The model's job is

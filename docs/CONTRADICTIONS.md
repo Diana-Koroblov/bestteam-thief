@@ -15,9 +15,9 @@ so in its own opening line, and its status column defines exactly three regimes:
 
 | Status | Hebrew | What it means | Can there be a contradiction? |
 |---|---|---|---|
-| **Fixed** | קבוע | The value cannot change at all. Deviating disqualifies the team. | **No.** The value *is* the value. Anything printed elsewhere that disagrees is an error in that other place, not a conflict. |
-| **Minimum** | מינימום | May be raised by mutual agreement, never lowered. | **No.** A different figure elsewhere is a legal raised value, not a conflict. |
-| **Negotiable** | משא ומתן | «נקבע כולו בשלב המשא ומתן בין הצדדים, והערך המוצג הוא דוגמה בלבד» — decided entirely in negotiation; the printed value is **an example only**. | **No.** Choosing a value is negotiation, not resolving a contradiction. |
+| **Fixed** | fixed | The value cannot change at all. Deviating disqualifies the team. | **No.** The value *is* the value. Anything printed elsewhere that disagrees is an error in that other place, not a conflict. |
+| **Minimum** | minimum | May be raised by mutual agreement, never lowered. | **No.** A different figure elsewhere is a legal raised value, not a conflict. |
+| **Negotiable** | negotiable | "determined entirely in negotiation between the parties; the value shown is an example only" — decided entirely in negotiation; the printed value is **an example only**. | **No.** Choosing a value is negotiation, not resolving a contradiction. |
 
 So a genuine contradiction can only exist where Appendix F is **silent** — that is, about *mechanisms
 and timing*, never about numbers.
@@ -91,7 +91,7 @@ log audit will blame both teams.
 
 | | |
 |---|---|
-| **Where** | Appendix F Table 18 fixes `[מספר המשחקונים]` = 6, status **fixed**. Nothing anywhere says who plays cop in which of them. |
+| **Where** | Appendix F Table 18 fixes `[number of sub-games]` = 6, status **fixed**. Nothing anywhere says who plays cop in which of them. |
 | **The gap** | We field both roles from two repositories, so an uneven split is expressible. An opponent strong in one role has an obvious interest in one. |
 | **Our choice** | **3–3**, stated explicitly in the handshake. |
 | **Why** | It is the symmetric default and trivially defensible. Conceding an uneven split gives away an edge for nothing. |
@@ -103,7 +103,7 @@ log audit will blame both teams.
 |---|---|
 | **Where** | Appendix F Table 17 row 5 vs. Ch. 3.5 |
 | **The gap** | `tie_score` is **fixed** at 2, so the *value* is not in question — but *when a tie is declared* is not a quantity and Appendix F does not define it. Table 17 pays each side `tie_score` when the cumulative total ends level. A series where every sub-game ended in a technical loss is level, at 0-0. Read literally, both teams collect the bonus for a series neither played. |
-| **Why it matters** | It inverts the incentive Ch. 3.5 exists to create: *"ההפסד הטכני מאפס את שני הצדדים כאחד, ובכך מתמרץ את שניהם לשמור על תקינות פרוטוקולרית ולא לנצח בפסק זמן"*. Two teams that crashed six times each would outscore a team that played honestly and lost narrowly. |
+| **Why it matters** | It inverts the incentive Ch. 3.5 exists to create: *"a technical loss zeroes both sides alike, thereby incentivising both to maintain protocol correctness rather than to win on a timeout"*. Two teams that crashed six times each would outscore a team that played honestly and lost narrowly. |
 | **Our choice** | The tie bonus is paid only when **at least one** sub-game produced a real result. An all-technical-loss series, and an empty series, return 0-0. |
 | **Why** | It is the reading that cannot be gamed, and the one the Ch. 3.5 rationale plainly intends. Where a literal reading and a stated purpose disagree, implement the purpose. |
 | **Effect** | `core/domain/scoring.aggregate()` filters technical losses before deciding the tie; three tests pin it. **Needs a negotiation item — see N19.** |
@@ -118,7 +118,7 @@ log audit will blame both teams.
 |---|---|
 | **Where** | M#47 vs. the fixed move set in Appendix F Table 15 |
 | **The apparent conflict** | M#47 captures a thief "imprisoned without any legal move". The move set is **fixed** as `N, S, E, W, STAY`, so STAY is *always* legal — under a literal reading M#47 could never fire. |
-| **Resolved by** | The barrier law on **p. 21** states the definition in the rule text itself: *"גנב שנכלא ללא מהלך חוקי כלשהו (**כל התאים הצמודים חסומים במחסומים ו/או בשולי הלוח**) נחשב אף הוא ללכוד"*. The parenthetical **defines** "without any legal move" as adjacency, and names barriers *and board edges* as equivalent blockers. |
+| **Resolved by** | The barrier law on **p. 21** states the definition in the rule text itself: *"Thief sealed in with no legal move at all (**all adjacent cells blocked by barriers and/or the board edge**) is likewise considered captured"*. The parenthetical **defines** "without any legal move" as adjacency, and names barriers *and board edges* as equivalent blockers. |
 | **Our choice** | Capture by **adjacency**: all four orthogonal neighbours blocked, regardless of STAY. Board edges count. |
 | **Status** | This is a clarification, not a contradiction — the rulebook answers it. The config flag `capture.stay_counts_as_move = false` is kept anyway, because an opponent who read only M#47 may arrive with the other reading, and the point of the pre-match agreement is that we never have to argue about it. |
 | **Stakes** | Thief at `(6,6)` with barriers at `(5,6)` and `(6,5)`: captured (20/5) under the correct reading, survives (5/10) under the other. A 15-point swing on identical boards. Negotiation item **N14**. |
@@ -135,7 +135,7 @@ detect during the handshake rather than discover during the audit.
 
 | | |
 |---|---|
-| **Appendix F says** | Table 18 row 1: `[מספר המשחקונים]` = **6**, status **קבוע (fixed)**. Not raisable, not negotiable. |
+| **Appendix F says** | Table 18 row 1: `[number of sub-games]` = **6**, status **fixed (fixed)**. Not raisable, not negotiable. |
 | **The reference ships** | `"num_games": 1` in `config/police/game.json` and in the sample run. |
 | **Reclassified 31/07** | **Not a contradiction.** A fixed value admits no conflict — the reference is simply non-conformant, and a team that plays a 1-sub-game series has deviated from a fixed value. |
 | **Our value** | 6, as Appendix F requires. |
@@ -145,7 +145,7 @@ detect during the handshake rather than discover during the audit.
 
 | | |
 |---|---|
-| **Appendix F says** | Table 16: `[קצב דעיכת הריח]` = **0.10**, status **fixed**. The *rate* is settled. |
+| **Appendix F says** | Table 16: `[scent decay rate]` = **0.10**, status **fixed**. The *rate* is settled. |
 | **The gap that remains** | The **formula** is not a quantity, so Appendix F cannot settle it. The book's worked example uses multiplicative decay `(1−ρ)·τ + Δτ`, giving 0.9 → **0.81**. The reference implements subtractive `τ − ρ`, giving 0.9 → **0.80**. |
 | **Reclassified 31/07** | Not a book contradiction — the book is self-consistent. It is a reference divergence sitting on a mechanism Appendix F does not cover. |
 | **Our choice** | The book's multiplicative model. Appendix D says the book prevails over the repository. |
@@ -165,7 +165,7 @@ detect during the handshake rather than discover during the audit.
 
 | | |
 |---|---|
-| **Appendix F says** | Table 15 row 1: `[מערך התנועה]` = four single orthogonal steps + STAY, **no diagonals**, status **fixed**. M#14 makes the sanction explicit. |
+| **Appendix F says** | Table 15 row 1: `[movement set]` = four single orthogonal steps + STAY, **no diagonals**, status **fixed**. M#14 makes the sanction explicit. |
 | **The reference does** | `Board.__init__(self, size, moves=None)` falls back to `tuple(Direction)` — all eight directions — when no move set is passed. Its own docstring admits it: *"the legacy 8-direction king movement is used when no move set is supplied."* The shipped config does pass the correct four, so the simulator itself is compliant. |
 | **Reclassified 31/07** | **Not a contradiction.** The move set is fixed; this is a latent defect in code we were invited to reuse. |
 | **Our choice** | Our `Direction` enum contains **no diagonals at all** — an illegal move is unrepresentable rather than merely rejected. |
@@ -210,9 +210,9 @@ resolves.
 
 | Retired | What it said | Why it was not a contradiction | Where it lives now |
 |---|---|---|---|
-| **C-003** | Board size 7×7 in Appendix F vs. a 10×10 belief-map figure | `[גודל הלוח]` is a **minimum**. A 10×10 figure illustrates a legal raised value; nothing conflicts. | `PARAMETERS.md` §4.3 — including the reason we decline increases: 14 barriers cover 28.6 % of a 7×7 but only 14 % of a 10×10, so a bigger board is strongly thief-favouring. |
+| **C-003** | Board size 7×7 in Appendix F vs. a 10×10 belief-map figure | `[board size]` is a **minimum**. A 10×10 figure illustrates a legal raised value; nothing conflicts. | `PARAMETERS.md` §4.3 — including the reason we decline increases: 14 barriers cover 28.6 % of a 7×7 but only 14 % of a 10×10, so a bigger board is strongly thief-favouring. |
 | **C-011a** | `survival_threshold` and `max_moves` can be raised apart | Both are **minimums**; Appendix F explicitly permits raising either. It produces a *degenerate* configuration, not a contradiction. | `PARAMETERS.md` §4.2 — the invariant `survival_threshold == max_moves`, enforced by `config_spec.invariant_violations()`, deliberately kept separate from `violations()` because Appendix F itself is content with the unequal pair. |
-| **C-012** | Our LLM provider was not one of the book's four modes | Table 21 states the choice is *"פרטית לכל עמית... ואינה נתונה למשא ומתן"* — private, outside the agreed config, not negotiated. It was our own configuration drift, not an ambiguity in any source. | `PARAMETERS.md` §5.2 — resolved 30/07: selector moved to `[trash_talk] provider`, committed value `template`, per-machine override via `P2P_LLM_PROVIDER`. |
+| **C-012** | Our LLM provider was not one of the book's four modes | Table 21 states the choice is *"private to each peer... and is not subject to negotiation"* — private, outside the agreed config, not negotiated. It was our own configuration drift, not an ambiguity in any source. | `PARAMETERS.md` §5.2 — resolved 30/07: selector moved to `[trash_talk] provider`, committed value `template`, per-machine override via `P2P_LLM_PROVIDER`. |
 
 **The lesson worth keeping.** All three were logged early, when "anything that looked odd" went into
 this file. Applying the §0 test retrospectively removed a quarter of it. A document that lists

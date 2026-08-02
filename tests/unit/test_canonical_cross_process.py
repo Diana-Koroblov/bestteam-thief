@@ -29,14 +29,14 @@ PAYLOAD = {
     "zeta": [3, 1, 2],
     "alpha": {"nested": True, "b": None},
     "float": 0.1 + 0.2,
-    "unicode": "גנב ושוטר — ✓",
+    "unicode": "Ωμέγα-Ünïcode — ✓",
     "int": 10**18,
 }
 
 # **The child writes UTF-8 bytes, never `print`.**
 #
 # The first version used `print`, and it failed on Windows and only on Windows:
-# the console there defaults to cp1252, so printing the Hebrew payload raised
+# the console there defaults to cp1252, so printing the non-ASCII payload raised
 # `UnicodeEncodeError` and the child exited 1. The canonical form was correct
 # all along — it was the *reporting* that could not survive the platform.
 #
@@ -80,8 +80,8 @@ def test_a_second_process_produces_the_identical_digest() -> None:
 
     This test earned its keep on the first Windows run: the child died with
     `UnicodeEncodeError` before it could report anything, because a cp1252
-    console cannot print Hebrew. The canonical bytes were right; the platform
-    could not carry them.
+    console cannot print non-Latin text. The canonical bytes were right; the
+    platform could not carry them.
 
     Run in a real subprocess rather than a thread or a fixture, because the
     things that break canonical form — hash seed, dict ordering, locale, float
@@ -102,8 +102,8 @@ def test_key_insertion_order_cannot_change_the_digest() -> None:
 
 
 def test_non_ascii_survives_the_boundary() -> None:
-    """Team names and hints may be Hebrew; an escaping difference is a mismatch."""
-    payload = {"team": "הטובים", "hint": "צפונה"}
+    """Team names and hints need not be ASCII; an escaping difference is a mismatch."""
+    payload = {"team": "Ωμέγα", "hint": "Δέλτα"}
     assert _in_child(payload)[0] == digest(payload)
 
 
@@ -152,13 +152,13 @@ def test_canonical_output_is_encodable_on_a_windows_console_codec() -> None:
     The cross-process child originally used `print`, and died with
     `UnicodeEncodeError` on a cp1252 console while the canonical bytes were
     perfectly correct. Any code path in the peer that logs or prints a canonical
-    payload containing a Hebrew team name will fail the same way, mid-match, on
-    Diana's machine but never on a CI runner.
+    payload containing a non-ASCII team name will fail the same way, mid-match,
+    on a Windows machine but never on a CI runner.
 
     The rule this pins down: canonical output is **bytes**, and anything that
     turns it back into console text must say UTF-8 explicitly.
     """
-    payload = {"team": "הטובים", "hint": "צפונה — ✓"}
+    payload = {"team": "Ωμέγα", "hint": "Δέλτα — ✓"}
     encoded = canonical_json(payload).encode("utf-8")
     assert encoded.decode("utf-8") == canonical_json(payload)
 

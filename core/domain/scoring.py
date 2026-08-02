@@ -10,8 +10,8 @@ Thief only 5; survival pays the Thief 10 but the Cop only 5. So neither side's
 optimal play is the mirror of the other's, and the Cop must force a result
 because a stalemate is a Thief win.
 
-A technical loss pays **0 to both sides** (Ch. 3.5) — *"ההפסד הטכני מאפס את שני
-הצדדים כאחד"* — which removes any incentive to win by making the opponent time
+A technical loss pays **0 to both sides** (Ch. 3.5) — *"a technical loss zeroes
+both sides alike"* — which removes any incentive to win by making the opponent time
 out. Worth knowing before designing anything that stresses an opponent's clock.
 """
 
@@ -102,7 +102,7 @@ def aggregate(outcomes: list[Outcome], table: ScoreTable) -> SeriesResult:
     which **every** sub-game ended in a technical loss also has equal totals, at
     0-0. Paying the tie bonus there would hand two teams points for a series
     neither managed to play, and would reward crashing over competing — which
-    directly contradicts *"ההפסד הטכני מאפס את שני הצדדים כאחד"*. We pay the
+    directly contradicts *"a technical loss zeroes both sides alike"* (Ch. 3.5). We pay the
     bonus only when at least one sub-game produced a real result.
     """
     cop = sum(score(outcome, table)[0] for outcome in outcomes)

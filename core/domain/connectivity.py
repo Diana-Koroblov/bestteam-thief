@@ -2,7 +2,8 @@
 
 A barrier blocks both players, so every wall the Cop builds is also a wall
 around itself. The rulebook states the danger plainly (Ch. 3.4): the Cop must
-squeeze the Thief into a corner *"מבלי לחסום בטעות את נתיבי הגישה של עצמו"* —
+squeeze the Thief into a corner *"without accidentally blocking its own access
+routes"* (Ch. 3.4) —
 without accidentally blocking its own access routes.
 
 The failure it warns about is not subtle, it is terminal. A Cop that partitions

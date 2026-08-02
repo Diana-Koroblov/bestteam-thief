@@ -101,3 +101,25 @@ def test_a_stale_lock_file_gets_actionable_advice() -> None:
 def test_the_lock_hint_does_not_shadow_more_specific_ones() -> None:
     """Hints are matched in order; a real auth failure must still win."""
     assert "Re-authenticate" in hint_for("Authentication failed for repo.git")
+
+
+def test_status_never_takes_the_index_lock(repo: Path) -> None:
+    """**The bug that stopped three ship.py runs on 02/08.**
+
+    A plain `git status` takes `.git/index.lock` to refresh cached stat info.
+    Harmless when it finishes; when the process is killed part-way it leaves the
+    lock behind and every later `git add` fails with "File exists".
+
+    We killed it repeatedly through interrupted test runs and failed gates, and
+    spent three rounds blaming the editor. `--no-optional-locks` is git's own
+    answer for a tool that wants to *read* status without writing the index.
+    """
+    import inspect
+
+    from core.shared import git_ops
+
+    source = inspect.getsource(git_ops.has_pending_changes)
+    assert "--no-optional-locks" in source
+
+    has_pending_changes(repo)
+    assert not (repo / ".git" / "index.lock").exists()

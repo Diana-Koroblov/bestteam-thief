@@ -14,7 +14,8 @@ from pathlib import Path
 from core.runtime.snapshot import SNAPSHOT_NAME, load, save
 from core.runtime.watchdog import Watchdog
 
-STATE = {"step": 7, "phase": "awaiting_reveal", "team": "הטובים", "reason": "watchdog"}
+NON_ASCII_TEAM = "Ωμέγα-Ünïcode"
+STATE = {"step": 7, "phase": "awaiting_reveal", "team": NON_ASCII_TEAM, "reason": "watchdog"}
 
 
 def test_a_snapshot_round_trips(tmp_path: Path) -> None:
@@ -22,11 +23,11 @@ def test_a_snapshot_round_trips(tmp_path: Path) -> None:
     assert load(tmp_path) == STATE
 
 
-def test_hebrew_survives_the_write(tmp_path: Path) -> None:
+def test_non_ascii_survives_the_write(tmp_path: Path) -> None:
     """Explicit UTF-8. We already lost an afternoon to cp1252 in 6.5.2."""
     save(STATE, tmp_path)
-    assert "הטובים" in (tmp_path / SNAPSHOT_NAME).read_text(encoding="utf-8")
-    assert load(tmp_path)["team"] == "הטובים"
+    assert NON_ASCII_TEAM in (tmp_path / SNAPSHOT_NAME).read_text(encoding="utf-8")
+    assert load(tmp_path)["team"] == NON_ASCII_TEAM
 
 
 def test_the_write_leaves_no_temporary_file_behind(tmp_path: Path) -> None:

@@ -8,9 +8,9 @@ Four ways a sub-game ends (Ch. 3.5):
 * the Thief survives ``survival_threshold`` valid steps.
 
 Plus a fifth that is not a game outcome at all: a crash, a missed deadline or a
-cryptographic forgery. The book is blunt about how that scores — *"ההפסד הטכני
-מאפס את שני הצדדים כאחד, ובכך מתמרץ את שניהם לשמור על תקינות פרוטוקולרית ולא
-לנצח בפסק זמן"*. **Both** sides get 0. There is no way to profit from an
+cryptographic forgery. The book is blunt about how that scores — *"a technical
+loss zeroes both sides alike, thereby incentivising both to maintain protocol
+correctness rather than to win on a timeout"*. **Both** sides get 0. There is no way to profit from an
 opponent's failure, so inducing one is never worth engineering.
 
 Three of these readings are not stated by the rulebook and are config flags

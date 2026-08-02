@@ -19,6 +19,16 @@ publish a red tree by forgetting a step.
 
 There is deliberately no --skip-gates flag. If you genuinely need to bypass
 them, run scripts/publish.py directly and know that you are doing it.
+
+Two lock helpers, because a stale .git/index.lock stopped three runs in one
+session::
+
+    ship.py --why-locked       explain the situation, change nothing
+    ship.py --unlock -m "..."  clear it first, but only if provably stale
+
+`--unlock` refuses unless no git process is running AND the lock is older than
+30 s. The cost of being wrong is a corrupted index; the cost of refusing is that
+somebody waits half a minute.
 """
 
 from __future__ import annotations
@@ -30,6 +40,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from core.shared.git_lock import diagnose, release  # noqa: E402
 from core.shared.git_ops import GitCommandError, has_pending_changes, run_git  # noqa: E402
 from core.shared.pipeline import GATES, Step, StepError, banner, run_step  # noqa: E402
 
@@ -64,6 +75,18 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         description="Run the quality gates, commit, and publish to both repositories."
     )
     parser.add_argument("--message", "-m", required=True, help="Commit message.")
+    parser.add_argument(
+        "--unlock",
+        action="store_true",
+        help="Clear a stale .git/index.lock first, but only if it is provably "
+        "stale: no git process running AND old enough that any live operation "
+        "would have finished. Refuses on a maybe.",
+    )
+    parser.add_argument(
+        "--why-locked",
+        action="store_true",
+        help="Explain the current lock situation and exit, changing nothing.",
+    )
     parser.add_argument("--role", choices=["cop", "thief", "both"], default="both")
     parser.add_argument("--dry-run", action="store_true", help="Show what would happen.")
     return parser.parse_args(argv)
@@ -72,6 +95,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     """Return 0 when everything succeeded, 1 on the first failure."""
     args = _parse_args(argv)
+
+    if args.why_locked:
+        print(diagnose(ROOT))
+        return 0
+    if args.unlock:
+        removed, explanation = release(ROOT)
+        print(f"  {explanation}", flush=True)
+        if not removed and "No .git" not in explanation:
+            return 1
     steps = build_steps(args.message, args.role, args.dry_run)
     total = len(steps)
     stage, *rest = steps
