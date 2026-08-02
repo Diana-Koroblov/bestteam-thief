@@ -453,8 +453,13 @@ Most of the schedule slack is allocated here — if anything slips, it slips her
   - The emission table travels as `distance² → intensity` rather than 25 cells: same information, half the payload, and a disagreement about one radius is obvious instead of hidden among 25 numbers differing in one place.
 - [x] 4.1.6 [D] - Scent field **transmission** (not sampling) | DoD: Our field is sent inside each turn message and the opponent's is merged on receipt. `scent_field_includes_current_turn` default `true`, matching the reference. Uncertainty survives because both peers then move again, leaving ≤5 candidates. See CONTRADICTIONS C-005.
 - [x] 4.1.7 [D] - `decay_model` config key: `multiplicative` (book, default) and `subtractive` (reference) | DoD: Both implemented. At ρ=0.10 the book gives 0.9→**0.81**, the reference 0.9→**0.80**. See CONTRADICTIONS C-007. — both implemented and both tested, so we can play under whichever was signed.
-- [ ] 4.1.8 [D] - **Seal a digest of our emitted scent field** in the per-step commit payload | DoD: The reference leaves `smell_grid` outside the seal, so a fabricated field passes audit undetected. We close it on our side regardless of what the opponent does. See CONTRADICTIONS C-008.
-- [ ] 4.1.9 [D] - Residual emission recovery | DoD: Implemented under both decay models — strongest available signal, and both sides can compute it.
+- [x] 4.1.8 [D] - **Seal a digest of our emitted scent field** in the per-step commit payload | DoD: The reference leaves `smell_grid` outside the seal, so a fabricated field passes audit undetected. See CONTRADICTIONS C-008.
+  - ⚠️ **Corrected from "regardless of what the opponent does" — that would have been a serious mistake.** The opponent recomputes our digests during the end-of-match audit using *their* payload builder. Sealing unilaterally would make **every digest we ever sent** fail their verification, and the sanction for a mismatch is a total technical loss. Sealing alone is worse than not sealing.
+  - So it is **opt-in and negotiated (N13c)**, and "off" means the key is *absent*, not `null`. `test_the_payload_is_byte_identical_when_sealing_is_off` asserts that on the canonical bytes, since those are what get hashed.
+- [x] 4.1.9 [D] - Residual emission recovery | DoD: Implemented under both decay models — strongest available signal, and both sides can compute it. — `core/domain/scent_residual.py`.
+  - A reading becomes a **timestamp**: not "they were near here" but "they were near here, *n* turns ago".
+  - Both models inverted, because C-007 means we may play either. Note the finding: at 0.81 **both return 1 turn**, so a single early reading cannot tell them apart — the divergence only appears further down the curve, by which point the match is already being played on a wrong assumption. That is the argument for settling it at the handshake via the M#23 digest rather than inferring it.
+  - Refuses to date a trace older than 25 turns. A confident timestamp on a faded trace is worse than none: it sends the Cop chasing where the Thief *used to be*.
 
 ### 4.2 Belief engine
 - [x] 4.2.1 [D] - `core/domain/belief.py` — full 7×7 posterior | DoD: Sums to 1.0 within float tolerance after every update.
@@ -519,10 +524,13 @@ Most of the schedule slack is allocated here — if anything slips, it slips her
 - [x] 4.6.4 [D] - Word-cap and coordinate-scanner tests | DoD: A 20-word hint and a `(3,4)` hint are both rejected.
 
 ### ✅ Phase 4 Quality Gate
-- [ ] 4.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.
-- [ ] 4.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC. `belief.py` and `scent.py` are the likeliest to breach — split early.
-- [ ] 4.QG.3 [D] - `uv run pytest --cov` | DoD: All pass; coverage ≥85 %.
-- [ ] 4.QG.4 [B] - **Milestone M4 observed** | DoD: Free-text report drives inference; scent map updates and decays each step; the verbal layer emits a truthful or deceptive hint.
+- [x] 4.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.
+- [x] 4.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC. — `belief.py` split into `belief.py` + `belief_hints.py`, `test_reliability.py` into two, exactly as predicted.
+- [x] 4.QG.3 [D] - `uv run pytest --cov` | DoD: All pass; coverage ≥85 %. — **705 tests, 94.89 %**.
+- [x] 4.QG.4 [B] - **Milestone M4 observed** | DoD: Free-text report drives inference; scent map updates and decays each step; the verbal layer emits a truthful or deceptive hint. — `uv run python scripts/demo_m4.py`.
+  - 🔴 **Building the demo caught a bug that would have cost us the league silently.** The parser scored *"I am heading north, you will never catch me"* at 0.315 — below the usable threshold — so the hint was discarded. Two compounding faults: the negation scan ran over the whole sentence, and hints are **taunts**, so "never" appears in nearly every one; and "no" was matched by prefix, making `"north".startswith("no")` true so **every northward hint negated itself**.
+  - **The failure has no symptom.** An ignored hint looks exactly like an opponent who said nothing useful. We would have played every match with a dead verbal channel and never known. Only running the loop end to end and *reading the output* exposed it — which is the entire argument for milestones being *observed* rather than asserted.
+  - Negation now scopes **forward**, as in English, and matches whole words. Eight parametrised tests hold the line between "not going north" (0.315, discarded) and "north, you will never catch me" (0.900, used).
 
 ---
 

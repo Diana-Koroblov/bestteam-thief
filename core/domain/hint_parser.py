@@ -34,10 +34,29 @@ BEARINGS: dict[str, Direction] = {
 # Words that weaken a claim without reversing it.
 HEDGES = ("might", "maybe", "perhaps", "possibly", "could", "somewhere", "probably")
 
-# Words that reverse it. "Not going north" is a claim about south-ish, but a
-# weak one — so it lowers confidence rather than flipping the direction, which
+# Words that reverse a claim. "Not going north" is a claim about south-ish, but
+# a weak one — so it lowers confidence rather than flipping the direction, which
 # would let a one-word negation drive our belief harder than a plain statement.
-NEGATIONS = ("not", "never", "n't", "away from", "opposite", "anywhere but")
+# Matched as **whole words**, never as prefixes. An earlier version used
+# ``startswith`` and included "no" — and ``"north".startswith("no")`` is True,
+# so every northward hint negated itself. Every hint claiming north was scored
+# 0.315 and silently discarded.
+NEGATIONS = frozenset(
+    {"not", "never", "n't", "away", "opposite", "avoid", "anywhere", "isn't", "won't"}
+)
+
+# **A negation counts only if it PRECEDES the bearing and sits close to it.**
+#
+# Negation scopes forward in English: "not going north" negates, "north — you
+# will never catch me" does not. The first version scanned the whole sentence
+# and silently broke the entire verbal channel, because hints are *taunts* and
+# "you will never catch me" is the house style. Almost every hint an opponent
+# could send scored 0.315, landed under the usable threshold, and was discarded.
+#
+# That failure is invisible from the outside: an ignored hint looks exactly like
+# an opponent who said nothing useful, so we would have played the whole league
+# with a dead verbal channel and no symptom.
+NEGATION_WINDOW = 3
 
 
 @dataclass(frozen=True)
@@ -94,9 +113,26 @@ def parse(text: str) -> ParsedHint:
     confidence = 0.9
     if any(hedge in lowered for hedge in HEDGES):
         confidence *= 0.5
-    if any(negation in lowered for negation in NEGATIONS):
+    if _negated_near_bearing(lowered, found[0]):
         # Deliberately weakens rather than flips. Flipping would let a single
         # "not" push our belief harder than a plain statement ever could,
         # which is a lever we should not hand the opponent.
         confidence *= 0.35
     return ParsedHint(found[0], round(confidence, 3), text)
+
+
+def _negated_near_bearing(lowered: str, bearing: Direction) -> bool:
+    """Whether a negation sits within ``NEGATION_WINDOW`` words of the bearing.
+
+    Position is what separates "I am **not** going north" from "I am heading
+    north, you will **never** catch me". The first negates the claim; the second
+    is trash talk that happens to contain a negative word, and treating it as a
+    negation would silently discard almost every hint in the league.
+    """
+    stem = {v: k for k, v in BEARINGS.items()}[bearing]
+    words = re.findall(r"[a-z']+", lowered)
+    positions = [i for i, w in enumerate(words) if w.startswith(stem)]
+    return any(
+        word in NEGATIONS and any(0 < p - index <= NEGATION_WINDOW for p in positions)
+        for index, word in enumerate(words)
+    )

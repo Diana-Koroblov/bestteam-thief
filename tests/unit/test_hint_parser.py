@@ -54,6 +54,51 @@ def test_hedging_lowers_confidence() -> None:
     assert parse("I might drift north somewhere.").confidence < parse("I go north.").confidence
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        "I am heading north, you will never catch me.",
+        "You will never catch me, I am heading north.",
+        "Heading north, and you cannot stop me.",
+        "North, and nothing you do matters.",
+    ],
+)
+def test_trash_talk_containing_a_negative_word_is_not_a_negation(text: str) -> None:
+    """**The bug that would have killed the verbal channel for the whole league.**
+
+    Two faults compounded. The negation scan ran over the *whole sentence*, and
+    hints are taunts — "you will never catch me" is the house style — so almost
+    every hint an opponent could send scored 0.315 and fell under the usable
+    threshold. And the list contained "no" matched by prefix, so
+    ``"north".startswith("no")`` made every northward hint negate **itself**.
+
+    The failure is invisible from outside: an ignored hint looks exactly like an
+    opponent who said nothing useful. We would have played the entire league
+    with a dead verbal channel and no symptom at all.
+
+    Negation now scopes forward, as it does in English, and matches whole words.
+    """
+    parsed = parse(text)
+    assert parsed.confidence >= 0.8
+    assert parsed.usable
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "I am not going north.",
+        "I am never going north.",
+        "I am moving away from the north.",
+        "I will avoid the north entirely.",
+    ],
+)
+def test_a_real_negation_before_the_bearing_still_weakens_it(text: str) -> None:
+    """The other half: the fix must not disarm the check it was fixing."""
+    parsed = parse(text)
+    assert parsed.confidence < 0.4
+    assert not parsed.usable
+
+
 def test_negation_weakens_rather_than_flips() -> None:
     """**Deliberate: "not north" does not become "south".**
 
