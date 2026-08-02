@@ -23,6 +23,8 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any, ClassVar
 
+from core.domain.intent import Intent
+
 __all__ = ["Role", "Intent", "MessageKind", "Message", "Commit", "Ack", "Reveal",
            "FinalReveal", "CaptureClaim", "CaptureResponse", "BarrierDeclaration", "Negotiation"]
 
@@ -32,18 +34,6 @@ class Role(str, Enum):
 
     COP = "cop"
     THIEF = "thief"
-
-
-class Intent(str, Enum):
-    """Whether the hint accompanying a move is truthful.
-
-    Declared **inside** the commitment, so a peer must decide before seeing the
-    opponent's move and cannot claim afterwards that a lie was "meant" as truth
-    (Ch. 5.3.1). Lying is legal; misdeclaring the flag is forgery.
-    """
-
-    TRUTH = "truth"
-    LIE = "lie"
 
 
 class MessageKind(str, Enum):

@@ -430,7 +430,7 @@ posterior shifts measurably; the verbal layer emits a truthful or deceptive hint
 Most of the schedule slack is allocated here — if anything slips, it slips here.
 
 ### 4.1 Scent engine
-- [ ] 4.1.1 [D] - `core/domain/scent.py` — 5×5 radial emission field, centre τ=0.9 | DoD: Reproduces the rulebook's figure values (0.9 / 0.62 / 0.42 / 0.20 / 0.14 / 0.04). (F)
+- [x] 4.1.1 [D] - `core/domain/scent.py` — 5×5 radial emission field, centre τ=0.9 | DoD: Reproduces the rulebook's figure values (0.9 / 0.62 / 0.42 / 0.20 / 0.14 / 0.04). (F)
   - **📐 The exact grid, read off the book's figure (Ch. 4, "5×5 scent emission field, centre τ = 0.9"). Ship this table, not a formula:**
     ```
     0.04  0.14  0.20  0.14  0.04
@@ -471,16 +471,21 @@ Most of the schedule slack is allocated here — if anything slips, it slips her
 - [x] 4.2.3 [D] - `peak`, `entropy` and `normalise` helpers | DoD: Used by the strategy layer and the GUI heatmap. — `peak` breaks ties on coordinates so two peers replaying one log agree; `entropy` in bits is how we report *"the filter works"* without cherry-picking a game.
 
 ### 4.3 Natural language — outbound
-- [ ] 4.3.1 [I] - `core/infra/llm/base.py` — `TextProvider` interface | DoD: One method, `generate(prompt, max_words) -> str`.
-- [ ] 4.3.2 [I] - `template` provider — pre-written bank, zero tokens | DoD: Default; works fully offline. (F)
-- [ ] 4.3.3 [I] - `ollama` provider — `localhost:11434` | DoD: Itay's machine produces a hint in under 10 s.
-- [ ] 4.3.4 [D] - `groq` provider, routed through the Gatekeeper | DoD: No direct SDK call outside this module; Diana's machine produces a hint.
-- [ ] 4.3.5 [I] - Automatic fallback to `template` on **any** provider error or timeout | DoD: Killing Ollama mid-match degrades quality but does not lose the match. (ADR-003)
-- [ ] 4.3.6 [I] - `every_n_steps` throttle | DoD: LLM invoked every 2–3 turns; other turns use the template bank.
-- [ ] 4.3.7 [D] - Hint word cap of 15, enforced for **every** provider including the LLM system prompt | DoD: An over-long generation is regenerated or truncated at a word boundary. (F)
-- [ ] 4.3.8 [D] - Outbound coordinate scanner | DoD: Any text containing bare numeric coordinates is rejected and regenerated. Port HW6's `_COORD_RE`. (M#27)
-- [ ] 4.3.9 [D] - Free natural language enforced — no structured position protocol anywhere | DoD: Architecture test asserts no numeric position field on the hint channel. (M#26)
-- [ ] 4.3.10 [I] - Optional `map_area` landmark flavour | DoD: With `"New York"` set, hints reference real landmarks; empty string yields generic ones. (F) *(P2)*
+- [x] 4.3.1 [I] - `core/infra/llm/base.py` — `TextProvider` interface | DoD: One method, `generate(prompt, max_words) -> str`.
+- [x] 4.3.2 [I] - `template` provider — pre-written bank, zero tokens | DoD: Default; works fully offline. (F)
+- [~] 4.3.3 [I] - `ollama` provider — `localhost:11434` | DoD: Itay's machine produces a hint in under 10 s. — **code complete and unit-tested against a mocked transport; the DoD needs Itay's machine.** ⏰ Verify during the warm-up match with `uv run python scripts/hint_demo.py`.
+- [~] 4.3.4 [D] - `groq` provider, routed through the Gatekeeper | DoD: No direct SDK call outside this module; Diana's machine produces a hint. — code complete; the Gatekeeper half is enforced (no key or URL exists outside `core/infra/llm/remote.py`).
+  - [ ] 4.3.4.a 🧑 **DIANA** - Edit `.env` (already exists, already git-ignored): replace `GROQ_API_KEY=gsk_replace_me` with the real key. Never in `game.toml` — that file is exchanged with the opponent during negotiation. Then, in PowerShell:
+    ```
+    uv run python scripts/hint_demo.py --provider groq
+    ```
+    The `--provider` flag exists **because the env-var syntax differs between PowerShell, cmd and bash, and getting it wrong fails silently into the template bank** — which looks exactly like success. The script prints `.env loaded`, who wrote each line, and an explicit verdict at the end.
+- [x] 4.3.5 [I] - Automatic fallback to `template` on **any** provider error or timeout | DoD: Killing Ollama mid-match degrades quality but does not lose the match. (ADR-003)
+- [x] 4.3.6 [I] - `every_n_steps` throttle | DoD: LLM invoked every 2–3 turns; other turns use the template bank. — **deliberately set to 1, not 2–3.** The book frames this purely as a token budget (Ch. 6.5.1); `template` and `ollama` spend zero tokens, so there is no budget to protect and 1 buys the richest verbal game. A startup guard (7.1.6) forces it to 3 if a metered provider is ever selected.
+- [x] 4.3.7 [D] - Hint word cap of 15, enforced for **every** provider including the LLM system prompt | DoD: An over-long generation is regenerated or truncated at a word boundary. (F)
+- [x] 4.3.8 [D] - Outbound coordinate scanner | DoD: Any text containing bare numeric coordinates is rejected and regenerated. Port HW6's `_COORD_RE`. (M#27)
+- [x] 4.3.9 [D] - Free natural language enforced — no structured position protocol anywhere | DoD: Architecture test asserts no numeric position field on the hint channel. (M#26)
+- [x] 4.3.10 [I] - **Landmarks are OFF unless `map_area` is negotiated** — inverted after a live leak: Groq truthfully said "heading north towards the old warehouse", then on a deliberately-empty hint said "near the old warehouse". No compass word, so every rule passed — but an opponent who paired warehouse↔north on turn 1 reads the second as north anyway. The model had built a **private codebook** out of its own flavour text. Originally 4.3.10 [I] - Optional `map_area` landmark flavour | DoD: With `"New York"` set, hints reference real landmarks; empty string yields generic ones. (F) *(P2)*
 
 ### 4.4 Natural language — inbound
 - [ ] 4.4.1 [D] - `core/domain/hint_parser.py` — free text → directional intent + confidence | DoD: Port and adapt HW6's parser; low confidence defers to the belief map alone.
@@ -488,13 +493,13 @@ Most of the schedule slack is allocated here — if anything slips, it slips her
 - [ ] 4.4.3 [I] - Behavioural profiling across sub-games | DoD: Opponent's lie rate and hint style recorded in the log. *(P2)*
 
 ### 4.5 Intent flag
-- [ ] 4.5.1 [D] - `Intent` enum (`truth` / `lie`) chosen by the brain, not the LLM | DoD: Present in the hashed record; the LLM receives it as an instruction, never decides it. (Ch. 5)
+- [x] 4.5.1 [D] - `Intent` enum (`truth` / `lie`) chosen by the brain, not the LLM | DoD: Present in the hashed record; the LLM receives it as an instruction, never decides it. (Ch. 5)
 
 ### 4.6 Tests
-- [ ] 4.6.1 [D] - Scent emission and decay unit tests | DoD: Values match the book's figures to 2 decimal places.
-- [ ] 4.6.2 [D] - Belief update unit tests | DoD: Posterior sums to 1; contradicted hints move mass correctly.
-- [ ] 4.6.3 [I] - Provider tests with a mocked transport | DoD: No test touches a live API. (X §6.1)
-- [ ] 4.6.4 [D] - Word-cap and coordinate-scanner tests | DoD: A 20-word hint and a `(3,4)` hint are both rejected.
+- [x] 4.6.1 [D] - Scent emission and decay unit tests | DoD: Values match the book's figures to 2 decimal places.
+- [x] 4.6.2 [D] - Belief update unit tests | DoD: Posterior sums to 1; contradicted hints move mass correctly.
+- [x] 4.6.3 [I] - Provider tests with a mocked transport | DoD: No test touches a live API. (X §6.1)
+- [x] 4.6.4 [D] - Word-cap and coordinate-scanner tests | DoD: A 20-word hint and a `(3,4)` hint are both rejected.
 
 ### ✅ Phase 4 Quality Gate
 - [ ] 4.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.
