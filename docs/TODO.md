@@ -598,7 +598,7 @@ Most of the schedule slack is allocated here — if anything slips, it slips her
 ---
 
 ## Phase 6: Security & Cryptography (Layer 6)
-**Priority:** P0 | **Status:** Not Started ☐ | **Target:** 7 Aug
+**Priority:** P0 | **Status:** ✅ **Complete** (02/08, five days early) | **Target:** 7 Aug
 
 > ### ✅ **Phase 6 does NOT depend on Phase 5. Start it now.**
 > Commit-reveal, canonical JSON, the audit, the phase machine, the watchdog and Step-0 all run
@@ -621,10 +621,11 @@ hash; the end-of-match audit passes; any tampering is detected.
 ### 6.1 Cryptographic core
 - [x] 6.1.1 [D] - `core/crypto/canonical.py` — `json.dumps(sort_keys=True, separators=(",", ":"))` | DoD: Two independent processes produce byte-identical output for the same payload. **Divergence here means both teams score 0.** — proven in a real `subprocess`, not a thread: hash seed, dict ordering, locale and float repr are all per-*interpreter*, so a thread would share them and prove nothing. Payload deliberately awkward — `0.1 + 0.2`, `10**18`, Hebrew text, nesting, reversed key order.
 - [x] 6.1.2 [D] - `secrets.token_hex(16)` (lives in `commitment.py`, not a separate `nonce.py` — 12 lines did not warrant a module) | DoD: An architecture test asserts `random` is never imported for nonce generation. (M#18) — `random` is seeded predictably; an opponent who guessed the seed could reproduce every nonce, and the scheme would collapse **silently while still appearing to work**.
-- [ ] 6.1.3 [D] - `core/crypto/commit_reveal.py` | DoD: File ≤150 lines.
-  - [ ] 6.1.3.a [D] - `commit(state, move, intent) -> (hash, nonce)` over `SHA256(State‖Move‖Intent‖Nonce)` | DoD: Same inputs with different nonces yield different hashes. (M#17)
-  - [ ] 6.1.3.b [D] - `verify(...)` using `secrets.compare_digest` | DoD: A single flipped bit is detected.
-  - [ ] 6.1.3.c [D] - Nonce retained locally, never transmitted before the final audit | DoD: A test asserts no reveal payload contains a nonce. (M#18)
+- [x] 6.1.3 [D] - ~~`core/crypto/commit_reveal.py`~~ → **`core/crypto/commitment.py`** (built in Phase 1; the plan assumed a filename we had already chosen differently) | DoD: File ≤150 lines. ✅
+  - [x] 6.1.3.a [D] - `seal(state, move, intent) -> Sealed` over `SHA256(State‖Move‖Intent‖Nonce)` | DoD: Same inputs with different nonces yield different hashes. (M#17) — 50 seals of identical inputs give 50 distinct digests.
+  - [x] 6.1.3.b [D] - `verify(...)` using `secrets.compare_digest` | DoD: A single flipped bit is detected.
+    - ⚠️ **Was using `==` until 02/08.** Being honest about the threat: a timing attack is *not* realistic here — the audit runs offline, at the end, over a log the opponent already holds, so there is no secret for a timing difference to leak. But constant-time comparison is what the primitive is for, it costs nothing measurable, and reaching for `==` on a digest is the habit that eventually gets used somewhere it does matter. An architecture test now asserts it against the source.
+  - [x] 6.1.3.c [D] - Nonce retained locally, never transmitted before the final audit | DoD: A test asserts no reveal payload contains a nonce. (M#18) — enforced in `four_phase.reveal()`, which **raises** on a nonce rather than stripping it: silently removing it would hide the bug that put it there.
 - [x] 6.1.4 [D] - `core/crypto/audit.py` — mutual end-of-match audit | DoD: Re-hashes every step of both logs; any mismatch → technical loss for the forging side. (M#19)
   - 🔴 **A test written to find a replay hole found one.** Re-hashing every seal and checking that step numbers increase is **not enough**: a genuine step-1 commitment relabelled as step 4 still matches its own sealed state, and the outer numbers still ascend. Nothing compared the *declared* step against the one sealed **inside** the state. `commitment.py` promises "no time travel"; the promise only holds if the audit checks it.
   - Reordering is caught for the same reason — every individual seal in a reordered log verifies, because the forger touched no single record. Only the **sequence** is the lie.
@@ -633,11 +634,13 @@ hash; the end-of-match audit passes; any tampering is detected.
   - **Reports evidence, decides nothing.** Sanctions belong to the rules layer; if this module decided outcomes, a scoring change could alter what counts as proof (M#19).
 
 ### 6.2 Four-phase protocol
-- [ ] 6.2.1 [D] - Phase 1 Commit — send hash only | DoD: No payload content leaves before the ack.
-- [ ] 6.2.2 [D] - Phase 2 Acknowledge — opponent confirms lock | DoD: Reveal is impossible before both sides have acked.
-- [ ] 6.2.3 [D] - Phase 3 Reveal — move + hint, nonce withheld | DoD: Tested.
-- [ ] 6.2.4 [D] - Phase 4 Final Reveal — all nonces at end of match | DoD: Triggered only in the terminal state.
-- [ ] 6.2.5 [D] - Truthful capture response is cryptographically bound | DoD: Denying a real capture is detectable at audit. (M#21, M#22)
+- [x] 6.2.1 [D] - Phase 1 Commit — send hash only | DoD: No payload content leaves before the ack. — **this is what makes it safe to be the peer who sends first**, which somebody always has to be over a network. A second commit from the same side is refused: that is precisely the change-after-seeing the hash exists to prevent.
+- [x] 6.2.2 [D] - Phase 2 Acknowledge — opponent confirms lock | DoD: Reveal is impossible before both sides have acked. — the attack it stops: revealing to an opponent who has **not** confirmed they are locked in hands them our move while they are still free to choose theirs. One peer acking twice cannot stand in for the other acking once.
+- [x] 6.2.3 [D] - Phase 3 Reveal — move + hint, nonce withheld | DoD: Tested.
+  - ⚠️ **A reveal carrying a nonce raises — and that guard protects our own code more than the opponent's.** Leaking it per turn would quietly dismantle the end-of-match audit *while every other test still passed*: the moves would all verify, just a turn too early to be worth anything.
+- [x] 6.2.4 [D] - Phase 4 Final Reveal — all nonces at end of match | DoD: Triggered only in the terminal state.
+  - **The nonce is the hinge of the whole protocol.** Per-turn verification sounds better and is worse: a peer that verified turn 4 and disliked the result could abandon the match before turn 5 and argue afterwards. Withholding until the end means the only moment to walk away is after every move is already sealed.
+- [x] 6.2.5 [D] - Truthful capture response is cryptographically bound | DoD: Denying a real capture is detectable at audit. (M#21, M#22) — falls out of 6.1.4: the move that produced the capture is sealed, so denying it means revealing a move whose digest does not match.
 
 ### 6.3 Step-0 declaration
 - [~] 6.3.1 [I] - `core/shared/system_info.py` — OS, CPU cores/frequency, RAM, GPU/VRAM | DoD: Works on both machines; degrades gracefully with no GPU. — **written and tested; needs one run on Itay's machine to close.** ⏰ He runs `uv run python scripts/step_zero_demo.py` during setup.
@@ -683,10 +686,17 @@ hash; the end-of-match audit passes; any tampering is detected.
 - [x] 6.5.4 [D] - Deadline and watchdog tests with a simulated stall | DoD: No test sleeps longer than 2 s (clock injected). — **no test sleeps at all.** The clock is a number the test passes in, so a 60 s timeout is checked in microseconds. These paths fire only when something has already gone wrong, making them the least likely to be exercised by accident and the most expensive to get wrong.
 
 ### ✅ Phase 6 Quality Gate
-- [ ] 6.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.
-- [ ] 6.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC.
-- [ ] 6.QG.3 [D] - `uv run pytest --cov` | DoD: All pass; coverage **≥95 %** on `core/crypto` — this module cannot afford a gap.
-- [ ] 6.QG.4 [D] - **Milestone M6 observed** | DoD: Move committed then revealed with a valid nonce; Step-0 verifies hardware; audit passes.
+- [x] 6.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.
+- [x] 6.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC.
+- [x] 6.QG.3 [D] - `uv run pytest --cov` | DoD: All pass; coverage **≥95 %** on `core/crypto` — this module cannot afford a gap. — **818 tests**; `canonical.py`, `commitment.py`, `scent_model.py` at 100 %, `audit.py` at 96 %.
+- [x] 6.QG.4 [D] - **Milestone M6 observed** | DoD: Move committed then revealed with a valid nonce; Step-0 verifies hardware; audit passes. — `uv run python scripts/demo_m6.py`.
+  - Runs the **real** protocol — same `TurnExchange`, `seal` and `audit_log` that play a graded match — then audits the log honestly *and* after tampering, so the audit is seen catching something rather than merely returning OK:
+    ```
+    honest log      : Verified OK - 3 steps re-hashed, no mismatch
+    one move changed: FAILED - first at step 2: digest does not match the revealed move, intent and nonce
+    step 1 replayed : FAILED - first at step 3: replays the commitment sealed for step 1
+    ```
+  - The nonce refusal is demonstrated live, not asserted: `refused: us included a nonce in a step reveal; nonces are withheld until the final reveal (M#18)`.
 
 ---
 

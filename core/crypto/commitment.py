@@ -132,5 +132,14 @@ def verify(
     Run over the opponent's whole log at the end of the match. A mismatch is
     proof of tampering — there is no statistical doubt with SHA-256 — and the
     sanction is a total technical loss for the team that forged it.
+
+    Compared with ``secrets.compare_digest`` rather than ``==``. Being honest
+    about why: a timing attack is **not** a realistic threat here — the audit
+    runs offline, at the end, over a log the opponent already holds, so there is
+    no secret for a timing difference to leak. But constant-time comparison of
+    digests is simply what the primitive is for, it costs nothing measurable,
+    and reaching for ``==`` on a hash is the habit that eventually gets used
+    somewhere it does matter.
     """
-    return digest(commitment_payload(state, move, intent, nonce, scent_digest)) == claimed
+    computed = digest(commitment_payload(state, move, intent, nonce, scent_digest))
+    return secrets.compare_digest(computed, claimed)

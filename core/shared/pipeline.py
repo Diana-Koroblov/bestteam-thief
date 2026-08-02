@@ -15,7 +15,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-__all__ = ["Step", "StepError", "GATES", "banner", "run_step"]
+__all__ = ["Step", "StepError", "GATES", "banner", "run_step", "environment_advice"]
 
 _RULE = "=" * 68
 
@@ -62,7 +62,33 @@ class StepError(RuntimeError):
             f"  The failure output is above, in full.\n\n"
             f"  Re-run just this step while you debug:\n"
             f"    {self.step.display}\n"
+            f"{environment_advice(self.cwd)}"
         )
+
+
+def environment_advice(cwd: Path) -> str:
+    """Return advice about the *environment*, checked by state not by output.
+
+    **Deliberately not string-matching on git's message.** The pipeline streams
+    every step straight to the terminal and captures nothing — which is what
+    makes a failing test readable in place — so there is no output here to
+    match against. A stale lock was reported twice before anyone noticed the
+    hint table could never fire from this code path.
+
+    Inspecting the filesystem is better anyway: it cannot be defeated by a
+    reworded git message or a non-English locale.
+    """
+    lock = cwd / ".git" / "index.lock"
+    if not lock.is_file():
+        return ""
+    return (
+        "\n  *** A stale .git/index.lock is present. ***\n"
+        "  Usually VS Code's git integration, or an interrupted ship.py run.\n"
+        "  1. Check nothing is running:  Get-Process git -ErrorAction SilentlyContinue\n"
+        "  2. Only if that prints nothing:  Remove-Item .git\\index.lock\n"
+        "  Deleting the lock while git IS running can corrupt the index,\n"
+        "  so step 1 is not optional.\n"
+    )
 
 
 # The four quality gates, in the order that fails cheapest first: lint and file

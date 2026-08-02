@@ -90,3 +90,38 @@ def test_sealed_carries_the_secrets_the_peer_must_withhold() -> None:
     sealed = seal(STATE, "W", "lie")
     assert (sealed.move, sealed.intent) == ("W", "lie")
     assert sealed.nonce
+
+
+def test_verification_is_constant_time() -> None:
+    """**M#17/6.1.3.b.** Asserted against the source, not merely intended.
+
+    A timing attack is not a realistic threat in this setting — the audit runs
+    offline over a log the opponent already holds — but reaching for `==` on a
+    digest is the habit that eventually gets used somewhere it does matter.
+    """
+    from pathlib import Path
+
+    source = Path(__file__).resolve().parents[2] / "core" / "crypto" / "commitment.py"
+    body = source.read_text(encoding="utf-8")
+    assert "secrets.compare_digest" in body
+    assert ") == claimed" not in body
+
+
+def test_a_single_flipped_bit_is_detected() -> None:
+    """6.1.3.b, over every field the digest covers."""
+    from core.crypto.commitment import seal, verify
+
+    sealed = seal({"step": 1}, "N", "truth", nonce="abc")
+    assert verify(sealed.digest, {"step": 1}, "N", "truth", "abc")
+
+    flipped = sealed.digest[:-1] + ("0" if sealed.digest[-1] != "0" else "1")
+    assert not verify(flipped, {"step": 1}, "N", "truth", "abc")
+
+
+def test_the_same_inputs_with_different_nonces_differ() -> None:
+    """6.1.3.a, M#17 — the nonce is what makes a five-move space unguessable."""
+    from core.crypto.commitment import seal
+
+    digests = {seal({"step": 1}, "N", "truth").digest for _ in range(50)}
+    assert len(digests) == 50
+

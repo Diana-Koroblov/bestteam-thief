@@ -95,3 +95,37 @@ def test_no_gate_uses_a_shell() -> None:
 def test_step_display_is_copy_pasteable() -> None:
     """The displayed command can be pasted straight back into the terminal."""
     assert Step("x", ("uv", "run", "pytest")).display == "uv run pytest"
+
+
+def test_a_stale_lock_is_reported_in_the_failure(tmp_path) -> None:
+    """**Reported twice by Diana before anyone noticed why the hint never fired.**
+
+    `git_ops.hint_for` matches on git's output text — but the pipeline streams
+    every step straight to the terminal and captures nothing, which is what
+    makes a failing test readable in place. There was no output for the hint
+    table to match, so it could never fire from this code path.
+
+    Checking the filesystem instead cannot be defeated by a reworded git message
+    or a non-English locale.
+    """
+    from core.shared.pipeline import Step, StepError, environment_advice
+
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".git" / "index.lock").write_text("", encoding="utf-8")
+
+    advice = environment_advice(tmp_path)
+    assert "index.lock" in advice
+    assert "Get-Process git" in advice
+
+    reported = str(StepError(Step("Stage", ("git", "add", "-A")), 1, 7, tmp_path, 128))
+    assert "stale .git/index.lock" in reported
+
+
+def test_no_advice_when_the_environment_is_clean(tmp_path) -> None:
+    """It must stay quiet, or every unrelated failure grows a red herring."""
+    from core.shared.pipeline import environment_advice
+
+    assert environment_advice(tmp_path) == ""
+    (tmp_path / ".git").mkdir()
+    assert environment_advice(tmp_path) == ""
+
