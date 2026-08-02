@@ -651,8 +651,14 @@ hash; the end-of-match audit passes; any tampering is detected.
   - **Terminal means terminal** — no outgoing edges at all, so a lost sub-game cannot quietly resume and start sending moves after the result was recorded, and a completed one cannot be downgraded.
   - `fail()` is a **no-op when already terminal**: the watchdog and the deadline tracker can both fire on one stalled turn, and the second must not raise while the first is being handled.
   - Written as a table, not as `if` statements, because M#4 requires "which module changed the state" to have exactly one answer. A transition scattered across five call sites has five.
-- [ ] 6.4.2 [D] - `core/runtime/deadline_tracker.py` | DoD: Every MCP request carries an expiry; expiry triggers a controlled retry then technical loss — never continued waiting. (M#6)
-- [ ] 6.4.3 [D] - `core/runtime/watchdog.py` — heartbeat monitor | DoD: No heartbeat for `watchdog_timeout_sec` → persist state → controlled shutdown. (M#7)
+- [x] 6.4.2 [D] - `core/runtime/deadline_tracker.py` | DoD: Every MCP request carries an expiry; expiry triggers a controlled retry then technical loss — never continued waiting. (M#6)
+  - **Exactly one retry.** Not zero — a single dropped packet on a home connection is common and cheap to survive. Not `max_retries` — three attempts at 30 s each would blow past the 60 s watchdog and turn a recoverable blip into the very hang the timeout exists to prevent.
+  - **It returns a decision, never acts on one.** The tracker knows *when* to give up; only the phase machine may decide what that does to the sub-game (M#4). Merging them would put the power to end a match inside a timer.
+- [x] 6.4.3 [D] - `core/runtime/watchdog.py` — heartbeat monitor | DoD: No heartbeat for `watchdog_timeout_sec` → persist state → controlled shutdown. (M#7)
+  - **Catches what the deadline tracker cannot**: a peer not waiting on anything because it never got as far as sending. Deadlocked thread, brain stuck in a loop, exception swallowed with no deadline outstanding — from outside all three look identical, and that is silence.
+  - **Persists before shutting down.** A killed process that left nothing behind cannot be audited, and the audit is what proves we played honestly. Losing a sub-game is survivable; losing the evidence is not.
+  - **Fires exactly once**, and a late heartbeat cannot resurrect a recorded loss. Polled every second on a dead process it would otherwise persist sixty times, and the last write — made while already tearing down — is the one most likely to leave a truncated file.
+  - ⚖️ Asserted rather than assumed: **60 s ≥ 30 s × 2 attempts**, so the watchdog and the tracker cannot race. Appendix F's defaults sit exactly on that boundary.
 - [ ] 6.4.4 [D] - State persistence for recovery | DoD: A killed process leaves a loadable snapshot.
 
 ### 6.5 Tests
@@ -663,7 +669,7 @@ hash; the end-of-match audit passes; any tampering is detected.
   - Also removed `check=True` from the subprocess call: it raises carrying only an exit code, which hid the child's real traceback and made the first failure unreadable. We surface stderr instead.
   - ✅ Audited the rest of the codebase for the same fault — **every** `open` / `write_text` already passes `encoding=`. Nothing else to fix, but see the 7.2 note.
 - [x] 6.5.3 [D] - State machine legal/illegal transition matrix | DoD: Every illegal pair asserted to raise. — **all 49 ordered pairs**, generated with `itertools.product` rather than hand-listed. A machine tested only on the paths someone thought of has untested paths, and the untested one is what fires during a graded match.
-- [ ] 6.5.4 [D] - Deadline and watchdog tests with a simulated stall | DoD: No test sleeps longer than 2 s (clock injected).
+- [x] 6.5.4 [D] - Deadline and watchdog tests with a simulated stall | DoD: No test sleeps longer than 2 s (clock injected). — **no test sleeps at all.** The clock is a number the test passes in, so a 60 s timeout is checked in microseconds. These paths fire only when something has already gone wrong, making them the least likely to be exercised by accident and the most expensive to get wrong.
 
 ### ✅ Phase 6 Quality Gate
 - [ ] 6.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.
