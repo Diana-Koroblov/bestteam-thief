@@ -646,7 +646,11 @@ hash; the end-of-match audit passes; any tampering is detected.
 - [ ] 6.3.4 [I] - Token meter, locked at Step-0 | DoD: Cumulative LLM tokens reported in the result JSON. (M#54)
 
 ### 6.4 Reliability patterns
-- [ ] 6.4.1 [D] - `core/runtime/phase_machine.py` — explicit transition table | DoD: `WAITING_FOR_OPPONENT → COMPUTING_MOVE → COMMITTING → AWAITING_REVEAL → VERIFYING`, plus terminal `TECHNICAL_LOSS`. Illegal transition raises. (M#4, M#5)
+- [x] 6.4.1 [D] - `core/runtime/phase_machine.py` — explicit transition table | DoD: `WAITING_FOR_OPPONENT → COMPUTING_MOVE → COMMITTING → AWAITING_REVEAL → VERIFYING`, plus terminal `TECHNICAL_LOSS`. Illegal transition raises. (M#4, M#5)
+  - **A hang is worse than a loss.** A peer stalling on a message that never arrives takes the opponent down with it, and the match ends with *no result for either side* — the one outcome nobody can appeal. Hence the shape: `TECHNICAL_LOSS` is reachable from **every** live phase, asserted by a test parametrised over the enum, so adding a phase later without a failure edge breaks the build instead of shipping a hang.
+  - **Terminal means terminal** — no outgoing edges at all, so a lost sub-game cannot quietly resume and start sending moves after the result was recorded, and a completed one cannot be downgraded.
+  - `fail()` is a **no-op when already terminal**: the watchdog and the deadline tracker can both fire on one stalled turn, and the second must not raise while the first is being handled.
+  - Written as a table, not as `if` statements, because M#4 requires "which module changed the state" to have exactly one answer. A transition scattered across five call sites has five.
 - [ ] 6.4.2 [D] - `core/runtime/deadline_tracker.py` | DoD: Every MCP request carries an expiry; expiry triggers a controlled retry then technical loss — never continued waiting. (M#6)
 - [ ] 6.4.3 [D] - `core/runtime/watchdog.py` — heartbeat monitor | DoD: No heartbeat for `watchdog_timeout_sec` → persist state → controlled shutdown. (M#7)
 - [ ] 6.4.4 [D] - State persistence for recovery | DoD: A killed process leaves a loadable snapshot.
@@ -658,7 +662,7 @@ hash; the end-of-match audit passes; any tampering is detected.
   - **The rule this pins down: canonical output is bytes.** Anything turning it back into console text must say UTF-8 explicitly. `sys.stdout.buffer` bypasses the console codec, which is the only reliable answer.
   - Also removed `check=True` from the subprocess call: it raises carrying only an exit code, which hid the child's real traceback and made the first failure unreadable. We surface stderr instead.
   - ✅ Audited the rest of the codebase for the same fault — **every** `open` / `write_text` already passes `encoding=`. Nothing else to fix, but see the 7.2 note.
-- [ ] 6.5.3 [D] - State machine legal/illegal transition matrix | DoD: Every illegal pair asserted to raise.
+- [x] 6.5.3 [D] - State machine legal/illegal transition matrix | DoD: Every illegal pair asserted to raise. — **all 49 ordered pairs**, generated with `itertools.product` rather than hand-listed. A machine tested only on the paths someone thought of has untested paths, and the untested one is what fires during a graded match.
 - [ ] 6.5.4 [D] - Deadline and watchdog tests with a simulated stall | DoD: No test sleeps longer than 2 s (clock injected).
 
 ### ✅ Phase 6 Quality Gate
