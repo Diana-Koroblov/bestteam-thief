@@ -46,6 +46,16 @@ FAILURE_HINTS: tuple[tuple[str, str], ...] = (
         "The remote refused the push. Read git's message above for the reason.",
     ),
     (
+        "index.lock",
+        "A stale lock file from a git process that died or is still running.\n"
+        "    This is almost always VS Code's git integration, or an interrupted\n"
+        "    ship.py run - not a problem with your repository.\n"
+        "    1. CHECK NOTHING IS RUNNING FIRST:   Get-Process git -ErrorAction SilentlyContinue\n"
+        "    2. Only if that prints nothing:      Remove-Item .git\\index.lock\n"
+        "    Deleting the lock while git really is running can corrupt the index,\n"
+        "    so step 1 is not optional.",
+    ),
+    (
         "does not have a commit checked out",
         "The target directory is not a working clone. Clone the repository there first.",
     ),

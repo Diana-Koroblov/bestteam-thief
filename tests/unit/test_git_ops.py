@@ -80,3 +80,24 @@ def test_the_workflow_scope_hint_names_the_actual_fix() -> None:
 def test_unmatched_output_yields_no_hint() -> None:
     """An unfamiliar failure returns nothing rather than misleading advice."""
     assert hint_for("something entirely unexpected") == ""
+
+
+def test_a_stale_lock_file_gets_actionable_advice() -> None:
+    """**The failure that stopped a real push, 02/08.**
+
+    Git's own message says "remove the file manually to continue", which is
+    correct and also the fastest way to corrupt an index if a git process really
+    is still running. The hint puts the *check* first and makes clear the second
+    step is conditional on it.
+    """
+    advice = hint_for(
+        "fatal: Unable to create 'C:/repo/.git/index.lock': File exists."
+    )
+    assert "Get-Process git" in advice
+    assert "Only if that prints nothing" in advice
+    assert "corrupt the index" in advice
+
+
+def test_the_lock_hint_does_not_shadow_more_specific_ones() -> None:
+    """Hints are matched in order; a real auth failure must still win."""
+    assert "Re-authenticate" in hint_for("Authentication failed for repo.git")

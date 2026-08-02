@@ -640,9 +640,17 @@ hash; the end-of-match audit passes; any tampering is detected.
 - [ ] 6.2.5 [D] - Truthful capture response is cryptographically bound | DoD: Denying a real capture is detectable at audit. (M#21, M#22)
 
 ### 6.3 Step-0 declaration
-- [ ] 6.3.1 [I] - `core/shared/system_info.py` — OS, CPU cores/frequency, RAM, GPU/VRAM | DoD: Works on both machines; degrades gracefully with no GPU.
-- [ ] 6.3.2 [D] - `core/protocol/step_zero.py` — signed declaration | DoD: Includes hardware, LLM model name, code version, team name, sub-game number **and `github_commit`**. (M#24, M#53)
-- [ ] 6.3.3 [D] - Read the current commit hash at runtime | DoD: Matches `git rev-parse HEAD`; a dirty tree raises a warning before a graded match.
+- [~] 6.3.1 [I] - `core/shared/system_info.py` — OS, CPU cores/frequency, RAM, GPU/VRAM | DoD: Works on both machines; degrades gracefully with no GPU. — **written and tested; needs one run on Itay's machine to close.** ⏰ He runs `uv run python scripts/step_zero_demo.py` during setup.
+  - **Degrade, never fail.** An unreadable field reports `unknown` and the match starts. Refusing to play because we could not read a CPU frequency would turn a cosmetic gap into a forfeit. `"none"` for GPU is a *real answer* — Diana's machine has none and plays anyway.
+  - No `psutil`: one fewer thing to install correctly on two machines under deadline, and every field the rulebook asks for is reachable from the standard library.
+- [x] 6.3.2 [D] - `core/protocol/step_zero.py` — signed declaration | DoD: Includes hardware, LLM model name, code version, team name, sub-game number **and `github_commit`**. (M#24, M#53)
+  - **It pins the code for the whole series.** `github_commit` is inside the digest, so a peer cannot quietly swap in a different agent between sub-games and still match what it signed at Step-0.
+  - The **sub-game number is sealed too**, closing the same replay hole the move audit closes (6.1.4): a declaration signed for sub-game 1 cannot be re-presented as sub-game 4 with different code underneath.
+  - ⚠️ **Declares the model, never the provider.** Appendix F Table 21 keeps the provider private per peer; naming `groq` or `ollama` would leak a choice the rulebook does not negotiate, and hint at our latency budget.
+- [x] 6.3.3 [D] - Read the current commit hash at runtime | DoD: Matches `git rev-parse HEAD`; a dirty tree raises a warning before a graded match.
+  - **A dirty tree is declared, not hidden** (`<sha>-dirty`). With uncommitted changes the declared commit does not describe the running code, so the reproducibility claim is simply false — better said before the match than discovered by a grader after.
+  - **Warnings are returned, never raised.** Whether to play a graded match against an unverifiable opponent is a judgement for the people involved, not a decision a dataclass gets to make.
+  - 🚀 **Cached** — and that is correctness, not only speed. The test suite exposed the cost (9.86 s → 0.86 s), but the real reason is that the declared commit must be *the same value all series*: re-reading it mid-match could return something other than what we signed.
 - [ ] 6.3.4 [I] - Token meter, locked at Step-0 | DoD: Cumulative LLM tokens reported in the result JSON. (M#54)
 
 ### 6.4 Reliability patterns
