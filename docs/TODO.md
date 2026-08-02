@@ -55,6 +55,48 @@ working; ≥4 league matches booked; 10 per-algorithm PRDs written; CI green.
 - [x] 0.1.9 [D] - Add `.pre-commit-config.yaml` with ruff, file-size and secret-scan hooks | DoD: A commit containing a 160-line file is refused locally. One-time setup: `uv run pre-commit install`. Secret scan is `scripts/scan_secrets.py` (pure Python, works on Windows; staged + `--tracked` modes), logic in `core/shared/secret_scanner.py`, 9 unit tests.
 - [x] 0.1.10 [D] - Create `.github/workflows/ci.yml`: `uv sync` → `ruff check` → `check_file_size.py` → `scan_secrets.sh` → `pytest` | DoD: All four steps pass locally; no bare `pip` or `python -m` calls in the YAML. (X §8.4)
 
+### 🧑‍🤝‍🧑 ITAY — START HERE (added 02/08)
+
+> **Do these five in order. Steps 1–3 are prerequisites for everything else and take under an
+> hour; do not skip to Phase 5 without them, because 5.1.1 cannot be tested on a machine whose
+> test suite does not run.**
+>
+> **1. Get the repo running.** Clone `bestteam-cop`, then:
+> ```
+> uv sync --all-extras --dev
+> copy .env-example .env          # PowerShell: Copy-Item .env-example .env
+> uv run pytest
+> ```
+> DoD: **all tests pass** on your machine. If they do not, stop and tell Diana — a difference
+> between our two machines is exactly the class of bug that decides a match, and one has already
+> bitten us (`update_from_hint` overwrote mass, worked on Linux, failed on Windows).
+>
+> **2. You do NOT need a Groq API key.** Leave `GROQ_API_KEY` out of your `.env` entirely.
+> You run `ollama`; Diana runs `groq`. The provider choice is **private per peer** and never
+> negotiated (Appendix F Table 21). Never ask for or accept a copy of her key.
+>
+> **3. Ollama — this is task 0.2.3, and it is yours alone.**
+> ```
+> ollama pull llama3.1:8b
+> ollama serve
+> uv run python scripts/hint_demo.py --provider ollama
+> ```
+> DoD: it prints `OK - ollama wrote every line`, in under 10 s. That also closes **4.3.3**.
+> ⚠️ If it prints `ollama was requested but did NOT write these lines`, the fallback caught an
+> error and the run is **not** a pass — the output looks fine either way, which is why the
+> verdict line exists.
+>
+> **4. ngrok — task 0.2.4 + 0.2.6.** Create the account, install, note your permanent
+> `*.ngrok-free.dev` domain, and record it in `config/thief/game.toml`. Diana's is already done
+> (`customs-countdown-uncork.ngrok-free.dev`). DoD: `ngrok http 8801 --url <your-domain>` works.
+>
+> **5. Then Phase 5 — `core/infra/tunnel.py` (5.1.1) onward.** That is the real work and it is
+> yours: Phase 5 is the only layer that genuinely needs two machines. Diana is on **Phase 6**
+> (crypto), which is entirely in-process and does not block you or wait on you.
+>
+> 🔒 **Never commit `.env`.** Never paste a key or token into chat. A secret sent once is
+> permanently exposed (M#39, M#40).
+
 ### 0.2 🧑 USER ACTION — External accounts
 > **PAUSE — I stop here. These need a browser and your credentials; I cannot do them.**
 > **Step-by-step guide: `docs/SETUP.md`. Verify with `uv run python scripts/check_setup.py`.**
@@ -65,7 +107,7 @@ working; ≥4 league matches booked; 10 per-algorithm PRDs written; CI green.
   - [x] 0.2.1.c 🧑 [D] - Create OAuth client ID (**Desktop app**), download `credentials.json` | DoD: **Verified 28/07** — `check_setup.py` confirms a Desktop client at `C:\Users\diana\.p2p-secrets\credentials.json`, outside both repos. SETUP 0.2.1.e-f
   - [x] 0.2.1.d 🧑 [D] - ⚠️ **Publish the app** (Testing → In production) — **confirmed 28/07: Publishing status = In production** | DoD: Audience page reads *In production*. **`check_setup.py` cannot verify this — publishing status is not exposed in `credentials.json` or by any API. Confirm by eye.** **Skipping this makes the refresh token expire after 7 days and silently breaks league reporting mid-project** — an unsent report scores 0 for **both** teams. SETUP 0.2.1.g (M#35)
 - [x] 0.2.2 🧑 [D] - Groq API key at console.groq.com/keys | DoD: **Verified 28/07** — `check_setup.py` reports `gsk_xJkR...(56 chars)`.
-- [ ] 0.2.3 🧑 [I] - Install Ollama and pull a model small enough for the 30 s step deadline | DoD: A 15-word prompt returns in under 10 s at `localhost:11434`. (PRD Q3)
+- [ ] 0.2.3 🧑 [I] - Install Ollama and pull a model small enough for the 30 s step deadline | DoD: A 15-word prompt returns in under 10 s at `localhost:11434`. (PRD Q3) — **verify with `uv run python scripts/hint_demo.py --provider ollama`; this also closes 4.3.3.** See *ITAY — START HERE* above.
 - [ ] 0.2.4 🧑 [B] - ngrok accounts + authtokens on both machines | DoD: **Diana verified 28/07** — installed and configured, static domain `customs-countdown-uncork.ngrok-free.dev`. **Itay pending.**
 - [x] 0.2.5 [D] - Decide: static ngrok domain or dynamic URLs? | DoD: **Answered — static.** ngrok now assigns every free account a permanent `*.ngrok-free.dev` dev domain, so no paid plan and no per-match URL exchange is needed. Recorded in PRD Q5 and SETUP 0.2.5.
 - [ ] 0.2.6 🧑 [B] - Note each machine's static ngrok domain in `config/<role>/game.toml` | DoD: Both domains recorded; `ngrok http 8801 --url <domain>` works on each machine.
@@ -482,13 +524,15 @@ Most of the schedule slack is allocated here — if anything slips, it slips her
 ### 4.3 Natural language — outbound
 - [x] 4.3.1 [I] - `core/infra/llm/base.py` — `TextProvider` interface | DoD: One method, `generate(prompt, max_words) -> str`.
 - [x] 4.3.2 [I] - `template` provider — pre-written bank, zero tokens | DoD: Default; works fully offline. (F)
-- [~] 4.3.3 [I] - `ollama` provider — `localhost:11434` | DoD: Itay's machine produces a hint in under 10 s. — **code complete and unit-tested against a mocked transport; the DoD needs Itay's machine.** ⏰ Verify during the warm-up match with `uv run python scripts/hint_demo.py`.
-- [~] 4.3.4 [D] - `groq` provider, routed through the Gatekeeper | DoD: No direct SDK call outside this module; Diana's machine produces a hint. — code complete; the Gatekeeper half is enforced (no key or URL exists outside `core/infra/llm/remote.py`).
-  - [ ] 4.3.4.a 🧑 **DIANA** - Edit `.env` (already exists, already git-ignored): replace `GROQ_API_KEY=gsk_replace_me` with the real key. Never in `game.toml` — that file is exchanged with the opponent during negotiation. Then, in PowerShell:
-    ```
-    uv run python scripts/hint_demo.py --provider groq
-    ```
-    The `--provider` flag exists **because the env-var syntax differs between PowerShell, cmd and bash, and getting it wrong fails silently into the template bank** — which looks exactly like success. The script prints `.env loaded`, who wrote each line, and an explicit verdict at the end.
+- [~] 4.3.3 [I] - `ollama` provider — `localhost:11434` | DoD: Itay's machine produces a hint in under 10 s. — **code complete and unit-tested against a mocked transport; the DoD needs Itay's machine.** ⏰ Itay verifies with `uv run python scripts/hint_demo.py --provider ollama` — see 4.3.4.b. No Groq key needed on his machine.
+- [x] 4.3.4 [D] - `groq` provider, routed through the Gatekeeper | DoD: No direct SDK call outside this module; Diana's machine produces a hint. — code complete; the Gatekeeper half is enforced (no key or URL exists outside `core/infra/llm/remote.py`).
+  - [x] 4.3.4.a 🧑 **DIANA — DONE 02/08.** Real key in `.env`, verified by running `uv run python scripts/hint_demo.py --provider groq` and reading `OK - groq wrote every line`.
+    - ⚠️ **The proof is the run, not the file.** A wrong or placeholder key fails *silently* into the template bank and the output still looks fine. Only the verdict line distinguishes them. Re-run it after any `.env` edit.
+  - ❌ **4.3.4.b — ITAY does NOT need a Groq key, and must not be sent one.**
+    - Itay runs `ollama`, which is local, free and unmetered — that is exactly why graded matches run on his machine (Appendix F Table 21; the provider choice is private per peer and never negotiated).
+    - His `.env` needs no `GROQ_API_KEY` line at all. `OLLAMA_BASE_URL` already defaults to `http://localhost:11434`, so he needs Ollama *installed and running*, not configuration.
+    - 🔒 **The key is never shared, never committed, never pasted into chat.** One key, one machine. A secret sent once is considered permanently exposed (M#39, M#40).
+    - His check is the same command with a different flag: `uv run python scripts/hint_demo.py --provider ollama`, which also satisfies 4.3.3's "a hint in under 10 s".
 - [x] 4.3.5 [I] - Automatic fallback to `template` on **any** provider error or timeout | DoD: Killing Ollama mid-match degrades quality but does not lose the match. (ADR-003)
 - [x] 4.3.6 [I] - `every_n_steps` throttle | DoD: LLM invoked every 2–3 turns; other turns use the template bank. — **deliberately set to 1, not 2–3.** The book frames this purely as a token budget (Ch. 6.5.1); `template` and `ollama` spend zero tokens, so there is no budget to protect and 1 buys the richest verbal game. A startup guard (7.1.6) forces it to 3 if a metered provider is ever selected.
 - [x] 4.3.7 [D] - Hint word cap of 15, enforced for **every** provider including the LLM system prompt | DoD: An over-long generation is regenerated or truncated at a word boundary. (F)
@@ -555,17 +599,38 @@ Most of the schedule slack is allocated here — if anything slips, it slips her
 
 ## Phase 6: Security & Cryptography (Layer 6)
 **Priority:** P0 | **Status:** Not Started ☐ | **Target:** 7 Aug
+
+> ### ✅ **Phase 6 does NOT depend on Phase 5. Start it now.**
+> Commit-reveal, canonical JSON, the audit, the phase machine, the watchdog and Step-0 all run
+> **in-process**. None of them touches a tunnel: the crypto that protects a match is the same
+> whether the bytes travel over ngrok or over a function call, which is what makes it testable
+> without a second machine at all.
+>
+> Phase 5 is a *transport* layer. The only items there that genuinely need two machines are
+> **5.3.1** (the rehearsal) and **5.3.2** (latency), both already marked `[B]`.
+>
+> Phase 6 is also where the worst-case risk in the whole project lives — **6.1.1**, canonical
+> serialisation. If two peers serialise the same payload differently, every digest mismatches and
+> **both teams score 0**. That is worth more attention than a tunnel, and it is entirely ours.
+>
+> Partly built already: `core/crypto/canonical.py` and `core/crypto/commitment.py` landed in
+> Phase 1–4 and are covered by tests.
 **DoD:** A move is committed then revealed with a valid nonce; Step-0 verifies hardware and commit
 hash; the end-of-match audit passes; any tampering is detected.
 
 ### 6.1 Cryptographic core
-- [ ] 6.1.1 [D] - `core/crypto/canonical.py` — `json.dumps(sort_keys=True, separators=(",", ":"))` | DoD: Two independent processes produce byte-identical output for the same payload. **Divergence here means both teams score 0.**
-- [ ] 6.1.2 [D] - `core/crypto/nonce.py` — `secrets.token_hex(16)` | DoD: An architecture test asserts `random` is never imported for nonce generation. (M#18)
+- [x] 6.1.1 [D] - `core/crypto/canonical.py` — `json.dumps(sort_keys=True, separators=(",", ":"))` | DoD: Two independent processes produce byte-identical output for the same payload. **Divergence here means both teams score 0.** — proven in a real `subprocess`, not a thread: hash seed, dict ordering, locale and float repr are all per-*interpreter*, so a thread would share them and prove nothing. Payload deliberately awkward — `0.1 + 0.2`, `10**18`, Hebrew text, nesting, reversed key order.
+- [x] 6.1.2 [D] - `secrets.token_hex(16)` (lives in `commitment.py`, not a separate `nonce.py` — 12 lines did not warrant a module) | DoD: An architecture test asserts `random` is never imported for nonce generation. (M#18) — `random` is seeded predictably; an opponent who guessed the seed could reproduce every nonce, and the scheme would collapse **silently while still appearing to work**.
 - [ ] 6.1.3 [D] - `core/crypto/commit_reveal.py` | DoD: File ≤150 lines.
   - [ ] 6.1.3.a [D] - `commit(state, move, intent) -> (hash, nonce)` over `SHA256(State‖Move‖Intent‖Nonce)` | DoD: Same inputs with different nonces yield different hashes. (M#17)
   - [ ] 6.1.3.b [D] - `verify(...)` using `secrets.compare_digest` | DoD: A single flipped bit is detected.
   - [ ] 6.1.3.c [D] - Nonce retained locally, never transmitted before the final audit | DoD: A test asserts no reveal payload contains a nonce. (M#18)
-- [ ] 6.1.4 [D] - `core/crypto/audit.py` — mutual end-of-match audit | DoD: Re-hashes every step of both logs; any mismatch → technical loss for the forging side. (M#19)
+- [x] 6.1.4 [D] - `core/crypto/audit.py` — mutual end-of-match audit | DoD: Re-hashes every step of both logs; any mismatch → technical loss for the forging side. (M#19)
+  - 🔴 **A test written to find a replay hole found one.** Re-hashing every seal and checking that step numbers increase is **not enough**: a genuine step-1 commitment relabelled as step 4 still matches its own sealed state, and the outer numbers still ascend. Nothing compared the *declared* step against the one sealed **inside** the state. `commitment.py` promises "no time travel"; the promise only holds if the audit checks it.
+  - Reordering is caught for the same reason — every individual seal in a reordered log verifies, because the forger touched no single record. Only the **sequence** is the lie.
+  - **An empty log does not pass.** A missing log is not a clean one; treating them alike would let a peer escape the audit by sending nothing — the cheapest possible forgery.
+  - **Never raises.** A forged log is an expected input, not an exception. Raising would stop at the first fault, and the *pattern* of failures is what distinguishes a bug from a forgery.
+  - **Reports evidence, decides nothing.** Sanctions belong to the rules layer; if this module decided outcomes, a scoring change could alter what counts as proof (M#19).
 
 ### 6.2 Four-phase protocol
 - [ ] 6.2.1 [D] - Phase 1 Commit — send hash only | DoD: No payload content leaves before the ack.
@@ -587,8 +652,12 @@ hash; the end-of-match audit passes; any tampering is detected.
 - [ ] 6.4.4 [D] - State persistence for recovery | DoD: A killed process leaves a loadable snapshot.
 
 ### 6.5 Tests
-- [ ] 6.5.1 [D] - Commit-reveal round trip and tamper detection | DoD: Every mutation of state/move/intent/nonce is caught.
-- [ ] 6.5.2 [D] - Cross-process canonical serialisation test | DoD: Two subprocesses agree on the digest.
+- [~] 6.5.1 [D] - Commit-reveal round trip and tamper detection | DoD: Every mutation of state/move/intent/nonce is caught. — all four fields covered by a parametrised test; the four-phase protocol tests (6.2) still to come.
+- [x] 6.5.2 [D] - Cross-process canonical serialisation test | DoD: Two subprocesses agree on the digest. — `tests/unit/test_canonical_cross_process.py`.
+  - 🪟 **It earned its keep on the first Windows run.** The child process died with `UnicodeEncodeError` before it could report anything: a cp1252 console cannot `print` Hebrew. The canonical bytes were correct all along — the *platform* could not carry them. Invisible on Linux and on any CI runner.
+  - **The rule this pins down: canonical output is bytes.** Anything turning it back into console text must say UTF-8 explicitly. `sys.stdout.buffer` bypasses the console codec, which is the only reliable answer.
+  - Also removed `check=True` from the subprocess call: it raises carrying only an exit code, which hid the child's real traceback and made the first failure unreadable. We surface stderr instead.
+  - ✅ Audited the rest of the codebase for the same fault — **every** `open` / `write_text` already passes `encoding=`. Nothing else to fix, but see the 7.2 note.
 - [ ] 6.5.3 [D] - State machine legal/illegal transition matrix | DoD: Every illegal pair asserted to raise.
 - [ ] 6.5.4 [D] - Deadline and watchdog tests with a simulated stall | DoD: No test sleeps longer than 2 s (clock injected).
 
@@ -619,6 +688,10 @@ truth only; the Replay App reproduces a recorded series with `Verified OK`.
   - Retry budget must stay inside the response timeout: 3 × 5 s backoff + request time < 30 s. A fourth retry would not fit, which is why `max_retries` stays at the Appendix F minimum.
 
 ### 7.2 JSON artefacts
+> 🪟 **Every file write here must pass `encoding="utf-8"` explicitly, and every console print of a
+> payload must go through `sys.stdout.buffer`.** Team names and hints may be Hebrew, and on a
+> Windows console the default codec is cp1252 — which raises `UnicodeEncodeError` mid-match on
+> Diana's machine and never on a CI runner. Found the hard way in 6.5.2.
 - [ ] 7.2.1 [D] - `declaration_<game_id>.json` builder | DoD: Teams, members, **four** repo links, MCP URLs, hardware, LLM model, token cap, timings.
 - [ ] 7.2.2 [D] - `config_<game_id>_g<NN>.json` builder | DoD: The locked negotiated parameters; committed to the repo per match. (Appendix F §2)
 - [ ] 7.2.3 [D] - `log_<game_id>_g<NN>.json` builder | DoD: Commits, reveals, moves, hints, nonces, hashes — sufficient for full replay verification.
