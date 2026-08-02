@@ -659,7 +659,10 @@ hash; the end-of-match audit passes; any tampering is detected.
   - **Persists before shutting down.** A killed process that left nothing behind cannot be audited, and the audit is what proves we played honestly. Losing a sub-game is survivable; losing the evidence is not.
   - **Fires exactly once**, and a late heartbeat cannot resurrect a recorded loss. Polled every second on a dead process it would otherwise persist sixty times, and the last write — made while already tearing down — is the one most likely to leave a truncated file.
   - ⚖️ Asserted rather than assumed: **60 s ≥ 30 s × 2 attempts**, so the watchdog and the tracker cannot race. Appendix F's defaults sit exactly on that boundary.
-- [ ] 6.4.4 [D] - State persistence for recovery | DoD: A killed process leaves a loadable snapshot.
+- [x] 6.4.4 [D] - State persistence for recovery | DoD: A killed process leaves a loadable snapshot. — `core/runtime/snapshot.py`, wired into the watchdog's `on_shutdown` so state reaches the disk *before* the verdict returns.
+  - **Atomic** — temp file then `os.replace`, atomic on Windows and POSIX alike. A process dying mid-write would otherwise leave half-written JSON, and a truncated snapshot is **worse than none**: it looks recoverable right up until it is parsed.
+  - **Never raises.** This runs *during* a failure; an exception here would replace a recorded technical loss with an unhandled traceback and lose the original reason with it. A missing file and a corrupt one both read as `None`, because the caller's response to each is identical.
+  - Explicit UTF-8 with `ensure_ascii=False`, per the 6.5.2 lesson. Keys sorted so two snapshots diff cleanly by eye.
 
 ### 6.5 Tests
 - [~] 6.5.1 [D] - Commit-reveal round trip and tamper detection | DoD: Every mutation of state/move/intent/nonce is caught. — all four fields covered by a parametrised test; the four-phase protocol tests (6.2) still to come.
