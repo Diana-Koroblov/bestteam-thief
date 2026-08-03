@@ -12,7 +12,17 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from core.report.artefacts import REPO_LINKS, build_declaration, build_result, write
+import pytest
+
+from core.crypto.canonical import digest
+from core.report.artefacts import (
+    REPO_LINKS,
+    ArtefactError,
+    build_config_snapshot,
+    build_declaration,
+    build_result,
+    write,
+)
 
 NON_ASCII_TEAM = "Ωμέγα-Ünïcode"
 TEAMS = {"bestteam": ["Diana", "Itay"], NON_ASCII_TEAM: ["A", "B"]}
@@ -60,6 +70,65 @@ def test_the_timestamp_is_utc() -> None:
     """Both peers are in one timezone today and may not be tomorrow; a local
     timestamp would make two reports disagree about when a match happened."""
     assert _declaration()["created_utc"].endswith("+00:00")
+
+
+# --- 7.2.2 config snapshot --------------------------------------------------
+
+SHARED = {"version": "1.00", "board_and_agents": {"grid_size": 7}}
+
+
+def _snapshot(**overrides) -> dict:
+    fields = {
+        "game_identifier": "gid",
+        "sub_game": 3,
+        "shared_config": SHARED,
+        "role": "cop",
+        "role_split": "3-3",
+        "readings": {"capture": "after_moves"},
+    }
+    return build_config_snapshot(**{**fields, **overrides})
+
+
+def test_the_snapshot_hashes_the_config_it_actually_contains() -> None:
+    """Recomputed, never copied from the caller.
+
+    A snapshot whose stated digest disagrees with its own body proves nothing
+    about the match it claims to describe.
+    """
+    assert _snapshot()["config_sha256"] == digest(SHARED)
+
+
+def test_a_digest_that_contradicts_the_body_is_refused() -> None:
+    """**Evidence for the wrong thing is worse than no evidence.**
+
+    Such a file would be quoted in a dispute to prove a match was played under
+    parameters that were never agreed (M#11).
+    """
+    with pytest.raises(ArtefactError, match="claims agreement on parameters"):
+        _snapshot(agreed_digest="0" * 64)
+
+
+def test_the_handshake_digest_is_accepted_when_it_matches() -> None:
+    assert _snapshot(agreed_digest=digest(SHARED))["config_sha256"] == digest(SHARED)
+
+
+def test_it_carries_the_choices_appendix_f_never_covers() -> None:
+    """C-011 and C-006: silence here is two honest peers assuming differently."""
+    snapshot = _snapshot()
+    assert snapshot["role_split"] == "3-3"
+    assert snapshot["readings"]["capture"] == "after_moves"
+
+
+def test_it_records_the_negotiated_contract_verbatim() -> None:
+    """The **shared** file only. Private settings are not part of the agreement,
+    and including them would make two correctly-agreed peers file contradicting
+    snapshots — their ngrok domains differ."""
+    assert _snapshot()["shared_config"] == SHARED
+
+
+def test_the_snapshot_is_per_sub_game() -> None:
+    """Appendix F §2 locks parameters per sub-game, not per series."""
+    assert _snapshot(sub_game=6)["sub_game"] == 6
 
 
 # --- 7.2.4 result -----------------------------------------------------------

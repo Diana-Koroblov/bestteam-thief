@@ -9,7 +9,28 @@ may be Hebrew, and a Windows console defaults to cp1252 — which raises
 cost us an afternoon in 6.5.2 and is now a rule rather than a memory.
 """
 
-from core.report.artefacts import build_declaration, build_result, write
+from core.report.artefacts import (
+    ArtefactError,
+    build_config_snapshot,
+    build_declaration,
+    build_result,
+    payload_digest,
+    write,
+)
 from core.report.identifiers import artefact_name, game_id
+from core.report.match_log import build_log, build_step, records, verify_log
 
-__all__ = ["game_id", "artefact_name", "build_declaration", "build_result", "write"]
+__all__ = [
+    "ArtefactError",
+    "game_id",
+    "artefact_name",
+    "build_declaration",
+    "build_config_snapshot",
+    "build_log",
+    "build_step",
+    "build_result",
+    "records",
+    "verify_log",
+    "payload_digest",
+    "write",
+]

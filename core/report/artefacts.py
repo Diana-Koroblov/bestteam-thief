@@ -21,14 +21,28 @@ from core.crypto.canonical import digest
 from core.shared.system_info import describe
 from core.shared.version import VERSION
 
-__all__ = ["build_declaration", "build_result", "write", "REPO_LINKS"]
+__all__ = [
+    "ArtefactError",
+    "build_declaration",
+    "build_config_snapshot",
+    "build_result",
+    "write",
+    "payload_digest",
+    "utc_now",
+    "REPO_LINKS",
+]
+
+
+class ArtefactError(ValueError):
+    """An artefact would contradict itself, so it is refused rather than written."""
+
 
 # **Four** links, not two: the rulebook wants both teams' repositories for both
 # roles, so a grader can read every agent that played (7.2.1 DoD).
 REPO_LINKS = ("ours_cop", "ours_thief", "theirs_cop", "theirs_thief")
 
 
-def _now() -> str:
+def utc_now() -> str:
     """UTC, ISO-8601. Both peers are in one timezone today and may not be
     tomorrow; a local timestamp would make two reports disagree about when a
     match happened.
@@ -60,7 +74,7 @@ def build_declaration(
     """
     return {
         "game_id": game_identifier,
-        "created_utc": _now(),
+        "created_utc": utc_now(),
         "code_version": VERSION,
         "teams": teams,
         "repositories": {key: repos.get(key, "") for key in REPO_LINKS},
@@ -71,11 +85,69 @@ def build_declaration(
     }
 
 
+def build_config_snapshot(
+    game_identifier: str,
+    sub_game: int,
+    shared_config: dict[str, Any],
+    role: str,
+    agreed_digest: str = "",
+    role_split: str = "",
+    scent_model_digest: str = "",
+    readings: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Assemble ``config_<game_id>_g<NN>.json`` (7.2.2, Appendix F §2, M#11).
+
+    This is the sub-game's rulebook, frozen. It is committed to both
+    repositories after the match so that anyone re-reading the log can see the
+    physics it was played under — a log without its config is a list of moves
+    nobody can score.
+
+    Args:
+        shared_config: The negotiated contract verbatim, exactly as both peers
+            hashed it. The **shared** file only: private settings are not part
+            of the agreement and including them would make two correctly-agreed
+            peers file contradicting snapshots.
+        agreed_digest: The `config_sha256` actually exchanged at the handshake.
+            Optional, and checked when given — see below.
+        readings: The C-006/C-010 mechanism choices, which Appendix F does not
+            cover at all and which two honest peers will otherwise assume
+            differently (C-011).
+
+    Raises:
+        ArtefactError: *agreed_digest* does not match the config in this file.
+            **The digest is recomputed here rather than copied.** A snapshot
+            asserting agreement on a config it does not actually contain is not
+            merely wrong, it is evidence for the wrong thing: it would be quoted
+            in a dispute to prove a match was played under parameters that were
+            never agreed. Refusing to write it is the only safe outcome.
+    """
+    computed = payload_digest(shared_config)
+    if agreed_digest and agreed_digest != computed:
+        raise ArtefactError(
+            f"config digest mismatch for sub-game {sub_game}: the handshake agreed "
+            f"{agreed_digest[:16]}... but this config hashes to {computed[:16]}.... "
+            "Refusing to write a snapshot that claims agreement on parameters it "
+            "does not contain (M#11)."
+        )
+    return {
+        "game_id": game_identifier,
+        "sub_game": sub_game,
+        "created_utc": utc_now(),
+        "code_version": VERSION,
+        "role": role,
+        "config_sha256": computed,
+        "role_split": role_split,
+        "scent_model_digest": scent_model_digest,
+        "readings": dict(readings or {}),
+        "shared_config": shared_config,
+    }
+
+
 def build_result(
     game_identifier: str,
     sub_games: list[dict[str, Any]],
     github_commit: str,
-    total_tokens: int,
+    total_llm_tokens: int,
     repos: dict[str, str],
 ) -> dict[str, Any]:
     """Assemble ``result_<game_id>.json`` (7.2.4, M#49, M#53, M#54).
@@ -85,7 +157,10 @@ def build_result(
             ``verdict``, ``cop_points`` and ``thief_points``.
         github_commit: From Step-0, so the result names the code that produced
             it (M#53).
-        total_tokens: Cumulative LLM tokens (M#54).
+        total_llm_tokens: Cumulative model tokens (M#54). Named for which kind
+            of token it counts, per the 7.1.4 discipline: rate-limiter tokens
+            and OAuth tokens are different things and a bare `total_tokens`
+            does not say which one a reader is looking at.
 
     Cumulative scores are **summed here, not passed in**. A caller supplying its
     own total could disagree with the per-sub-game rows in the same file, and a
@@ -95,12 +170,12 @@ def build_result(
     theirs = sum(int(game.get("their_points", 0)) for game in sub_games)
     return {
         "game_id": game_identifier,
-        "created_utc": _now(),
+        "created_utc": utc_now(),
         "github_commit": github_commit,
         "code_version": VERSION,
         "sub_games": sub_games,
         "totals": {"ours": ours, "theirs": theirs, "sub_games_played": len(sub_games)},
-        "total_llm_tokens": total_tokens,
+        "total_llm_tokens": total_llm_tokens,
         "repositories": {key: repos.get(key, "") for key in REPO_LINKS},
     }
 

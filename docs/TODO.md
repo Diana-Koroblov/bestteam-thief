@@ -707,7 +707,7 @@ hash; the end-of-match audit passes; any tampering is detected.
 ---
 
 ## Phase 7: Reporting & Visualisation (Layer 7)
-**Priority:** P0 | **Status:** ◐ 7.1 Gatekeeper complete (03/08); 7.2 partial; 7.3–7.5 not started | **Target:** 8 Aug
+**Priority:** P0 | **Status:** ◐ 7.1 Gatekeeper and 7.2 JSON artefacts complete (03/08); 7.3–7.5 not started | **Target:** 8 Aug
 **DoD:** A match summary reaches the lecturer's inbox as a JSON attachment; the Live GUI shows local
 truth only; the Replay App reproduces a recorded series with `Verified OK`.
 
@@ -737,8 +737,15 @@ truth only; the Replay App reproduces a recorded series with `Verified OK`.
 - [x] 7.2.1 [D] - `declaration_<game_id>.json` builder | DoD: Teams, members, **four** repo links, MCP URLs, hardware, LLM model, token cap, timings. — `core/report/artefacts.py`.
   - A **missing** repo link is recorded as `""`, never omitted. Dropping the key would make an incomplete report look complete; an empty string shows a reader *which* one is absent.
   - Timestamps are **UTC**. Both peers share a timezone today and may not tomorrow, and two reports disagreeing about when a match happened is a needless question for a grader.
-- [ ] 7.2.2 [D] - `config_<game_id>_g<NN>.json` builder | DoD: The locked negotiated parameters; committed to the repo per match. (Appendix F §2)
-- [ ] 7.2.3 [D] - `log_<game_id>_g<NN>.json` builder | DoD: Commits, reveals, moves, hints, nonces, hashes — sufficient for full replay verification.
+- [x] 7.2.2 [D] - `config_<game_id>_g<NN>.json` builder | DoD: **Done 03/08.** `build_config_snapshot()` in `core/report/artefacts.py`. The **shared** contract only — private settings are not part of the agreement and including them would make two correctly-agreed peers file contradicting snapshots. Carries `role_split`, `scent_model_digest` and the C-006/C-010 `readings`, which Appendix F does not cover at all. (Appendix F §2)
+  - **`config_sha256` is recomputed here, never copied from the caller**, and the handshake's agreed digest is *checked* against it when supplied. A snapshot asserting agreement on a config it does not contain is not merely wrong — it is evidence for the wrong thing, and would be quoted in a dispute to prove a match was played under parameters nobody agreed to. It raises `ArtefactError` rather than writing. (M#11)
+- [x] 7.2.3 [D] - `log_<game_id>_g<NN>.json` builder | DoD: **Done 03/08.** `core/report/match_log.py`.
+  - **"Sufficient for full replay verification" is a round trip, not a field list**, so the module ships the inverse (`records()`, `verify_log()`) and the test does the trip: seal real commitments → build → write → read off disk → re-hash → `Verified OK`. Off disk specifically, because JSON has no tuple and that is where it would bite. The Replay Viewer (7.5.2) calls the same path, so the viewer and the test check one thing rather than two similar things.
+  - **Nonces are merged from the `FinalReveal`, not carried per step** (M#18) — the shape mirrors the protocol instead of pretending the nonce was available at commit time. A step whose nonce never arrived is written with an empty one and listed in `unverifiable_steps`: dropping it would produce a shorter log that audits *clean*, which is precisely the forgery the audit exists to catch.
+  - `scent_digest` is **omitted when unused, never `null`** — mirroring `commitment_payload` exactly, because the replay rebuilds the hashed payload from this file and a stray `null` would fail every digest in an honest match (C-008).
+- [x] 7.2.C [I] - **Cross-artefact consistency test** — `tests/unit/test_artefact_consistency.py` | DoD: **Added 03/08, and it caught a real one.** The four builders were written one at a time and every per-file test passed, but the log carried neither `created_utc` nor `code_version` while the other three had since 7.2.1. Nothing compared them, so nothing noticed. The comparison is now a test: shared `game_id`, common fields, UTC timestamps, matching `sub_game` between config and log, distinct filenames, and no artefact leaking the private provider (Table 21).
+  - Also fixed while auditing: `payload_digest()` existed but was neither exported nor used; `build_result`'s `total_tokens` parameter became `total_llm_tokens`, since 7.1.4 requires saying *which* of the three kinds of token a name means.
+  - ⚠️ **PRD 7 §4 places these in `core/protocol/artefacts.py`; they live in `core/report/`.** Not worth moving — artefacts are reports, not protocol, and `core/report/` is the better home — but the PRD's interface sketch and the tree disagree, so read the tree.
 - [x] 7.2.4 [D] - `result_<game_id>.json` builder | DoD: Per-sub-game and cumulative scores, `github_commit`, total tokens, four repo links. (M#49, M#53, M#54)
   - **Totals are summed here, never passed in.** A caller supplying its own total could disagree with the per-sub-game rows printed in the same file, and a report that contradicts itself is worse than one that is merely wrong.
 - [x] 7.2.5 [D] - Shared `game_uid`; filenames derived from `game_id` | DoD: Files from different matches can never collide. (Ch. 9) — `core/report/identifiers.py`.
