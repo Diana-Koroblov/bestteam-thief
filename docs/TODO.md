@@ -707,20 +707,25 @@ hash; the end-of-match audit passes; any tampering is detected.
 ---
 
 ## Phase 7: Reporting & Visualisation (Layer 7)
-**Priority:** P0 | **Status:** Not Started ☐ | **Target:** 8 Aug
+**Priority:** P0 | **Status:** ◐ 7.1 Gatekeeper complete (03/08); 7.2 partial; 7.3–7.5 not started | **Target:** 8 Aug
 **DoD:** A match summary reaches the lecturer's inbox as a JSON attachment; the Live GUI shows local
 truth only; the Replay App reproduces a recorded series with `Verified OK`.
 
-### 7.1 Gatekeeper
-- [ ] 7.1.1 [D] - Port `rate_limiter.py`, `queue_manager.py`, `call_logger.py` from HW6 | DoD: Adapted to the new config layout; tests ported.
-- [ ] 7.1.2 [D] - `core/shared/gatekeeper.py` — three cumulative gates | DoD: Only a request clearing all three reaches the API.
-  - [ ] 7.1.2.a [D] - Quota manager — daily ceiling | DoD: Exhausted quota blocks every further send.
-  - [ ] 7.1.2.b [D] - Token bucket `tokens ← min(C, tokens + r·Δt)`, allow iff `tokens ≥ 1` | DoD: A burst empties the bucket and subsequent sends are blocked. (M#28)
-  - [ ] 7.1.2.c [D] - **DOS detector** — abnormal send pattern locks the pipe | DoD: A simulated infinite loop triggers `LOCKED` rather than account suspension. (M#29)
-- [ ] 7.1.3 [D] - HTTP 429 honoured with backoff, never blind retry | DoD: A mocked 429 produces a wait, not an immediate resend. (Ch. 9)
-- [ ] 7.1.4 [D] - Naming discipline for the three meanings of "token" | DoD: Rate-limiter tokens, LLM tokens and OAuth tokens use distinct identifiers throughout. (Ch. 9)
-- [ ] 7.1.5 [D] - Queue rather than error when the bucket is full | DoD: A saturated limiter blocks the caller until a slot frees; it never raises. Erroring is indistinguishable from a forfeit, and demand (~0.5 RPM) is 60× below the 30 RPM budget, so this path should never fire in a real match. (`REFERENCE_PERFORMANCE_NOTES.md` §5)
-- [ ] 7.1.6 [D] - Startup check: metered provider ⇒ `every_n_steps ≥ 3` | DoD: With `provider` in {`groq`, `claude_api`, `claude_cli`} and `every_n_steps < 3`, startup refuses with a message naming both keys. `template` and `ollama` are exempt — they spend zero tokens, so 1 is correct there and gives the richest verbal game.
+> **Note on ownership.** Every task in this phase is marked **[D]**. 7.1 was built by [I] on 03/08
+> anyway — the Gatekeeper blocks 7.3, and Phase 5 was finished and waiting on a two-machine slot.
+> Reassign the rest or leave it; the split is worth agreeing before 7.3 starts, because 7.3 needs
+> the Gmail OAuth consent that only Diana's account has completed (SETUP 0.2.1.d).
+
+### 7.1 Gatekeeper — ✅ complete 03/08
+- [x] 7.1.1 [D] - Port `rate_limiter.py`, `queue_manager.py`, `call_logger.py` from HW6 | DoD: **Done 03/08 — written fresh, not ported.** No HW6 tree exists in this workspace, so there was nothing to adapt; the three modules were written against the current config layout directly. All limits load from `rate_limits.json` via `core/shared/rate_limits.py` (req. 7.6) — no limit has a default in code, and a missing key is named rather than guessed.
+- [x] 7.1.2 [D] - `core/shared/gatekeeper.py` — three cumulative gates | DoD: **Done 03/08.** `execute()` / `status()`; a call must clear all three. ⚠️ **Gate order reversed from PRD 7 §3.1** — see CONTRADICTIONS **C-014**: the drawn order leaves the detector blind once the quota is spent, which is exactly when a runaway loop is running. Exceptions are `GatekeeperLockedError` / `QuotaExhaustedError`, also C-014: ruff `N818` rejects the PRD's names and 7.QG.1 requires zero violations.
+  - [x] 7.1.2.a [D] - Quota manager — daily ceiling | DoD: **Done 03/08.** 50/day, rolling on the **UTC** calendar day. Counted on the attempt, not on success: a failing loop still reached the provider, and a quota that counted only successes would let exactly that loop run free.
+  - [x] 7.1.2.b [D] - Token bucket `rate_tokens ← min(C, rate_tokens + r·Δt)` | DoD: **Done 03/08.** Starts full, `C = 5` (one report plus its three retries, with one spare), `r` = 30/min. (M#28)
+  - [x] 7.1.2.c [D] - **DOS detector** — abnormal send pattern locks the pipe | DoD: **Done 03/08.** 20 calls in 10 s = 120 RPM, 240× measured demand and unreachable by a match. The lock is **terminal until `reset()`** — a detector that timed out would let the same loop resume at the rate that tripped it. (M#29)
+- [x] 7.1.3 [D] - HTTP 429 honoured with backoff, never blind retry | DoD: **Done 03/08.** Constant 5 s × 3, not exponential: the whole sequence has to finish inside one 30 s response window and doubling leaves it in three steps. Detection is duck-typed on `status_code`, so `core/shared/` needs no HTTP dependency. A non-429 failure is not retried at all. (Ch. 9)
+- [x] 7.1.4 [D] - Naming discipline for the three meanings of "token" | DoD: **Done 03/08.** `rate_tokens` / `llm_tokens` / `oauth_token` (the last reserved for 7.3). Enforced by an AST test that walks every module on the outbound path and fails on a bare `token`/`tokens` binding — a comment would not have survived the next file. (Ch. 9)
+- [x] 7.1.5 [D] - Queue rather than error when the bucket is full | DoD: **Done 03/08.** A saturated bucket delays; it never raises. Two bounded exceptions, both argued in the module: a queue deeper than `queue_depth` refuses (at 0.5 RPM, 100 waiters is a loop, not traffic), and a wait outliving the 30 s response window raises `QueueDeadlockError` — this process is single-threaded, so a slot nobody can free is a deadlock, and **a hang is worse than a loss**. (`REFERENCE_PERFORMANCE_NOTES.md` §5)
+- [x] 7.1.6 [D] - Startup check: metered provider ⇒ `every_n_steps ≥ 3` | DoD: **Done 03/08.** `core/shared/provider_budget.py`, called from the CLI — deliberately **not** from `PeerSDK.__init__`, so it stops a human about to play a match rather than failing the suite on whichever machine's `.env` selects a metered provider. Resolves the provider the same way `build_provider` does (env over file); asking the question differently is how a check passes while the thing it checks is misconfigured.
   - **Why a check and not a comment:** at `every_n_steps = 1` a 6-sub-game series makes 210 model calls instead of ~70 (~52k tokens on a paid tier). The safe value depends on the provider, and the provider is set per machine in `.env` — so the two can drift apart silently on someone else's laptop. See `REFERENCE_PERFORMANCE_NOTES.md` §2.
   - Retry budget must stay inside the response timeout: 3 × 5 s backoff + request time < 30 s. A fourth retry would not fit, which is why `max_retries` stays at the Appendix F minimum.
 

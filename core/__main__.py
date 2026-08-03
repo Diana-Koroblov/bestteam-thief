@@ -17,6 +17,7 @@ from pathlib import Path
 
 from core.protocol.schemas import Role
 from core.sdk.peer_sdk import PeerSDK
+from core.shared.provider_budget import BudgetError
 
 __all__ = ["main"]
 
@@ -80,6 +81,14 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     role = Role.COP if CONFIG_DIRS[args.role] == "police" else Role.THIEF
     sdk = PeerSDK(_config_dir(args.role), role)
+
+    # Before anything else, and before any model is contacted: a metered
+    # provider paired with every_n_steps = 1 burns ~52k tokens over a series,
+    # and the two halves live on different machines (TODO 7.1.6).
+    try:
+        sdk.verify_budget()
+    except BudgetError as error:
+        raise SystemExit(str(error)) from error
 
     view = sdk.board_view()
     print(f"role            : {sdk.role.value}")

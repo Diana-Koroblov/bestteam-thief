@@ -103,6 +103,17 @@ def test_the_tunnel_follows_an_overridden_port(sdk: PeerSDK) -> None:
     assert sdk.tunnel(port=9999).port == 9999
 
 
+def test_the_gatekeeper_is_one_instance_per_process(sdk: PeerSDK) -> None:
+    """**TODO 7.1.2.** The quota and the DOS detector are stateful by definition.
+
+    A fresh Gatekeeper per call would start with a full bucket and an empty
+    window every time — which is exactly the loop the detector exists to catch,
+    made permanently undetectable.
+    """
+    assert sdk.gatekeeper is sdk.gatekeeper
+    assert sdk.gatekeeper.limits.requests_per_minute >= 30
+
+
 def test_the_ui_layer_never_reaches_past_the_facade() -> None:
     """Excellence guide §4.1, checked literally rather than remembered."""
     ui = Path(__file__).resolve().parents[2] / "core" / "ui"

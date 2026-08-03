@@ -27,6 +27,9 @@ from core.runtime.orchestrator import Orchestrator
 from core.runtime.peer_runtime import PeerRuntime
 from core.shared import env
 from core.shared.config_manager import load_config
+from core.shared.gatekeeper import Gatekeeper
+from core.shared.provider_budget import verify_budget
+from core.shared.rate_limits import load_rate_limits
 
 __all__ = ["PeerSDK", "BoardView"]
 
@@ -59,7 +62,9 @@ class PeerSDK:
             config_dir: ``config/police`` or ``config/thief``.
             role: The side this process plays. One process, one role (M#1).
         """
+        self._config_dir = Path(config_dir)
         self._config = load_config(config_dir)
+        self._gatekeeper: Gatekeeper | None = None
         self._orchestrator = Orchestrator.from_config(self._config, role)
         # Loaded eagerly: a bad strategy path must fail here, where the only
         # cost is an error message, not on turn one of a real match.
@@ -108,6 +113,30 @@ class PeerSDK:
         manager = TunnelManager.from_config(self._config, "", **overrides)
         manager.authtoken = env.optional(manager.spec.token_env) or ""
         return manager
+
+    @property
+    def gatekeeper(self) -> Gatekeeper:
+        """Return the single door every outbound call leaves by (TODO 7.1.2).
+
+        **One instance per process, built once and reused.** The quota and the
+        DOS detector are stateful by definition — a fresh Gatekeeper per call
+        would start with a full bucket and an empty window, which is precisely
+        the loop the detector exists to catch, made undetectable.
+        """
+        if self._gatekeeper is None:
+            self._gatekeeper = Gatekeeper(limits=load_rate_limits(self._config_dir))
+        return self._gatekeeper
+
+    def verify_budget(self) -> None:
+        """Refuse a metered provider paired with too short an interval (TODO 7.1.6).
+
+        Raises:
+            BudgetError: Naming both keys. Called at CLI startup rather than
+                here in ``__init__``, so it stops a human about to play a match
+                instead of failing the suite on a machine whose ``.env`` picks
+                a metered provider.
+        """
+        verify_budget(self._config)
 
     @property
     def brain_name(self) -> str:

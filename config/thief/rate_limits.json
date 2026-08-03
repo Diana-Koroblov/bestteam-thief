@@ -1,11 +1,19 @@
 {
   "version": "1.00",
   "_comment": "Gatekeeper budgets. Appendix F sets these as MINIMUMS: raising them by mutual agreement is legal, lowering them is not (M#12). The values here are the floor, so they are always safe to propose.",
+  "_comment_gates": "The three cumulative gates of PRD 7 §3.1, in order: daily quota, token bucket, DOS detector. Measured demand is ~0.5 RPM against a 30 RPM budget, so none of these should ever fire in a real match. They are insurance against our own bugs (M#29), not throughput management - which is why the DOS ceiling is set where only a loop can reach it.",
   "requests_per_minute": 30,
   "concurrent_requests": 2,
   "retry_backoff_sec": 5,
   "max_retries": 3,
   "queue_depth": 100,
+  "_comment_burst": "Token-bucket capacity C, the largest legitimate burst. One report plus its three retries is 4 calls; 5 leaves one spare. Anything larger is a loop, not a match.",
+  "burst_capacity": 5,
+  "_comment_quota": "Daily ceiling. At most 10 counted matches (max_games_per_team) send one report each, so 50 is five times the entire tournament's legitimate traffic and still far below any figure Google would act on.",
+  "daily_send_quota": 50,
+  "_comment_dos": "Abnormal-pattern lock. 20 calls in 10 s is 120 RPM - 240x measured demand, and unreachable by a match played at one move per turn. Reaching it means our own code is looping, and the pipe locks entirely: one lost report is cheaper than a suspended account.",
+  "dos_window_sec": 10,
+  "dos_max_calls_in_window": 20,
   "per_tool_overrides": {
     "get_move": {
       "requests_per_minute": 30,

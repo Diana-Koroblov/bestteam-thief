@@ -37,7 +37,7 @@ defects. C-006a is a clarification the rulebook itself supplies. Three entries �
 | **A. Genuine gaps** — the rulebook does not define the behaviour anywhere | C-005, C-006b, C-006c, C-010, C-011, C-013 | **Must be settled in the pre-match agreement.** Every one appears in `PRD_negotiation.md`. |
 | **B. Resolved by the rulebook** — looked ambiguous, settled on a closer reading | C-006a | Implemented as read. Flag kept only because an opponent may arrive with the other reading. |
 | **C. Reference-implementation defects** — the book is unambiguous, the reference diverges | C-001, C-007, C-009, C-008 | **Watch items.** Most opponents will build on the reference and inherit these. Detect at the handshake. |
-| **D. Gaps outside the game rules** — engineering and process | C-002, C-004 | Our own decisions, recorded for the reviewer. |
+| **D. Gaps outside the game rules** — engineering and process | C-002, C-004, C-014 | Our own decisions, recorded for the reviewer. |
 
 ---
 
@@ -198,6 +198,17 @@ places where a source left something undetermined and we had to choose.
 | **Our choice** | Pin LF for all text files via `.gitattributes` (`* text=auto eol=lf`), published to both repositories. |
 | **Why** | M#11 is enforced on bytes, not meaning. The failure appears only against an opponent on a different operating system — the worst possible moment to discover it. |
 | **Effect** | `.gitattributes` is in `SHARED_PATHS` and unit-tested. Also silences Git's CRLF warnings on Windows. |
+
+## C-014 — Two deviations from PRD 7's Gatekeeper interface
+
+| | |
+|---|---|
+| **Category** | D — our own engineering, not a rulebook conflict. Appendix F sets the Gatekeeper's *numbers* (Table 19) and is silent on its shape, so §0 admits this. |
+| **Where** | `PRD_7_reporting.md` §3.1 (gate order) and §4 (exception names) vs. `core/shared/gatekeeper.py` |
+| **The problem** | Both are cases where following our own PRD literally produces something worse. **(a) Gate order.** §3.1 draws quota → bucket → detector. Taken literally the detector is blind to the case it exists for: once the quota is spent every call is rejected before reaching it, so a runaway loop hammering an exhausted quota is invisible. **(b) Exception names.** §4 specifies `GatekeeperLocked` and `QuotaExhausted`. Ruff's `N818` rejects both, and 5.QG.1 requires zero violations — so the PRD as written cannot pass our own gate. |
+| **Our choice** | **(a)** Detector first: `detector → quota → bucket`. **(b)** `GatekeeperLockedError`, `QuotaExhaustedError`, matching the `Error` suffix every other exception in this codebase already uses. |
+| **Why** | **(a)** Nothing goes out under either order, so the account is safe either way — but only one *names* the fault. "Locked: 400 calls in 10 s, this is a loop" is a diagnosis; "quota exhausted", repeated ten thousand times, is not. **(b)** A linter that is a binding gate outranks a naming choice in a design document, and the codebase is already unanimous: `PeerError`, `TunnelError`, `ConfigError`, `RateLimitsError`. One pair of exceptions spelled differently would be the inconsistency, not the fix. |
+| **Effect** | `core/shared/gatekeeper.py` — the reordering is argued in the module docstring beside the corrected diagram. `PRD_7_reporting.md` is left as written: it records what we designed, this file records what we shipped and why they differ. |
 
 ---
 
