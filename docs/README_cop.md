@@ -43,6 +43,55 @@ cp .env-example .env                # then fill in your own credentials
 uv run python -m core peer --role police
 ```
 
+## Network exposure
+
+Both machines sit behind NAT, so neither can reach the other directly. A tunnelling agent publishes
+a public URL that forwards to the local FastMCP port. Public exposure is mandatory for league play
+(rule M#10); local development needs none of it and continues to run on `127.0.0.1`.
+
+```bash
+uv run python -m core peer --role police --serve --tunnel
+```
+
+`core/infra/tunnel.py` starts the agent, **reads the public URL back from the agent's own local
+API**, and prints it. It is read back rather than computed from config on purpose: a tunnel that
+failed to start otherwise looks identical to one that worked, right until the opponent cannot reach
+us mid-match. The authtoken comes from `NGROK_AUTHTOKEN` in `.env` and is passed through the child
+process's environment, never on the command line where the process table would expose it (M#39).
+
+The manual equivalent, for debugging:
+
+```bash
+ngrok http 8081 --url YOUR-DOMAIN.ngrok-free.dev
+```
+
+Each machine has a **reserved static domain**, so the address survives a restart and goes into the
+declaration once instead of being re-exchanged per match. Set yours in `config/police/game.toml`
+under `[network] public_domain`.
+
+### If the tunnel drops
+
+`core/runtime/tunnel_supervisor.py` restarts it, re-runs the handshake so the opponent is not left
+talking to a stale session, and gives up after three attempts. It feeds the watchdog only while the
+tunnel is healthy, so a tunnel that cannot be revived ends the sub-game in a clean `TECHNICAL_LOSS`
+within `watchdog_timeout_sec` rather than hanging. A hang is worse than a loss: it produces no log
+and scores 0 for *both* teams.
+
+### Fallback provider
+
+ngrok is primary. **Localtonet** is the documented fallback, selected by config rather than by a
+code change:
+
+```toml
+# config/police/game.toml
+[network]
+tunnel_provider = "localtonet"   # ngrok | localtonet
+```
+
+with `LOCALTONET_AUTHTOKEN` in `.env`. Its argument form in `core/infra/tunnel.py` has never been
+run against a live Localtonet account — confirm it against their docs before a graded match, not
+during one.
+
 ## Quality gates
 
 One command runs every gate, commits, and publishes to both repositories. It stops at the first

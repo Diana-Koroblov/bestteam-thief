@@ -36,6 +36,12 @@ listen_host = "127.0.0.1"
 # Different port from the cop so both roles can run on one machine for
 # self-play. The public domain still maps to exactly one of them at a time.
 listen_port = 8082
+# ngrok | localtonet. See docs/PRD_5_tunnelling.md §6 for why ngrok is primary.
+# Localtonet is the documented fallback for the day ngrok is blocked or down;
+# switching is this line plus LOCALTONET_AUTHTOKEN in .env, no code change.
+# Its argument form in core/infra/tunnel.py is unverified against a live
+# account — confirm it before a graded match, not during one.
+tunnel_provider = "ngrok"
 
 [strategy]
 # See docs/PRD_strategy_advanced.md. These are ours alone; the opponent must

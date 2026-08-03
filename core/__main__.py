@@ -46,6 +46,12 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     peer.add_argument("--serve", action="store_true", help="Run the MCP server and wait.")
     peer.add_argument("--port", type=int, help="Override the port from config.")
     peer.add_argument(
+        "--tunnel",
+        action="store_true",
+        help="Expose the server publicly through the configured tunnel provider. "
+        "Required for league play (M#10); local development does not need it.",
+    )
+    peer.add_argument(
         "--handshake",
         action="store_true",
         help="Negotiate with --opponent, send one sealed move, print the replies.",
@@ -91,7 +97,7 @@ def main(argv: list[str] | None = None) -> int:
         print("\ndry run - configuration loaded, nothing started.")
         return 0
     if args.serve:
-        return _serve(sdk, args.port)
+        return _serve(sdk, args.port, args.tunnel)
     if args.handshake:
         return _handshake(sdk, args.opponent)
 
@@ -100,13 +106,18 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _serve(sdk: PeerSDK, port: int | None) -> int:
-    """Run this peer's MCP server until interrupted.
+def _serve(sdk: PeerSDK, port: int | None, tunnel: bool = False) -> int:
+    """Run this peer's MCP server until interrupted, optionally exposed publicly.
 
     Ctrl-C is the normal way to stop a server, so it exits quietly. Letting the
     KeyboardInterrupt escape prints a ten-frame traceback through asyncio and
     anyio, which teaches whoever is watching to ignore tracebacks — exactly the
     habit that hides a real one during a match.
+
+    The tunnel is started **before** the server and torn down in a `finally`.
+    Before, because a tunnel that cannot start should cost nothing but an error
+    message; in a `finally`, because an agent orphaned by a crashed peer holds
+    the reserved domain and the next run cannot bind it (TODO 5.1.1).
     """
     from core.infra.mcp_server import create_server
 
@@ -114,6 +125,10 @@ def _serve(sdk: PeerSDK, port: int | None) -> int:
     # No trailing slash: FastMCP serves at /mcp, and /mcp/ costs a 307 redirect
     # before every single request. The client strips it defensively too.
     url = f"http://127.0.0.1:{spec.port}/mcp"
+    manager = sdk.tunnel(port=spec.port) if tunnel else None
+    if manager is not None:
+        url = f"{manager.start()}/mcp"
+
     print(f"\nserving {len(spec.tools)} tools on http://{spec.host}:{spec.port}/mcp")
     print(f"give the other terminal:  --opponent {url}")
     print("ctrl-c to stop.\n")
@@ -121,6 +136,9 @@ def _serve(sdk: PeerSDK, port: int | None) -> int:
         create_server(spec).run(transport="http", host=spec.host, port=spec.port)
     except KeyboardInterrupt:
         print("\nserver stopped.")
+    finally:
+        if manager is not None:
+            manager.stop()
     return 0
 
 

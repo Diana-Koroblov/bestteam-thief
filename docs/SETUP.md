@@ -175,11 +175,17 @@ ngrok config add-authtoken YOUR_TOKEN_HERE
 4. Test:
 
 ```powershell
-ngrok http 8801
+ngrok http 8081
 ```
 
 ✅ **Done when:** a `https://....ngrok-free.dev` URL appears and the session
 stays open. `Ctrl+C` to stop.
+
+The port must match `[network] listen_port` in `config/<role>/game.toml`, which
+is **8081**. This page said 8801 until 02/08 — a transposition that survived
+because nothing executes these snippets, and the first thing it would have
+broken is the two-machine rehearsal, where the cost of a wrong digit is a
+booked slot with both people present.
 
 Also add the token to `.env` so the tunnel can be started programmatically in
 Phase 5:
@@ -203,7 +209,7 @@ Find yours at <https://dashboard.ngrok.com/domains> (Gateway → Domains), then
 start the tunnel pinned to it:
 
 ```powershell
-ngrok http 8801 --url YOUR-DOMAIN.ngrok-free.dev
+ngrok http 8081 --url YOUR-DOMAIN.ngrok-free.dev
 ```
 
 Why this matters: with a rotating URL, every match would need the address
@@ -222,12 +228,12 @@ Phase 1. Until then this table is where the domains live, so nothing is lost.
 | Machine | Owner | Static domain | Recorded |
 |---|---|---|---|
 | Diana's | [D] | `customs-countdown-uncork.ngrok-free.dev` | 2026-07-28 |
-| Itay's | [I] | _pending — SETUP 0.2.4_ | |
+| Itay's | [I] | `denotatively-sciuroid-florine.ngrok-free.dev` | 2026-08-02 |
 
 Start the tunnel pinned to it:
 
 ```powershell
-ngrok http 8801 --url customs-countdown-uncork.ngrok-free.dev
+ngrok http 8081 --url customs-countdown-uncork.ngrok-free.dev
 ```
 
 These move into `[network]` in the private per-peer TOML when task 1.1.4 creates it, and are

@@ -74,6 +74,35 @@ def test_the_runtime_is_reachable_for_tool_registration(sdk: PeerSDK) -> None:
     assert hasattr(sdk.runtime, "on_commit")
 
 
+def test_the_tunnel_reads_the_token_its_provider_actually_uses(
+    sdk: PeerSDK, monkeypatch
+) -> None:
+    """**TODO 5.1.1.** Which variable holds the token depends on the provider.
+
+    A caller that hardcoded ``NGROK_AUTHTOKEN`` would silently start an
+    unauthenticated fallback the day `[network] tunnel_provider` changed, so
+    the facade resolves it from the provider rather than from a constant.
+    """
+    monkeypatch.setenv("NGROK_AUTHTOKEN", "tok_from_the_environment")
+    manager = sdk.tunnel()
+    assert manager.spec.token_env == "NGROK_AUTHTOKEN"
+    assert manager.authtoken == "tok_from_the_environment"
+
+
+def test_an_absent_token_is_not_an_error_until_the_tunnel_starts(
+    sdk: PeerSDK, monkeypatch
+) -> None:
+    """Building the manager to inspect it stays free; `start()` is what refuses."""
+    monkeypatch.delenv("NGROK_AUTHTOKEN", raising=False)
+    monkeypatch.setattr("core.shared.env.load_env", lambda *a, **k: False)
+    assert sdk.tunnel().authtoken == ""
+
+
+def test_the_tunnel_follows_an_overridden_port(sdk: PeerSDK) -> None:
+    """Otherwise `--port` publishes a domain that forwards nowhere."""
+    assert sdk.tunnel(port=9999).port == 9999
+
+
 def test_the_ui_layer_never_reaches_past_the_facade() -> None:
     """Excellence guide §4.1, checked literally rather than remembered."""
     ui = Path(__file__).resolve().parents[2] / "core" / "ui"

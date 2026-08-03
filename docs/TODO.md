@@ -88,7 +88,7 @@ working; ≥4 league matches booked; 10 per-algorithm PRDs written; CI green.
 >
 > **4. ngrok — task 0.2.4 + 0.2.6.** Create the account, install, note your permanent
 > `*.ngrok-free.dev` domain, and record it in `config/thief/game.toml`. Diana's is already done
-> (`customs-countdown-uncork.ngrok-free.dev`). DoD: `ngrok http 8801 --url <your-domain>` works.
+> (`customs-countdown-uncork.ngrok-free.dev`). DoD: `ngrok http 8081 --url <your-domain>` works.
 >
 > **5. Then Phase 5 — `core/infra/tunnel.py` (5.1.1) onward.** That is the real work and it is
 > yours: Phase 5 is the only layer that genuinely needs two machines. Diana is on **Phase 6**
@@ -107,10 +107,10 @@ working; ≥4 league matches booked; 10 per-algorithm PRDs written; CI green.
   - [x] 0.2.1.c 🧑 [D] - Create OAuth client ID (**Desktop app**), download `credentials.json` | DoD: **Verified 28/07** — `check_setup.py` confirms a Desktop client at `C:\Users\diana\.p2p-secrets\credentials.json`, outside both repos. SETUP 0.2.1.e-f
   - [x] 0.2.1.d 🧑 [D] - ⚠️ **Publish the app** (Testing → In production) — **confirmed 28/07: Publishing status = In production** | DoD: Audience page reads *In production*. **`check_setup.py` cannot verify this — publishing status is not exposed in `credentials.json` or by any API. Confirm by eye.** **Skipping this makes the refresh token expire after 7 days and silently breaks league reporting mid-project** — an unsent report scores 0 for **both** teams. SETUP 0.2.1.g (M#35)
 - [x] 0.2.2 🧑 [D] - Groq API key at console.groq.com/keys | DoD: **Verified 28/07** — `check_setup.py` reports `gsk_xJkR...(56 chars)`.
-- [ ] 0.2.3 🧑 [I] - Install Ollama and pull a model small enough for the 30 s step deadline | DoD: A 15-word prompt returns in under 10 s at `localhost:11434`. (PRD Q3) — **verify with `uv run python scripts/hint_demo.py --provider ollama`; this also closes 4.3.3.** See *ITAY — START HERE* above.
-- [ ] 0.2.4 🧑 [B] - ngrok accounts + authtokens on both machines | DoD: **Diana verified 28/07** — installed and configured, static domain `customs-countdown-uncork.ngrok-free.dev`. **Itay pending.**
+- [x] 0.2.3 🧑 [I] - Install Ollama and pull a model small enough for the 30 s step deadline | DoD: **Verified 02/08** — `hint_demo.py --provider ollama` printed `OK - ollama wrote every line` on `llama3.1:8b`. Closes 4.3.3. Full suite on Itay's machine: 815 passed, 22 skipped, coverage 92.94 % — no cross-machine divergence. (PRD Q3)
+- [x] 0.2.4 🧑 [B] - ngrok accounts + authtokens on both machines | DoD: **Diana verified 28/07** — static domain `customs-countdown-uncork.ngrok-free.dev`. **Itay verified 02/08** — ngrok 3.39.10, `check_setup.py` reports installed and configured, static domain `denotatively-sciuroid-florine.ngrok-free.dev`.
 - [x] 0.2.5 [D] - Decide: static ngrok domain or dynamic URLs? | DoD: **Answered — static.** ngrok now assigns every free account a permanent `*.ngrok-free.dev` dev domain, so no paid plan and no per-match URL exchange is needed. Recorded in PRD Q5 and SETUP 0.2.5.
-- [ ] 0.2.6 🧑 [B] - Note each machine's static ngrok domain in `config/<role>/game.toml` | DoD: Both domains recorded; `ngrok http 8801 --url <domain>` works on each machine.
+- [~] 0.2.6 🧑 [B] - Note each machine's static ngrok domain in `config/<role>/game.toml` | DoD: **Tunnels verified on both machines 02/08** — `ngrok http 8081 --url <domain>` opens on Diana's and on Itay's (`denotatively-sciuroid-florine.ngrok-free.dev`). Both domains are recorded in the SETUP 0.2.5 table. **Still open:** only Diana's domain is in `config/police/game.toml`; that file is committed with a single value and there is no per-machine override, unlike `P2P_LLM_PROVIDER` which has one in `.env`. Deciding the mechanism belongs to 5.1.1 — the `TunnelManager(domain=...)` argument has to come from somewhere. (PRD 5.10)
 
 ### 0.3 🧑 USER ACTION — League scheduling ⏰ **DO THIS FIRST**
 > **PAUSE — This is the binding constraint on the final grade, and it is not a coding task.**
@@ -524,7 +524,7 @@ Most of the schedule slack is allocated here — if anything slips, it slips her
 ### 4.3 Natural language — outbound
 - [x] 4.3.1 [I] - `core/infra/llm/base.py` — `TextProvider` interface | DoD: One method, `generate(prompt, max_words) -> str`.
 - [x] 4.3.2 [I] - `template` provider — pre-written bank, zero tokens | DoD: Default; works fully offline. (F)
-- [~] 4.3.3 [I] - `ollama` provider — `localhost:11434` | DoD: Itay's machine produces a hint in under 10 s. — **code complete and unit-tested against a mocked transport; the DoD needs Itay's machine.** ⏰ Itay verifies with `uv run python scripts/hint_demo.py --provider ollama` — see 4.3.4.b. No Groq key needed on his machine.
+- [x] 4.3.3 [I] - `ollama` provider — `localhost:11434` | DoD: **Verified 02/08 on Itay's machine** — three hints written by `ollama` on `llama3.1:8b`, verdict line `OK - ollama wrote every line`. No Groq key present, which is the point: the fallback never fired. See 4.3.4.b.
 - [x] 4.3.4 [D] - `groq` provider, routed through the Gatekeeper | DoD: No direct SDK call outside this module; Diana's machine produces a hint. — code complete; the Gatekeeper half is enforced (no key or URL exists outside `core/infra/llm/remote.py`).
   - [x] 4.3.4.a 🧑 **DIANA — DONE 02/08.** Real key in `.env`, verified by running `uv run python scripts/hint_demo.py --provider groq` and reading `OK - groq wrote every line`.
     - ⚠️ **The proof is the run, not the file.** A wrong or placeholder key fails *silently* into the template bank and the output still looks fine. Only the verdict line distinguishes them. Re-run it after any `.env` edit.
@@ -579,21 +579,27 @@ Most of the schedule slack is allocated here — if anything slips, it slips her
 ---
 
 ## Phase 5: Cloud Exposure (Layer 5)
-**Priority:** P0 | **Status:** Not Started ☐ | **Target:** 6 Aug
+**Priority:** P0 | **Status:** ◐ Code complete (03/08) — every task that one machine can finish is done; 5.3.1, 5.3.2 and M5 need both machines | **Target:** 6 Aug
 **DoD:** An agent on a remote machine connects via a public URL and plays a complete series.
 
-- [ ] 5.1.1 [I] - `core/infra/tunnel.py` — ngrok lifecycle | DoD: Public URL obtained programmatically at startup. Public exposure is mandatory for league play. (M#10)
-- [ ] 5.1.2 [I] - Localtonet fallback path | DoD: Documented in the README; switchable by config. *(P2)*
-- [ ] 5.2.1 [I] - Drop detection + reconnect + re-handshake | DoD: A tunnel killed mid-match recovers or ends in a clean `TECHNICAL_LOSS` — never a hang.
-- [ ] 5.2.2 [I] - Tunnel health wired into the Watchdog input | DoD: Dead tunnel triggers a controlled action within `watchdog_timeout_sec`.
-- [ ] 5.3.1 [B] - Two-machine rehearsal, Diana ↔ Itay over the public internet | DoD: A full 6-sub-game series completes end-to-end.
-- [ ] 5.3.2 [B] - Latency measurement under the 30 s response timeout | DoD: p95 round-trip recorded; timeout raised by agreement if the margin is thin. (F, M#12)
+> **⏰ THE BOOKING IS THE BOTTLENECK.** Everything below that code can settle is settled. What
+> remains is 5.3.1/5.3.2/5.QG.4, and none of them can be simulated: they need Diana and Itay on
+> two machines at the same time. It is the only hard human-availability dependency in the project.
+> **Book the slot now** — the code has been waiting since 03/08, and a slot booked late is a
+> milestone observed late.
+
+- [x] 5.1.1 [I] - `core/infra/tunnel.py` — ngrok lifecycle | DoD: **Done 03/08.** `TunnelManager(authtoken, port, domain).start()/is_alive()/restart()/stop()`, wired into the CLI as `--serve --tunnel`. The URL is **read back from the agent's own local API**, not computed from config: a tunnel that failed to start otherwise looks identical to one that worked until the opponent cannot reach us mid-match. The authtoken travels in the child's environment, never in argv, because the process table is readable by every process on the machine (M#39, M#10).
+- [x] 5.1.2 [I] - Localtonet fallback path | DoD: **Done 03/08.** `[network] tunnel_provider = "ngrok" | "localtonet"` in `game.toml`, documented in both READMEs under *Network exposure*. ⚠️ The localtonet argument form in `core/infra/tunnel.py` has **never been run against a live account** — confirm it against their docs before a graded match, not during one. *(P2)*
+- [x] 5.2.1 [I] - Drop detection + reconnect + re-handshake | DoD: **Done 03/08.** `core/runtime/tunnel_supervisor.py`: three bounded reconnects, then a clean `TECHNICAL_LOSS`. **Reconnection is not complete until the handshake has been re-run** — a tunnel that is up while the opponent still holds a stale session looks healthy from here and is worse than one plainly down (PRD 5 req. 5.6). A failing re-handshake therefore counts as a failed reconnect.
+- [x] 5.2.2 [I] - Tunnel health wired into the Watchdog input | DoD: **Done 03/08.** The watchdog is beaten only while the tunnel is up, so an unrevivable tunnel ends the sub-game within `watchdog_timeout_sec` with nobody deciding that it should. The supervisor **also** runs its own outage clock: starving the watchdog only bounds the outage if the tunnel is its sole heartbeat source, and the turn loop beats the same watchdog. Two independent clocks, so the bound holds either way.
+- [ ] 5.3.1 🧑 [B] - Two-machine rehearsal, Diana ↔ Itay over the public internet | DoD: A full 6-sub-game series completes end-to-end. **Cannot be simulated — book the slot.** Run `--serve --tunnel` on one machine and `--handshake --opponent <public-url>` on the other.
+- [ ] 5.3.2 🧑 [B] - Latency measurement under the 30 s response timeout | DoD: p95 round-trip recorded; timeout raised by agreement if the margin is thin. (F, M#12) — **the instrument is built and tested** (`core/infra/latency.py`: p50/p95 nearest-rank, `verdict()`, `recommended_timeout()`); what is missing is the two-machine reading it is meant to record. Raising is legal by mutual agreement, lowering never is, so a thin margin has exactly one remedy.
 
 ### ✅ Phase 5 Quality Gate
-- [ ] 5.QG.1 [I] - `uv run ruff check .` | DoD: 0 violations.
-- [ ] 5.QG.2 [I] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC.
-- [ ] 5.QG.3 [I] - `uv run pytest --cov` | DoD: All pass; coverage ≥85 %.
-- [ ] 5.QG.4 [B] - **Milestone M5 observed** | DoD: Remote machine plays a full series via ngrok against the local agent.
+- [x] 5.QG.1 [I] - `uv run ruff check .` | DoD: **0 violations, 03/08.**
+- [x] 5.QG.2 [I] - `uv run python scripts/check_file_size.py` | DoD: **No file over 150 LOC, 03/08.**
+- [x] 5.QG.3 [I] - `uv run pytest --cov` | DoD: **899 passed, coverage 95.45 %, 03/08.** Split-repository suite green on both published repos. No test opens a real tunnel (PRD 5 §5): the process, the agent API and the clock are all injected, so T5.1–T5.6 and T5.9 run against fakes in microseconds.
+- [ ] 5.QG.4 🧑 [B] - **Milestone M5 observed** | DoD: Remote machine plays a full series via ngrok against the local agent. **Blocked on 5.3.1 only.**
 
 ---
 

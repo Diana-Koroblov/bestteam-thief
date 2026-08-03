@@ -94,7 +94,7 @@ TunnelManager(authtoken: str, port: int, domain: str | None)
 Manual equivalent, for debugging:
 
 ```powershell
-ngrok http 8801 --url YOUR-DOMAIN.ngrok-free.dev
+ngrok http 8081 --url YOUR-DOMAIN.ngrok-free.dev
 ```
 
 ---

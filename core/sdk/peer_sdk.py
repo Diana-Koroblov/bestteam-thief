@@ -14,15 +14,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from core.domain.connectivity import exit_count, region_size
 from core.domain.movement import get_legal_moves
 from core.infra.mcp_server import ServerSpec, build_server_spec
+from core.infra.tunnel import TunnelManager
 from core.protocol.schemas import Role
 from core.protocol.tools import build_guarded_tools
 from core.runtime.brain_loader import load_brain
 from core.runtime.orchestrator import Orchestrator
 from core.runtime.peer_runtime import PeerRuntime
+from core.shared import env
 from core.shared.config_manager import load_config
 
 __all__ = ["PeerSDK", "BoardView"]
@@ -90,6 +93,21 @@ class PeerSDK:
             name=self._config.get("identity.contact_label", "peer"),
             port=port or self._config.require("network.listen_port"),
         )
+
+    def tunnel(self, **overrides: Any) -> TunnelManager:
+        """Return the tunnel manager for this peer's configured provider (TODO 5.1.1).
+
+        The authtoken is resolved here rather than by the caller, because which
+        variable holds it depends on which provider the config selected — and a
+        caller that hardcoded ``NGROK_AUTHTOKEN`` would silently start an
+        unauthenticated fallback the day the config switched.
+
+        Missing is not an error yet: ``start()`` raises with the SETUP step that
+        fixes it, so building the manager to inspect it stays free.
+        """
+        manager = TunnelManager.from_config(self._config, "", **overrides)
+        manager.authtoken = env.optional(manager.spec.token_env) or ""
+        return manager
 
     @property
     def brain_name(self) -> str:
