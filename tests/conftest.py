@@ -23,10 +23,26 @@ from core.domain.game_state import GameState
 from core.domain.rules import Rules
 from core.domain.scoring import ScoreTable
 from core.shared.config_manager import Config, load_config
-from tests.paths import PRESENT_ROLES, role_dir
+from tests.paths import PRESENT_ROLES, brain_class, role_dir
 
 DEFAULT_COP: Position = (0, 0)
 DEFAULT_THIEF: Position = (3, 3)
+
+# A published repository ships **one** role package (ADR-001), so a test module
+# that imports the other one at top level takes the whole suite down during
+# *collection* — before any skip marker gets a chance to run. `needs_brain` in
+# `tests/paths.py` cannot help here: a marker skips a test, it does not stop the
+# import that precedes it.
+#
+# So the modules that unit-test one role's strategy are dropped from collection
+# outright when that role is absent, and they carry a `test_<role>_` prefix to
+# say so in their own filenames. Caught by `scripts/check_split_repos.py`, which
+# is the only place the split is real before a push.
+_ROLE_ONLY_PREFIXES = {"police": "unit/test_cop_", "thief": "unit/test_thief_"}
+
+collect_ignore_glob = [
+    f"{prefix}*.py" for role, prefix in _ROLE_ONLY_PREFIXES.items() if brain_class(role) is None
+]
 
 
 @pytest.fixture(scope="session")

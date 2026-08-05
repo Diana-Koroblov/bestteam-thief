@@ -7,13 +7,22 @@ log without launching a window.
 
 Excluded from coverage (`pyproject.toml` omits `core/ui/*`) because asserting on
 box-drawing characters tests the drawing, not the game.
+
+**Takes plain numbers, not a `Board`.** It used to accept the engine object,
+which meant `core/ui/` imported `core.domain` — a breach of X §4.1 and TODO
+7.5.4 that survived because the boundary test only looked for
+`core.runtime`, `core.protocol` and `core.infra`. A `Board` is duck-typed here
+now: anything with `grid_size` and the two index bounds will do, so the module
+depends on a shape rather than on a class.
 """
 
 from __future__ import annotations
 
-from core.domain.board import Board, Position
+from typing import Any
 
 __all__ = ["render", "legend"]
+
+Position = tuple[int, int]
 
 COP = "C"
 THIEF = "T"
@@ -39,7 +48,7 @@ def _symbol(cell: Position, cop: Position, thief: Position, barriers: frozenset[
 
 
 def render(
-    board: Board,
+    board: Any,
     cop: Position,
     thief: Position,
     barriers: frozenset[Position] = frozenset(),

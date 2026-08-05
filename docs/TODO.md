@@ -707,7 +707,7 @@ hash; the end-of-match audit passes; any tampering is detected.
 ---
 
 ## Phase 7: Reporting & Visualisation (Layer 7)
-**Priority:** P0 | **Status:** ◐ 7.1 Gatekeeper and 7.2 JSON artefacts complete (03/08); 7.3–7.5 not started | **Target:** 8 Aug
+**Priority:** P0 | **Status:** ✅ **Complete** (03/08, five days early) — 7.1–7.5 all done; M7 needs one observed run | **Target:** 8 Aug
 **DoD:** A match summary reaches the lecturer's inbox as a JSON attachment; the Live GUI shows local
 truth only; the Replay App reproduces a recorded series with `Verified OK`.
 
@@ -753,55 +753,98 @@ truth only; the Replay App reproduces a recorded series with `Verified OK`.
   - 🐛 **Caught while testing:** two Hebrew team names both sanitise to an empty filename. Hashing the *sanitised* form would have given them the same id — exactly the collision this function exists to prevent. The fingerprint is taken from the originals, and each side gets a short readable stand-in (`team310f02-vs-team787be7`).
   - Sub-game numbers zero-padded (`g03`), so `g10` cannot sort before `g2` in a directory listing.
 
-### 7.3 Gmail delivery
-- [ ] 7.3.1 [D] - Port `gmail_sender.py`, send-only scope, routed through the Gatekeeper | DoD: Reporting is fully automated with no human step; no direct Gmail call bypasses the gates. (M#30, M#32)
-- [ ] 7.3.2 [D] - Report sent as a JSON **attachment**, never free text | DoD: A test asserts the body carries no report data. (M#33, M#34)
-- [ ] 7.3.3 [D] - Recipient `rmisegal+uoh26finalgame@gmail.com` from config | DoD: Not hardcoded; test config points elsewhere. (M#51)
-- [ ] 7.3.4 [D] - Each team sends its **own** report independently | DoD: No code path sends on the opponent's behalf. (M#35)
+### 7.3 Gmail delivery — ✅ complete 03/08
+- [x] 7.3.1 [D] - Port `gmail_sender.py`, send-only scope, routed through the Gatekeeper | DoD: **Done 03/08.** `core/infra/gmail_sender.py`; `sdk.mailer()` wires it to the peer's single Gatekeeper. Every send goes through `execute()` — a direct API call would walk around the three gates that stand between a bug and a suspended account. `build_transport()` refreshes the stored OAuth token silently, so there is **no human step at send time**; the one-time consent is SETUP 0.2.1. (M#30, M#32)
+- [x] 7.3.2 [D] - Report sent as a JSON **attachment**, never free text | DoD: **Done 03/08.** The body is a fixed two-line sentence and the test asserts the game id, the totals and every score are **absent** from it — a grader parsing the attachment must not find a second, possibly disagreeing, copy in the prose. The JSON is attached as bytes, never decoded, so a Hebrew team name is not mangled by a cp1252 console on the way out. (M#33, M#34)
+- [x] 7.3.3 [D] - Recipient `rmisegal+uoh26finalgame@gmail.com` from config | DoD: **Done 03/08.** `[email] recipient` in both `game.toml`s; neither address has a default, because a default recipient is a hardcoded lecturer address by another name. A test asserts the string does not appear in the module source at all. (M#51)
+- [x] 7.3.4 [D] - Each team sends its **own** report independently | DoD: **Done 03/08.** Checked structurally rather than by intent: a test reads `send_result`'s signature and asserts no parameter anywhere names whose report it is. A peer that "helpfully" filed for both would produce exactly the disagreeing pair M#35 voids matches over.
+  - ⚠️ **Nothing calls `send_result()` yet.** `[email] send_on_series_end = true` describes a hook the turn loop owns, and the turn loop is Phase 9. The sender, the transport and the wiring are done; the trigger is not.
 
-### 7.4 Live GUI — local truth only
-- [ ] 7.4.1 [D] - `core/ui/live_gui.py` in Tkinter | DoD: File ≤150 lines; split widgets into `core/ui/widgets.py`. (ADR-005)
-  - [ ] 7.4.1.a [D] - Belief heatmap, intensity ∝ posterior | DoD: Darker red = higher probability.
-  - [ ] 7.4.1.b [D] - Own position and known barriers | DoD: Rendered distinctly.
-  - [ ] 7.4.1.c [D] - Turn banner: green `YOUR TURN` / grey `LOCKED` | DoD: Input ignored while locked.
-- [ ] 7.4.2 [D] - **Local-truth enforcement test** | DoD: Asserts the GUI layer never receives the opponent's true position. Failing this is project disqualification. (M#8, M#9)
+### 7.4 Live GUI — local truth only — ✅ complete 03/08
+- [x] 7.4.1 [D] - `core/ui/live_gui.py` in Tkinter | DoD: **Done 03/08.** 62 and 40 code lines; widgets split into `core/ui/widgets.py` as ADR-005 requires. The window polls a provider on a timer and **never drives the match** — a GUI running the turn loop would freeze for a 30 s response timeout, and a frozen window mid-match looks exactly like a crashed peer. Launch with `uv run python -m core peer --role police --gui`.
+  - ⚠️ **`--gui` and `--serve` do not currently combine.** `--gui` is dispatched first and returns, so adding `--serve` opens the window and never starts the server. Not a one-line fix: `FastMCP.run()` blocks and `uvicorn` installs signal handlers that only work on the main thread, so serving alongside Tkinter needs the server in a worker thread and that needs testing on both machines. Until the turn loop exists (Phase 9) the window shows the starting position either way, so this is deferred to whoever wires the loop — **it must be resolved before the M7 screenshot of live state.**
+  ![alt text](image.png)
+  - [x] 7.4.1.a [D] - Belief heatmap, intensity ∝ posterior | DoD: **Done 03/08.** Normalised against the peak, not absolute: a uniform prior over 47 cells peaks at 0.021 and would render as a blank board, hiding the one thing the heatmap exists to show. `heat_colour()` interpolates toward dark red so the ordering survives a greyscale printout, and T7.14 is asserted — the deepest cell *is* `belief.argmax()`.
+  - [x] 7.4.1.b [D] - Own position and known barriers | DoD: **Done 03/08.** Painted back to front — heat, then barriers, then our marker — so an agent is never buried under a wall by the drawing order.
+  - [x] 7.4.1.c [D] - Turn banner: green `YOUR TURN` / grey `LOCKED` | DoD: **Done 03/08.** `accepts_input()` lives on the state, not in the event handler, so "are we allowed to move?" has one answer a test can ask directly. Accepting a keystroke while locked would let a human change a move the opponent already holds a digest of — commit-reveal defeated through the keyboard.
+- [x] 7.4.2 [D] - **Local-truth enforcement test** | DoD: **Done 03/08 — `tests/unit/test_local_truth.py`, checked three ways.** (1) By type: `GuiState` has no field that could hold the opponent's position. (2) By construction: it is built from an `Observation`, which has no such field either, so there is nothing to build it from. (3) By import: `core/ui/` reaches nothing below `core/sdk/`. **Not a filter applied at render time** — filtering works until somebody adds a debug label, and that failure is silent, visible only on screen, and worth the whole project. (M#8, M#9)
+  - 🐛 **Caught by writing it: `core/ui/render.py` had been importing `core.domain.board` since Phase 1.** A live breach of X §4.1 and 7.5.4 that survived because the old boundary test in `test_peer_sdk.py` only looked for `core.runtime`, `core.protocol` and `core.infra` — never `core.domain`. The renderer now duck-types the board and the new test walks the AST, which also catches `import core.domain.board` that a grep for `from core.domain` would miss.
 
-### 7.5 Replay Viewer
-- [ ] 7.5.1 [D] - `core/ui/replay.py` — load a log, step forward/back | DoD: Controls work on a saved match. (M#20)
-- [ ] 7.5.2 [D] - Live re-hash of every entry | DoD: Recomputes `SHA256` from the revealed nonce and move and compares to the stored commitment.
-- [ ] 7.5.3 [D] - Green `Verified OK` / red `TAMPERED` | DoD: A deliberately altered log produces `TAMPERED`; one such verdict voids the match. (Ch. 7)
-- [ ] 7.5.4 [D] - `PeerSdk` is the only path used by GUI, Replay, CLI and tests | DoD: `grep -r "from core.domain" core/ui/` returns nothing. (X §4.1)
+### 7.5 Replay Viewer — ✅ complete 03/08
+- [x] 7.5.1 [D] - `core/ui/replay.py` — load a log, step forward/back | DoD: **Done 03/08.** Model in `core/report/replay.py` beside the log it replays; window in `core/ui/replay.py`. The cursor clamps rather than wraps — a viewer that looped would make "is this the last step?" unanswerable from the screen. (M#20)
+- [x] 7.5.2 [D] - Live re-hash of every entry | DoD: **Done 03/08.** Via `verify_log()`, the same call 7.2.3 was built around, so the viewer and the log-format test check one thing rather than two similar things. **The whole log is audited before the first frame is drawn** — a viewer verifying lazily as the cursor moved would show a green banner on a log whose forgery sits at step 30 and which nobody clicked as far as.
+- [x] 7.5.3 [D] - Green `Verified OK` / red `TAMPERED` | DoD: **Done 03/08.** Per-step verdicts are recomputed rather than read from the audit's failure list: an ordering or duplication failure is about the log's *shape* and says nothing about whether that seal is genuine, so conflating them would point the viewer at the wrong row. A log that cannot be verified at all **refuses to open** — a green banner over an unverifiable file is worse than no viewer, because it looks like evidence. (Ch. 7)
+  - `python -m core replay <log.json> --headless` prints the verdict and **exits 1 on TAMPERED**, so a log can be checked from CI without a display. 7.24 is not a verdict that should require a human to be looking at a window.
+- [x] 7.5.4 [D] - `PeerSdk` is the only path used by GUI, Replay, CLI and tests | DoD: **Done 03/08.** `core/sdk/replay_sdk.py` and `core/sdk/view_state.py` are the two facades; the AST test in `test_local_truth.py` supersedes the weaker substring check in `test_peer_sdk.py`, which had been passing over a real breach. (X §4.1)
 
 ### ✅ Phase 7 Quality Gate
-- [ ] 7.QG.1 [D] - `uv run ruff check .` | DoD: 0 violations.
-- [ ] 7.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC. GUI modules breach most often — split into widgets/controller.
-- [ ] 7.QG.3 [D] - `uv run pytest --cov` | DoD: All pass; coverage ≥85 % (GUI rendering excluded via `omit`).
-- [ ] 7.QG.4 [D] - **Milestone M7 observed** | DoD: Summary reaches the inbox; GUI shows live state; Replay reproduces a recorded series with `Verified OK`.
-
----
+- [x] 7.QG.1 [D] - `uv run ruff check .` | DoD: **0 violations, 03/08.**
+- [x] 7.QG.2 [D] - `uv run python scripts/check_file_size.py` | DoD: **No file over 150 LOC, 03/08.** The GUI modules did not breach; `core/__main__.py` did — it reached 149 of 150 while gaining `--gui` and `replay`, so the command bodies moved to `core/cli_commands.py`. Parsing and dispatch stayed. The architecture test caught the new module joining two subsystems and it is now listed in `GATEWAY`, which records where the CLI lives rather than widening M#3.
+- [x] 7.QG.3 [D] - `uv run pytest --cov` | DoD: **1047 passed, coverage 96.19 %, 03/08.** Split-repository suite green on both published repos. `core/ui/*` stays excluded from coverage (rendering), but the local-truth test is **not** — it is a correctness test, not a rendering test.
+- [ ] 7.QG.4 🧑 [B] - **Milestone M7 observed** — **1 of 3 done, 05/08** | DoD: Summary reaches the inbox; GUI shows live state; Replay reproduces a recorded series with `Verified OK`. **The only part of Phase 7 code cannot finish.** Three human steps, none blocked by anything but a person:
+  - [ ] **Send one real report.** Needs Diana's completed OAuth consent (SETUP 0.2.1.d). Everything up to the network is tested; the network is the one part a test must not touch. ⛔ **Blocked on a teammate, not on us.**
+  - [x] **Screenshot the Live GUI** — `uv run python -m core peer --role police --gui`. **Captured 05/08, `docs/evidence/m7-live-gui.png`.** Banner, 7×7 heatmap, own marker, status line. ⚠️ It shows the **starting position**, which is honest and not yet the whole DoD: at step 0 the prior is uniform, so every cell renders at peak intensity and the board is a flat wash of red. That is the heatmap telling the truth — a uniform posterior has no structure to show — but a screenshot of *evolving* belief needs the turn loop (Phase 9) and the `--gui`/`--serve` combination noted under 7.4.1.
+  - [ ] **Screenshot `Verified OK`** — `uv run python -m core replay <log.json>`. **A required submission artefact** (PRD 7 §3.5, 7.25), and it needs a real match log, so it lands with the first completed series. ⛔ **Blocked on Phase 9**, which is what produces a log with real commitments and nonces; self-play produces no seals to verify.
 
 ## Phase 8: Advanced Strategy — the competitive edge
-**Priority:** P1 | **Status:** Not Started ☐ | **Target:** starts once Phase 4 lands; runs parallel to 5–7
+**Priority:** P1 | **Status:** 8.1 complete ✅ 05/08 · 8.2–8.3 not started ☐ | **Target:** starts once Phase 4 lands; runs parallel to 5–7
 **DoD:** The advanced brains beat the Phase 3 baselines in ≥70 % of self-play sub-games, measured on
 the harness built at 3.5.
 **This is where the league grade lives.** See `PRD_strategy_advanced.md`.
 
-### 8.1 Cop — the role that breaks ties
+### 8.1 Cop — the role that breaks ties — ✅ complete 05/08
 Between two competent teams every sub-game ends in survival, the series ties, and each takes 2.
 The cop carries a 15-point spread against the thief's 5, and is the only role that can win outright.
 
-- [ ] 8.1.1 [D] - Expectimax over the belief map, depth 2–3 | DoD: Beats the baseline cop; completes well inside the 30 s step deadline.
-- [ ] 8.1.2 [D] - **Connectivity constraint** replacing the old mobility guard | DoD: Hard penalty ∝ believed thief-mass outside `component(cop)`. **Co-confinement is rewarded, not rejected** — sealing yourself in with the thief is the winning move. (PRD advanced §3.2)
-- [ ] 8.1.3 [D] - Reward shrinking the **shared** component | DoD: `−β·|component containing both|`; smaller is better.
-- [ ] 8.1.4 [D] - **Wall-behind-yourself rule** | DoD: A placement that puts the wall between cop and thief is rejected. Sealing the thief away from you guarantees its survival.
-- [ ] 8.1.5 [D] - Diagonal minimum cuts | DoD: Placements extending a diagonal chain are preferred — a diagonally-connected wall cannot be crossed on a 4-connected grid, so it is the cheapest cut. 4 barriers seal a 6-cell corner.
-- [ ] 8.1.6 [D] - Cycle elimination as the barrier objective | DoD: Prefer placements that destroy cycles. A region the thief can circle is a region it survives in.
-- [ ] 8.1.7 [D] - **One-placement rule** | DoD: Reject any cut that cannot be completed with one further placement. Each placement gifts the thief a free step, so a two-barrier seal leaks.
-- [ ] 8.1.8 [D] - **Win condition: drive thief exit count to 1 while adjacent to that exit** | DoD: The evaluation targets this state explicitly, not generic region shrinkage.
-- [ ] 8.1.9 [D] - Three-phase plan: herd (0 barriers) → seal → squeeze | DoD: Transitions driven by measured state — thief edge-adjacency, exit count, belief entropy — never by turn number.
-- [ ] 8.1.10 [D] - Opponent-type gate on the phasing | DoD: Flee-greedy thief → chase, no early barriers (the board's edges corner it for free). Orbiting thief → spend barriers early to cut the cycle.
-- [ ] 8.1.11 [D] - Entropy-aware pursuit on a multimodal posterior | DoD: Chooses the information-revealing move over the argmax chase.
-- [ ] 8.1.12 [D] - No barrier while belief entropy is high | DoD: A barrier placed where the thief probably is not can open a route *for* it.
+**Shipped as five modules, not one brain.** `police/search.py` (expectimax), `police/evaluation.py`
+(what a position is worth), `police/barrier_policy.py` (whether to wall, and which), `police/phases.py`
+(which plan is in force), `police/advanced.py` (the 4-step turn), over a new shared primitive
+`core/domain/cuts.py`. The split is the 150-LOC rule doing its job — 8.QG.2 predicted brains grow
+fastest — and it is why each rule below could be tested on a hand-drawn board rather than inferred
+from a self-play batch.
+
+**Measured against the baseline, 16 mirrored openings, same engine a graded match runs on**
+(`tests/integration/test_advanced_selfplay.py`):
+
+| | captures | mean steps | barriers | **self-separations** |
+|---|---|---|---|---|
+| baseline cop | 16/16 | 17.75 | 0 | **0** |
+| advanced cop | 16/16 | **9.00** | 12 | **0** |
+
+Win rate saturates because the baseline thief loses to both — the honest metric is time to capture,
+and it halves. A win-rate comparison worth making needs 8.2's thief to lose to.
+
+⚠️ **Not yet fielded.** `[strategy] cop_class` is unset, so both peers still load the baseline. The
+project's own rule is measure-then-adopt (8.3.6, 8.QG.4), and adopting before the Phase 8 gate would
+be exactly the shortcut that rule exists to prevent. One line switches it when the gate is green.
+
+- [x] 8.1.1 [D] - Expectimax over the belief map, depth 2–3 | DoD: **Done 05/08 — `police/search.py`.** Depth from `[strategy] search_depth` (A1.3) via a new `BrainBase.configure` hook, since the loader builds every brain the same way. **17.5 ms per turn at depth 3** on the worst case (open board, uniform belief) against a 30 s deadline; 71 ms at depth 4. Chance nodes propagate the posterior with the same `predict` the live filter uses — a search using a different transition model would be searching a game the filter is not playing.
+- [x] 8.1.2 [D] - **Connectivity constraint** replacing the old mobility guard | DoD: **Done 05/08.** Hard penalty ∝ believed thief-mass outside `component(cop)`, weighted 400 against the next term's 0.6: stranding is not a weak position, it is a lost sub-game. **Co-confinement scores strictly higher than staying outside** on the same walls and the same belief — asserted, because the two boards look nearly identical and are opposite in value. (PRD advanced §3.2)
+- [x] 8.1.3 [D] - Reward shrinking the **shared** component | DoD: **Done 05/08.** `−β·|component|·mass_inside`. Weighted by the mass actually in the region, so walling an empty corner scores exactly zero — otherwise the cop spends its quota tidying the far side of the board.
+- [x] 8.1.4 [D] - **Wall-behind-yourself rule** | DoD: **Done 05/08.** Expressed as a *mass comparison* rather than a geometric between-ness test, which also catches the subtle case: a wall that looks behind us but closes the last corridor round a region.
+  - 🐛 **Caught by the end-to-end test: the guard refused the winning move.** Sealing the thief's last exit puts it outside our component *by construction*, so a check reading the belief as it stood before the placement saw the worst thing on the board and vetoed a capture. Stranding is now judged on the mass that **survives** the placement — mass a wall captures is not mass we failed to reach. Before the fix the cop placed **0 barriers across all 16 openings** and still won every one, so nothing about the result looked wrong.
+- [x] 8.1.5 [D] - Diagonal minimum cuts | DoD: **Done 05/08 — `cuts.diagonal_support`.** Off-board corners count alongside placed ones: the board edge is wall we did not pay for, and a scoring that ignored it would send the cop off to rebuild the border it already had.
+- [x] 8.1.6 [D] - Cycle elimination as the barrier objective | DoD: **Done 05/08 — `cuts.region_has_cycle`.** Counted, not searched: a connected region has a cycle exactly when its edge count reaches its vertex count. Cheaper than a back-edge hunt on 49 cells and it cannot miss a cycle the way a traversal with a visited-set bug can.
+- [x] 8.1.7 [D] - **One-placement rule** | DoD: **Done 05/08.** Implemented as *never start a cut you cannot finish*: sealing a cell means blocking every exit it has, so its exit count after this wall is a lower bound on the walls still needed, and a placement is refused when that exceeds the remaining quota. The literal reading — refuse anything not one wall from a seal — would forbid every barrier until the endgame and contradict §3.4's Phase B, which spends 4–6.
+- [x] 8.1.8 [D] - **Win condition: drive thief exit count to 1 while adjacent to that exit** | DoD: **Done 05/08 — `evaluation.endgame_mass`.** Targeted explicitly, weighted 60. A cop rewarded only for smaller regions shrinks them from the wrong side and never takes the last step. **Standing *on* the last exit counts too** — Ch. 3.4 lets the cop wall its own cell, and an adjacency-only test scored the strongest position on the board at zero.
+- [x] 8.1.9 [D] - Three-phase plan: herd (0 barriers) → seal → squeeze | DoD: **Done 05/08 — `police/phases.py`.** Entropy, exit count and region size drive every transition. ⚠️ The shipped `barrier_hold_until_turn = 8` contradicts A1.11 head-on; reconciled by making it **suppressive only** — it can hold us in HERD and can never itself cause a wall. Recorded as **CONTRADICTIONS C-015**; measured inert across all 16 openings.
+- [x] 8.1.10 [D] - Opponent-type gate on the phasing | DoD: **Done 05/08.** Two coarse traits behind a 6-sample gate (8.3.2). Profiled from the **belief peak's trajectory**, not from sight — `core/domain/opponent_model.py` takes an observed position and the cop never has one (M#8). A fleer earns a stricter sealing threshold; an orbiter triggers SEAL wherever it stands and lifts the turn floor.
+- [x] 8.1.11 [D] - Entropy-aware pursuit on a multimodal posterior | DoD: **Done 05/08, and the requirement needed correcting first.** A1.13 asks for the move that most reduces expected entropy after the next observation. **That term is identically zero here**: our sensor is the opponent's transmitted scent field, which arrives whole and reads the same whichever cell we stand on. There is no information to gather by moving. What multimodality actually changes is which move is *cheapest*, and belief-weighted expected distance gets it right where an argmax chase does not — asserted against the baseline on a posterior whose peak is a peak only because ties break on coordinates, six steps away, while three quarters of the mass sits two steps away. A1.14 then falls out free: a concentrated posterior makes the two objectives the same objective.
+- [x] 8.1.12 [D] - No barrier while belief entropy is high | DoD: **Done 05/08.** Two independent guards — the phase machine holds HERD, and `rejection_for` refuses regardless of phase. Redundant on purpose: a bad wall is permanent, and permanence earns the second check.
+
+**Also touched, deliberately.** `BrainBase.configure` (a no-op hook, so the baselines need no config
+and the loader stays uniform); `load_brain(spec, role, config)`; the M#25 architecture test, which
+keyed on the module *name* `"brain"` and would have waved all five new strategy modules through — it
+now covers the role packages, which is what the rule always meant.
+
+- 🐛 **The split-repository gate caught two things the other four gates could not.** (1) The new
+  police unit tests imported `police.*` at module level, which kills the thief repo during
+  *collection* — before any skip marker runs, so `needs_brain` cannot help. Fixed with
+  `collect_ignore_glob` in `tests/conftest.py` plus a `test_cop_` filename prefix, so a role-only
+  test says so in its own name. (2) A **pre-existing break in the uncommitted 7.3 work**:
+  `test_the_mailer_shares_the_peers_one_gatekeeper` paired `PRESENT_ROLES[0]` with a hardcoded
+  `Role.COP`, so the thief repo tried to load the police brain. Both were invisible to ruff, pytest
+  and the LOC check in a working tree that holds both roles.
 
 ### 8.2 Thief — full tactic set, value measured not assumed
 Retained in full. Whether each tactic earns its keep is settled by ablation (8.3.4), not by prior belief.

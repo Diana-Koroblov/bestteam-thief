@@ -37,7 +37,7 @@ defects. C-006a is a clarification the rulebook itself supplies. Three entries �
 | **A. Genuine gaps** — the rulebook does not define the behaviour anywhere | C-005, C-006b, C-006c, C-010, C-011, C-013 | **Must be settled in the pre-match agreement.** Every one appears in `PRD_negotiation.md`. |
 | **B. Resolved by the rulebook** — looked ambiguous, settled on a closer reading | C-006a | Implemented as read. Flag kept only because an opponent may arrive with the other reading. |
 | **C. Reference-implementation defects** — the book is unambiguous, the reference diverges | C-001, C-007, C-009, C-008 | **Watch items.** Most opponents will build on the reference and inherit these. Detect at the handshake. |
-| **D. Gaps outside the game rules** — engineering and process | C-002, C-004, C-014 | Our own decisions, recorded for the reviewer. |
+| **D. Gaps outside the game rules** — engineering and process | C-002, C-004, C-014, C-015 | Our own decisions, recorded for the reviewer. |
 
 ---
 
@@ -209,6 +209,17 @@ places where a source left something undetermined and we had to choose.
 | **Our choice** | **(a)** Detector first: `detector → quota → bucket`. **(b)** `GatekeeperLockedError`, `QuotaExhaustedError`, matching the `Error` suffix every other exception in this codebase already uses. |
 | **Why** | **(a)** Nothing goes out under either order, so the account is safe either way — but only one *names* the fault. "Locked: 400 calls in 10 s, this is a loop" is a diagnosis; "quota exhausted", repeated ten thousand times, is not. **(b)** A linter that is a binding gate outranks a naming choice in a design document, and the codebase is already unanimous: `PeerError`, `TunnelError`, `ConfigError`, `RateLimitsError`. One pair of exceptions spelled differently would be the inconsistency, not the fix. |
 | **Effect** | `core/shared/gatekeeper.py` — the reordering is argued in the module docstring beside the corrected diagram. `PRD_7_reporting.md` is left as written: it records what we designed, this file records what we shipped and why they differ. |
+
+## C-015 — A turn number in a phase machine that forbids turn numbers
+
+| | |
+|---|---|
+| **Category** | D — our own engineering. Appendix F says nothing about barrier *timing*; it sets the quota (14, a minimum) and stops. |
+| **Where** | `PRD_strategy_advanced.md` §3.4 **A1.11** — *"phase transitions are driven by measured state… never by turn number"* — vs. `[strategy] barrier_hold_until_turn = 8`, shipped in both `config/police/game.toml` and `config/thief/game.toml` since Phase 0. |
+| **The problem** | The config key predates the requirement and directly contradicts it. Deleting the key loses a real safety property: early barriers are the classic way a cop throws a sub-game, and a hard floor is cheap insurance while the phase thresholds are still untuned. Honouring the key as written makes the turn counter a trigger, which is exactly what A1.11 forbids — and it would also veto A1.12, which requires spending barriers *earlier* against an orbiting thief. |
+| **Our choice** | The key is **suppressive only**. Below that turn it can hold the cop in HERD; it can never by itself cause a placement. A measured ORBITER classification lifts it. Every transition *into* SEAL or SQUEEZE is caused by entropy, exit count or region size. |
+| **Why** | A guard that can only ever make us more conservative is not driving the decision — it is bounding it, the way `max_retries` bounds the Gatekeeper without deciding when to call. That reading satisfies A1.11's intent (no schedule) and A1.12's requirement (measurement can always override) at once, and keeps the insurance. Measured across sixteen openings the floor is currently inert — identical captures, steps, barriers and separations at 0 and at 8 — so it costs nothing to keep. |
+| **Effect** | `police/phases.py` — argued in the module docstring, asserted by `test_the_turn_floor_can_only_delay_a_placement` and `test_a_measured_orbiter_lifts_the_turn_floor`. The shipped value stays 8; `PhaseSettings()` defaults it to 0, so a caller with no config is driven purely by measurement. |
 
 ---
 

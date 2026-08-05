@@ -15,6 +15,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from core import cli_commands
 from core.protocol.schemas import Role
 from core.sdk.peer_sdk import PeerSDK
 from core.shared.provider_budget import BudgetError
@@ -57,6 +58,18 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Negotiate with --opponent, send one sealed move, print the replies.",
     )
+    peer.add_argument(
+        "--gui", action="store_true", help="Open the Live GUI. Shows local truth only (M#8)."
+    )
+
+    replay = sub.add_parser("replay", help="Open a saved match log and verify it (M#20).")
+    replay.add_argument("log", type=Path, help="Path to log_<game_id>_gNN.json.")
+    replay.add_argument("--grid", type=int, default=7, help="Board edge; a log records positions.")
+    replay.add_argument(
+        "--headless",
+        action="store_true",
+        help="Print the verdict and exit without opening a window. Exits non-zero on TAMPERED.",
+    )
     return parser.parse_args(argv)
 
 
@@ -79,6 +92,9 @@ def _config_dir(role: str) -> Path:
 def main(argv: list[str] | None = None) -> int:
     """Return 0 when the peer started cleanly."""
     args = _parse_args(argv)
+    if args.command == "replay":
+        return cli_commands.replay(args)
+
     role = Role.COP if CONFIG_DIRS[args.role] == "police" else Role.THIEF
     sdk = PeerSDK(_config_dir(args.role), role)
 
@@ -105,92 +121,21 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         print("\ndry run - configuration loaded, nothing started.")
         return 0
+    if args.gui:  # pragma: no cover - opens a window
+        from core.ui.live_gui import LiveGui
+
+        # `sdk.gui_state`, never `sdk.board_view`: the latter carries both true
+        # positions and putting it on a screen is disqualification (M#8, M#9).
+        LiveGui(sdk.gui_state, int(sdk.ui_cell_pixels)).run()
+        return 0
     if args.serve:
-        return _serve(sdk, args.port, args.tunnel)
+        return cli_commands.serve(sdk, args.port, args.tunnel)
     if args.handshake:
-        return _handshake(sdk, args.opponent)
+        return cli_commands.handshake(sdk, args.opponent)
 
     print("\nthe turn loop arrives in Phase 3; this peer is wired but not yet playing.")
     print("try --serve in one terminal and --handshake --opponent <url> in another.")
     return 0
-
-
-def _serve(sdk: PeerSDK, port: int | None, tunnel: bool = False) -> int:
-    """Run this peer's MCP server until interrupted, optionally exposed publicly.
-
-    Ctrl-C is the normal way to stop a server, so it exits quietly. Letting the
-    KeyboardInterrupt escape prints a ten-frame traceback through asyncio and
-    anyio, which teaches whoever is watching to ignore tracebacks — exactly the
-    habit that hides a real one during a match.
-
-    The tunnel is started **before** the server and torn down in a `finally`.
-    Before, because a tunnel that cannot start should cost nothing but an error
-    message; in a `finally`, because an agent orphaned by a crashed peer holds
-    the reserved domain and the next run cannot bind it (TODO 5.1.1).
-    """
-    from core.infra.mcp_server import create_server
-
-    spec = sdk.server_spec(port)
-    # No trailing slash: FastMCP serves at /mcp, and /mcp/ costs a 307 redirect
-    # before every single request. The client strips it defensively too.
-    url = f"http://127.0.0.1:{spec.port}/mcp"
-    manager = sdk.tunnel(port=spec.port) if tunnel else None
-    if manager is not None:
-        url = f"{manager.start()}/mcp"
-
-    print(f"\nserving {len(spec.tools)} tools on http://{spec.host}:{spec.port}/mcp")
-    print(f"give the other terminal:  --opponent {url}")
-    print("ctrl-c to stop.\n")
-    try:
-        create_server(spec).run(transport="http", host=spec.host, port=spec.port)
-    except KeyboardInterrupt:
-        print("\nserver stopped.")
-    finally:
-        if manager is not None:
-            manager.stop()
-    return 0
-
-
-def _handshake(sdk: PeerSDK, opponent: str | None) -> int:
-    """Negotiate with the opponent and send one sealed move (milestone M2).
-
-    Deliberately does the *whole* exchange rather than a bare ping: a handshake
-    that succeeds proves the digests match, the tools are registered and the
-    encoding survives — which is what M2 actually claims.
-    """
-    import asyncio
-
-    from core.crypto.commitment import seal
-
-    if not opponent:
-        raise SystemExit("--handshake needs --opponent <url>")
-    if sdk._orchestrator.opponent is None:  # noqa: SLF001 - the CLI is the gateway's caller
-        sdk.connect(opponent)
-
-    async def run() -> int:
-        client = sdk._orchestrator.opponent  # noqa: SLF001
-        agreed = await client.call(
-            "negotiate",
-            {"step": 0, "role": sdk.role.value, "config_digest": sdk.config_digest},
-        )
-        print(f"negotiate  -> agreed on {agreed['config_digest'][:16]}...")
-
-        view = sdk.board_view()
-        sealed = seal({"cop": list(view.cop), "thief": list(view.thief), "step": 0}, "S", "truth")
-        ack = await client.call(
-            "receive_commit", {"step": 0, "role": sdk.role.value, "digest": sealed.digest}
-        )
-        print(f"commit     -> {ack['kind']} for {ack['acknowledged_digest'][:16]}...")
-
-        reply = await client.call(
-            "receive_reveal",
-            {"step": 0, "role": sdk.role.value, "move": "S", "hint": "heading south"},
-        )
-        print(f"reveal     -> {reply}")
-        print("\nM2 observed: a message left this peer and decoded correctly at the other.")
-        return 0
-
-    return asyncio.run(run())
 
 
 if __name__ == "__main__":

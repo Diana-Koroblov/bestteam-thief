@@ -33,15 +33,20 @@ DEFAULTS: dict[str, str] = {
 }
 
 
-def load_brain(spec: str | None, role: str) -> BrainBase:
+def load_brain(spec: str | None, role: str, config: object = None) -> BrainBase:
     """Return the brain named by *spec*, or the baseline for *role*.
 
     Args:
         spec: ``package.module:Class``. Empty or None selects the default.
         role: ``cop`` or ``thief``, used to pick the fallback.
+        config: Passed to ``BrainBase.configure`` when supplied, so a strategy
+            can read its own `[strategy]` keys — search depth, weights,
+            thresholds. Optional because the fallback baselines need none, and a
+            brain that could not be built without config would be unusable as
+            the fallback for a config that failed to load.
 
     Returns:
-        An instantiated brain.
+        An instantiated brain, already configured.
 
     Raises:
         BrainLoadError: The spec is malformed, the module or class is missing,
@@ -71,6 +76,9 @@ def load_brain(spec: str | None, role: str) -> BrainBase:
         raise BrainLoadError(f"{target!r} is not a BrainBase subclass")
 
     try:
-        return brain_class(name=class_name)
+        brain = brain_class(name=class_name)
+        if config is not None:
+            brain.configure(config)
     except Exception as error:  # noqa: BLE001 - re-raised as a startup failure
         raise BrainLoadError(f"{target!r} could not be constructed: {error}") from error
+    return brain

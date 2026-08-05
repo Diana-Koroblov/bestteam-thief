@@ -113,6 +113,9 @@ timeout_sec = 8
 # League reporting via the Gmail API, send-only scope (M#30).
 enabled = true
 sender = "dianakoroblov27@gmail.com"
+# M#51. From config, never a literal in code: the test suite must not be able
+# to mail the lecturer, and a changed address is a config edit not a release.
+recipient = "rmisegal+uoh26finalgame@gmail.com"
 send_on_series_end = true
 
 [ui]

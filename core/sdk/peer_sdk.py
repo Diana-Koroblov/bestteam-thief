@@ -18,6 +18,7 @@ from typing import Any
 
 from core.domain.connectivity import exit_count, region_size
 from core.domain.movement import get_legal_moves
+from core.infra.gmail_sender import GmailSender, build_transport
 from core.infra.mcp_server import ServerSpec, build_server_spec
 from core.infra.tunnel import TunnelManager
 from core.protocol.schemas import Role
@@ -25,6 +26,7 @@ from core.protocol.tools import build_guarded_tools
 from core.runtime.brain_loader import load_brain
 from core.runtime.orchestrator import Orchestrator
 from core.runtime.peer_runtime import PeerRuntime
+from core.sdk.view_state import GuiState
 from core.shared import env
 from core.shared.config_manager import load_config
 from core.shared.gatekeeper import Gatekeeper
@@ -68,7 +70,7 @@ class PeerSDK:
         self._orchestrator = Orchestrator.from_config(self._config, role)
         # Loaded eagerly: a bad strategy path must fail here, where the only
         # cost is an error message, not on turn one of a real match.
-        brain = load_brain(self._config.get(f"strategy.{role.value}_class"), role.value)
+        brain = load_brain(self._config.get(f"strategy.{role.value}_class"), role.value, self._config)
         self._runtime = PeerRuntime(orchestrator=self._orchestrator, brain=brain)
 
     @property
@@ -127,6 +129,22 @@ class PeerSDK:
             self._gatekeeper = Gatekeeper(limits=load_rate_limits(self._config_dir))
         return self._gatekeeper
 
+    def mailer(self, transport: Any = None) -> GmailSender:
+        """Return the league reporter, wired through the Gatekeeper (TODO 7.3).
+
+        Args:
+            transport: Injected in tests. Left unset in play, where the OAuth
+                client is built on first use — so importing the SDK never needs
+                a token and a peer with no credentials still starts.
+
+        The **caller** decides when a report goes out. `[email]
+        send_on_series_end` says it should be at the end of a series, and the
+        turn loop that reaches that point does not exist yet (Phase 9).
+        """
+        return GmailSender.from_config(
+            self._config, self.gatekeeper, transport or build_transport()
+        )
+
     def verify_budget(self) -> None:
         """Refuse a metered provider paired with too short an interval (TODO 7.1.6).
 
@@ -146,6 +164,22 @@ class PeerSDK:
     def connect(self, base_url: str) -> None:
         """Attach the single opponent for this match."""
         self._orchestrator.connect(base_url)
+
+    @property
+    def ui_cell_pixels(self) -> int:
+        """Square size for both windows, from `[ui] cell_pixels`."""
+        return int(self._config.get("ui.cell_pixels", 64))
+
+    def gui_state(self, locked: bool = False) -> GuiState:
+        """Return one frame for the Live GUI — local truth only (M#8, M#9).
+
+        **Not `board_view()`.** That one carries both true positions and exists
+        for self-play debugging and the CLI; handing it to a display would put
+        the objective board state on screen, which is project disqualification.
+        The two are separate methods so that the dangerous one has to be asked
+        for by name.
+        """
+        return GuiState.from_observation(self._runtime.observe(), locked)
 
     def board_view(self) -> BoardView:
         """Return a display snapshot of the current position."""

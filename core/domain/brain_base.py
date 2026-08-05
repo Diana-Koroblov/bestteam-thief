@@ -98,6 +98,22 @@ class BrainBase(ABC):
         """Store a display name used in logs and the A/B report."""
         self.name = name or type(self).__name__
 
+    def configure(self, config: object) -> None:  # noqa: B027 - optional by design
+        """Adopt the `[strategy]` section. Does nothing by default.
+
+        Deliberately **not** abstract, which is what the `noqa` records: making
+        it abstract would force every strategy to implement a hook most of them
+        do not want, and the baselines take no configuration at all.
+
+        A hook rather than a constructor argument, because the loader builds
+        every brain the same way and a strategy that needed configuration to
+        exist could not be the fallback for a config that failed to load.
+
+        Called once at startup, never mid-match: a brain that re-read config per
+        turn could change behaviour between the commit and the reveal, and the
+        two peers would audit different games.
+        """
+
     def decide(self, observation: Observation) -> Decision:
         """Return this turn's decision.
 

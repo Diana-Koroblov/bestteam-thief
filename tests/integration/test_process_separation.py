@@ -32,7 +32,10 @@ PERIPHERAL = ("core.protocol", "core.infra", "core.ui")
 FOUNDATIONS = ("core.domain", "core.shared", "core.crypto")
 
 # The gateway. Only these may join subsystems together.
-GATEWAY = ("core.runtime", "core.sdk", "core.__main__")
+# `core.cli_commands` is `__main__`'s body, moved out when that file reached 149
+# of its 150 permitted lines. It is the same gateway with the same permission —
+# listing it here is recording where the CLI now lives, not widening the rule.
+GATEWAY = ("core.runtime", "core.sdk", "core.__main__", "core.cli_commands")
 
 
 # The shipped packages. Tests and scripts legitimately reach across subsystems —
@@ -150,6 +153,18 @@ def test_the_ui_reaches_nothing_but_the_facade(graph: dict) -> None:
 
 # --- M#25: movement is never decided by a language model -------------------
 
+# Everything that decides a move. **Not just modules named "brain"**: the
+# advanced Cop of Phase 8 is split across `police/search.py`,
+# `police/evaluation.py`, `police/barrier_policy.py` and `police/phases.py`, and
+# the earlier name-based check would have waved every one of them through. The
+# rule was always about strategy code, so the test now says strategy code.
+STRATEGY_PACKAGES = ("police", "thief")
+
+
+def _is_strategy(name: str) -> bool:
+    """Whether *name* is a module that participates in choosing a move."""
+    return name.startswith(STRATEGY_PACKAGES) or "brain" in name
+
 
 def test_no_brain_can_reach_a_language_model(graph: dict) -> None:
     """Ch. 6: "the move decision is always algorithmic and in Python code".
@@ -161,7 +176,7 @@ def test_no_brain_can_reach_a_language_model(graph: dict) -> None:
     """
     forbidden = ("llm", "groq", "ollama", "anthropic", "openai")
     for name, node in graph.items():
-        if not (name.endswith("brain") or "brain" in name):
+        if not _is_strategy(name):
             continue
         for edge in node.imports:
             assert not any(word in edge.lower() for word in forbidden), f"{name} -> {edge}"
@@ -170,10 +185,27 @@ def test_no_brain_can_reach_a_language_model(graph: dict) -> None:
 def test_a_brain_never_reaches_the_transport_or_the_protocol(graph: dict) -> None:
     """A strategy that could send its own messages could bypass commit-reveal."""
     for name, node in graph.items():
-        if "brain" not in name:
+        if not _is_strategy(name):
             continue
         for edge in node.imports:
             assert not edge.startswith(("core.infra", "core.protocol")), f"{name} -> {edge}"
+
+
+def test_the_check_covers_more_than_the_files_called_brain(graph: dict) -> None:
+    """Otherwise the two tests above would pass by looking at almost nothing.
+
+    Phase 8 is where a role package stops being one file, so the guard has to be
+    seen covering the modules that arrived with it. Asserted against the role
+    **this repository ships**, not both — demanding both would fail in every
+    published repo, which is the mistake the split-repository gate exists to
+    catch (see `test_the_brains_are_actually_in_the_graph`).
+    """
+    for role in STRATEGY_PACKAGES:
+        if not (ROOT / role).is_dir():
+            continue
+        modules = {name for name in graph if name.startswith(f"{role}.")}
+        assert modules, f"{role} ships no modules at all"
+        assert modules <= {name for name in graph if _is_strategy(name)}, sorted(modules)
 
 
 def test_the_brains_are_actually_in_the_graph(graph: dict) -> None:

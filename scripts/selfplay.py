@@ -53,8 +53,8 @@ def run_batch(
     # that remembered the last game would make the batch measure one long game.
     return [
         play_sub_game(
-            load_brain(cop_spec, "cop"),
-            load_brain(thief_spec, "thief"),
+            load_brain(cop_spec, "cop", config),
+            load_brain(thief_spec, "thief", config),
             rules,
             quota,
             start,
