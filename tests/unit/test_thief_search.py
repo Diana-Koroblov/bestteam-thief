@@ -13,9 +13,9 @@ import time
 from core.domain.actions import Direction
 from core.domain.board import Board
 from core.domain.brain_base import Observation
+from core.domain.trail import TrailTracker
 from thief.evaluation import CAPTURED, ThiefWeights
 from thief.search import DEFAULT_DEPTH, best_move, expectimax, options, value_of
-from thief.trail import TrailTracker
 
 BOARD = Board(grid_size=7)
 WEIGHTS = ThiefWeights()

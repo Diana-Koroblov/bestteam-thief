@@ -1,7 +1,7 @@
 """The advanced Thief, end to end (TODO 8.2).
 
 The pieces are tested apart in `test_thief_search.py`, `test_thief_evaluation.py`,
-`test_thief_trail.py` and `test_thief_anchor.py`. What is left is the wiring: that
+`test_trail.py` and `test_thief_anchor.py`. What is left is the wiring: that
 the brain emits into its own trail every turn, resets both trail and bluff at a
 sub-game boundary, and never produces a decision only a Cop is allowed to make.
 """
@@ -92,7 +92,7 @@ def test_it_emits_into_its_own_trail_every_turn() -> None:
     thief = AdvancedThief()
     for step, cell in enumerate([(3, 3), (3, 4), (2, 4)]):
         thief.decide(observe(cell, {(0, 0): 1.0}, step=step))
-    assert thief.trail.visits == [(3, 3), (3, 4), (2, 4)]
+    assert thief.verbal.trail.visits == [(3, 3), (3, 4), (2, 4)]
 
 
 def test_a_new_sub_game_clears_the_trail_and_the_bluff() -> None:
@@ -101,7 +101,7 @@ def test_a_new_sub_game_clears_the_trail_and_the_bluff() -> None:
     thief = AdvancedThief()
     thief.decide(observe((3, 3), {(0, 0): 1.0}, step=7))
     thief.decide(observe((6, 6), {(0, 0): 1.0}, step=0))
-    assert thief.trail.visits == [(6, 6)]
+    assert thief.verbal.trail.visits == [(6, 6)]
     assert thief.anchor.phase is AnchorPhase.OFF
 
 
@@ -133,8 +133,8 @@ def test_the_decay_model_comes_from_the_negotiated_section() -> None:
     own preference."""
     thief = AdvancedThief()
     thief.configure(Stub(**{"pheromones.decay_model": "subtractive", "pheromones.pheromone_decay": 0.2}))
-    assert thief.trail.model == "subtractive"
-    assert thief.trail.rate == 0.2
+    assert thief.verbal.trail.model == "subtractive"
+    assert thief.verbal.trail.rate == 0.2
 
 
 def test_the_false_anchor_is_off_unless_config_asks_for_it() -> None:

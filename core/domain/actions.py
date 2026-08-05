@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-__all__ = ["Direction", "DELTAS", "MOVE_SET", "parse_direction"]
+__all__ = ["Direction", "DELTAS", "MOVE_SET", "parse_direction", "opposite"]
 
 
 class Direction(str, Enum):
@@ -53,6 +53,28 @@ DELTAS: dict[Direction, tuple[int, int]] = {
 # the negotiated config against this; a mismatch means someone edited a fixed
 # value and the match must not start.
 MOVE_SET: tuple[str, ...] = ("N", "S", "E", "W", "STAY")
+
+
+# The reverse of each bearing. STAY is deliberately absent: it has no opposite,
+# and a lookup that invented one would let a caller "reverse" a decision to hold
+# position into a move it never considered.
+_OPPOSITES: dict[Direction, Direction] = {
+    Direction.N: Direction.S,
+    Direction.S: Direction.N,
+    Direction.E: Direction.W,
+    Direction.W: Direction.E,
+}
+
+
+def opposite(direction: Direction) -> Direction | None:
+    """Return the reverse bearing, or None for STAY.
+
+    Used in two places that must agree: reading a known liar's hint backwards
+    (`core/domain/belief_hints.py`) and choosing what to claim when we are the
+    liar (`core/domain/bluff.py`). Two private copies of this table would be one
+    edit away from a bluff we could not ourselves decode.
+    """
+    return _OPPOSITES.get(direction)
 
 
 def parse_direction(value: str) -> Direction:

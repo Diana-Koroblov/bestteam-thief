@@ -80,7 +80,68 @@ weight_distance = 1.0
 false_anchor = false
 anchor_turns = 3
 break_turns = 5
+# Cap on how many opponent traits we will profile, to stay unexploitable.
+# Enforced: `core/domain/opponent_profile.TRAITS` is compared against this value
+# by a test, so a fifth trait cannot be added without the cap being raised on
+# purpose. See PRD_strategy_advanced A3.6 and CONTRADICTIONS C-016 for why flee
+# and orbit count as one trait and not two.
 max_profiled_traits = 4
+
+# --- 8.3 unexploitable defaults --------------------------------------------
+# How close two actions must score before the choice is drawn at random from
+# the seeded generator in [game] seed (A3.1).
+#
+# 0.0 DISABLES the draw and restores the fixed search ordering, which is the
+# exact control arm the 8.3.6 ablation measures against.
+#
+# SWEPT, NOT GUESSED. Survivals out of 48 against the baseline cop, over five
+# seeds:
+#
+#     eps    0.0   0.05    0.1   0.25    0.5    1.0
+#     mean  46.0   46.4   46.4   44.0   44.0   44.6
+#     range 46-46 44-48  44-48  40-48  40-48  43-48
+#
+# 0.1 randomises near-ties as A3.1 requires at no cost in mean survival, while
+# the cop's 0.5 would cost 2.4 sub-games and double the spread. Eps is in
+# evaluation units and our largest positional term is 2.0 per cell of escape
+# room, so half a point spans genuinely different moves here — actions that far
+# apart are not ties, and drawing between them throws away real advantage.
+tie_epsilon = 0.1
+
+# --- 8.3 verbal layer -------------------------------------------------------
+# Whether the brain may lie at all (A3.9). False pins every turn to saying
+# nothing directional, and is the ablation's control arm.
+#
+# OFF FOR THE THIEF: BUILT, MEASURED, NOT ADOPTED. Over 48 openings against our
+# own advanced cop the thief survives 40/48 with the verbal layer off and 40/48
+# with it on — exactly neutral, no evidence to adopt on. The cop's arm of the
+# same ablation moved 40/48 -> 32/48 in the cop's favour, so the machinery
+# works; it is the THIEF that has nothing to herd. A3.10 says as much: the
+# lie's job is steering a fleeing opponent, and the cop is the one doing the
+# steering.
+#
+# Neutral is not harmless. Most turns are cheap truths, so leaving it on hands
+# a listening opponent our bearing for a measured gain of zero — and their cop
+# may weight hints far harder than ours, whose tilt is capped at MAX_TILT 0.35.
+# Measured upside of nothing against unmeasured downside is not a trade.
+#
+# Revisit in Phase 9 against real opponents, where 8.3.5 would also switch it
+# off automatically for anyone who ignores hints.
+bluff_enabled = false
+# Information value at or below which the truth is free (A3.7, A3.8). Measured
+# as 1 - how plainly our own scent field already announces the direction we are
+# about to move in: a straight run leaves a decaying tail behind us and nothing
+# ahead, so the bearing is already public and saying it costs nothing.
+#
+# 0.6 comes from the measured distribution, not from taste. Claiming the way we
+# have actually been walking reads 1.00 after two steps, 0.69 after three, 0.54
+# after four and 0.31 after six; a turn reads 0.74, a reversal and standing
+# still both read 1.00. See core/domain/bluff.py.
+cheap_truth = 0.60
+# Measured hint-responsiveness at or below which we stop claiming a bearing at
+# all (A3.12). Gated on a CONFIDENT reading — an unmeasured opponent is not a
+# deaf one.
+responsiveness_floor = 0.10
 
 [trash_talk]
 enabled = true

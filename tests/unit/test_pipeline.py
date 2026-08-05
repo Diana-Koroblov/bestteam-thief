@@ -68,23 +68,38 @@ def test_banner_prints_the_text(capfd) -> None:
     assert "Lint" in capfd.readouterr().out
 
 
-def test_all_four_gates_are_present() -> None:
-    """Lint, file size, secret scan and tests — none may be quietly dropped."""
+def test_every_gate_is_present() -> None:
+    """Lint, file size, secret scan, tests and the league benchmark — none may
+    be quietly dropped."""
     labels = " ".join(gate.name for gate in GATES).lower()
-    for expected in ("ruff", "file size", "secret", "tests"):
+    for expected in ("ruff", "file size", "secret", "tests", "benchmark"):
         assert expected in labels
 
 
 def test_gates_run_the_cheapest_check_first() -> None:
     """Ruff first, so a typo fails in a second rather than a minute.
 
-    The split-repository suite runs last: it is the slowest gate and it is
-    pointless before the ordinary suite passes.
+    The three slowest run last and in dependency order: the ordinary suite, then
+    the league benchmark, then the split-repository suite. Neither of the last
+    two is worth starting before the ordinary suite passes.
     """
     names = [gate.name for gate in GATES]
     assert names[0].startswith("Lint")
-    assert names[-2].startswith("Tests")
+    assert names[-3].startswith("Tests")
+    assert names[-2].startswith("League benchmark")
     assert names[-1].startswith("Split-repository")
+
+
+def test_the_benchmark_gate_re_selects_what_the_default_run_deselects() -> None:
+    """**The whole point of the split.** `pyproject.toml` deselects `slow` from
+    the default run because coverage tracing costs 6x on 192 sub-games — 2:00
+    becomes 12:14. That is only acceptable because this gate runs it anyway, and
+    without the tracing that made it expensive. A `-m slow` that stopped being a
+    gate would leave the headline numbers unchecked, which is exactly how the
+    16-vs-48 opening-count discrepancy survived a whole phase."""
+    benchmark = next(gate for gate in GATES if "benchmark" in gate.name.lower())
+    assert "-m" in benchmark.command and "slow" in benchmark.command
+    assert "--no-cov" in benchmark.command
 
 
 def test_no_gate_uses_a_shell() -> None:

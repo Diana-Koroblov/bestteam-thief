@@ -46,7 +46,18 @@ ignore = ["E501"]
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
-addopts = "--tb=short --cov --cov-report=term-missing"
+# `-m "not slow"` deselects the 8.3.6 league benchmark from the default run.
+# It is NOT skipped: `pipeline.GATES` runs it as its own step, so it still
+# blocks every commit. The split exists because coverage tracing costs 6x on
+# 192 sub-games of expectimax -- the benchmark is 2:00 on its own and 12:14
+# under --cov, which turned a 4:47 commit gate into 15:48. Running it without
+# tracing loses nothing measurable: police/ and thief/ already report 98-100%
+# from the unit suite, so the benchmark contributes coverage nobody needs and
+# evidence everybody does.
+addopts = "--tb=short --cov --cov-report=term-missing -m 'not slow'"
+markers = [
+    "slow: long self-play batches. Deselected by default, run as its own gate.",
+]
 
 [tool.coverage.run]
 # `source_pkgs` tolerates a role package being absent, which is exactly the

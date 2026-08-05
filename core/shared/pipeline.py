@@ -104,6 +104,18 @@ GATES: tuple[Step, ...] = (
         ("uv", "run", "python", "scripts/scan_secrets.py", "--tracked"),
     ),
     Step("Tests and coverage (>= 85%)", ("uv", "run", "pytest")),
+    # The 8.3.6 league benchmark: 192 sub-games, both roles, at the shipped
+    # configuration. Its own step and **without coverage**, because tracing
+    # costs 6x on this workload — 2:00 becomes 12:14, and it turned the gate
+    # above from 4:47 into 15:48. It contributes no coverage the unit suite does
+    # not already have (police/ and thief/ report 98-100% there), so the trace
+    # buys nothing and the evidence buys everything. Deselected from the default
+    # run by `-m 'not slow'` in pyproject.toml and re-selected here, so it still
+    # blocks every commit rather than becoming a number nobody re-checks.
+    Step(
+        "League benchmark (192 sub-games, both roles)",
+        ("uv", "run", "pytest", "-m", "slow", "--no-cov"),
+    ),
     # Last, because it is the slowest and because it only makes sense once the
     # suite passes here. It is also the only gate that can catch a failure which
     # exists solely after the role split. See scripts/check_split_repos.py.

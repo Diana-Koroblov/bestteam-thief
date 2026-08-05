@@ -75,7 +75,7 @@ tasks that implement it, and the rule or parameter that mandates it.
 |---|---|---|
 | `PRD_negotiation.md` | Pre-match handshake, config locking, honest game-count declaration | 9.1.1 - 9.1.5 |
 | `PRD_state_machine.md` | Phase transitions, deadline tracking, watchdog | 6.4.1 - 6.4.4 |
-| `PRD_strategy_advanced.md` | Expectimax, barrier-trap planning, scent-aware evasion, bluff policy | 8.1.1 - 8.3.3 |
+| `PRD_strategy_advanced.md` | Expectimax, barrier-trap planning, scent-aware evasion, unexploitable defaults, opponent profiling, bluff policy | 8.1.1 - 8.3.7 |
 
 ## Administrative rules — deliberately not in a layer PRD
 

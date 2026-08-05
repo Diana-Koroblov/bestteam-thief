@@ -2,6 +2,24 @@
 
 *Original extension — README material.*
 
+⚠️ **Superseded by `core/domain/opponent_profile.py` in 8.3, and nothing imports
+this.** The reason is in the signature: `record` and `predict` take *theirs* — an
+observed opponent position — and **no peer ever has one**. M#8 gives each side
+its own position, the declared barriers and the opponent's transmitted scent
+field, and nothing else. So the conditional-response model below is correct
+about a game we do not play.
+
+What replaced it profiles from the **belief peak's trajectory**, which is an
+estimate and sometimes wrong, and is therefore deliberately coarser: four gated
+traits rather than a 9-bucket frequency table. `flee_rate` survives in spirit as
+`OpponentProfile.flee_fraction` and is still the cheapest high-value hypothesis
+on the board.
+
+Kept rather than deleted because it is the honest record of a design that was
+built, tested and then found to need information the rules withhold — which is
+worth more in a submission than a file that quietly disappeared. It is not on
+any code path, and `test_opponent_model.py` tests it in isolation.
+
 We meet the same opponent six times: three sub-games as Cop, three as Thief. So
 every move they make is a sample from a policy we will face again, and the
 league's own scoring says which samples are worth most — **a capture pays the

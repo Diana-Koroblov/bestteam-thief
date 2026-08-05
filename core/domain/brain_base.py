@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 
 from core.domain.actions import Direction
 from core.domain.board import Board, Position
+from core.domain.intent import Intent
 
 __all__ = ["Observation", "Decision", "BrainBase"]
 
@@ -63,7 +64,7 @@ class Observation:
 
 @dataclass(frozen=True)
 class Decision:
-    """What a brain chose this turn.
+    """What a brain chose this turn — the move *and* what to say about it.
 
     Attributes:
         move: The action to take. ``STAY`` when placing a barrier, since a
@@ -71,19 +72,36 @@ class Decision:
         barrier: The cell to wall, or None. Only ever set by a Cop.
         reason: Why, in one line. Written to the log so a replay explains
             itself rather than showing an unmotivated sequence of moves.
+        claim: The bearing to assert in this turn's hint, or None to say
+            nothing directional. **Not necessarily the move** — that is the
+            whole point of the verbal game.
+        intent: Whether *claim* is the truth. Chosen here because Ch. 5 and
+            A3.11 both require the brain to set it and the language model only
+            to write the sentence; it is sealed into the commitment beside the
+            move (Ch. 5.3.1), so a lie cannot be retro-fitted after the reveal.
     """
 
     move: Direction
     barrier: Position | None = None
     reason: str = ""
+    claim: Direction | None = None
+    intent: Intent = Intent.TRUTH
 
     def __post_init__(self) -> None:
-        """Reject a decision that moves *and* places, which no rule allows."""
+        """Reject decisions no rule allows, and one no audit could read.
+
+        A `LIE` with nothing claimed is the second: the flag is what the
+        end-of-match audit reads, and declaring deception over a hint that
+        asserts nothing would put a confession in the record for a lie that was
+        never told.
+        """
         if self.barrier is not None and self.move is not Direction.STAY:
             raise ValueError(
                 f"a barrier at {self.barrier} requires forgoing movement, "
                 f"but the move is {self.move.value} (Ch. 3.4)"
             )
+        if self.intent is Intent.LIE and self.claim is None:
+            raise ValueError("an Intent.LIE must name the bearing it claims (Ch. 5.3.1)")
 
 
 class BrainBase(ABC):

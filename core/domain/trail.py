@@ -1,15 +1,27 @@
-"""Our own scent, reconstructed (TODO 8.2.3; PRD advanced §4.2).
+"""Our own scent, reconstructed (TODO 8.2.3, 8.3.4; PRD advanced §4.2).
 
-The Thief is the only agent that can be *heard*. Ch. 4 gives each side the
-opponent's transmitted field and nothing else, so `Observation` carries a belief
-about where the Cop is and no record of what we ourselves have been emitting —
-which is exactly the quantity A2.5 says to treat as a cost.
+**Both agents emit** (Ch. 4.1.3), so this is shared domain code and not a Thief
+tactic. It arrived in `thief/` because the Thief needed it first — A2.5 charges
+its own trail as a cost — and moved here when the bluff policy showed the Cop
+needs the same quantity: the information value of a hint is measured against
+what our trail has already given away, and the Cop's trail gives away just as
+much as the Thief's (TODO 8.3.4). A module in a role package is invisible to the
+other role's repository, so a Cop reaching for it would simply not have it.
+
+Ch. 4 gives each side the opponent's transmitted field and nothing else, so
+`Observation` carries a belief about where the opponent is and no record of what
+we ourselves have been emitting — which is exactly the quantity A2.5 says to
+treat as a cost.
 
 **So we rebuild it rather than ask for it.** Emission is a pure function of where
 we have stood: `merge(decay(previous), emit(here))`, evaluated once per turn with
 the negotiated rate and decay model. The brain is told `own_position` every turn,
 so replaying that is exact, not an estimate — the same arithmetic the engine runs,
 on the same inputs.
+
+`bearing_leak` asks the other question the same field answers — *"can they
+already tell which way I am going?"* — and it is what the bluff policy prices a
+claim against (`core/domain/bluff.py`).
 
 Rebuilding beats threading a field through `Observation` for a concrete reason:
 `PeerRuntime.belief()` is still the Phase 4 placeholder, so a trail plumbed
@@ -29,7 +41,7 @@ the values that were there — five turns of standing produces a field byte-for-
 identical to one turn of it (25 cells, total 7.14). Moving five turns instead
 leaves 34 cells and total 12.51, because each step lays a fresh window beside the
 decaying old one. **Movement is what accumulates scent; repetition does not.**
-That fact is measured in `tests/unit/test_thief_trail.py`, and it is why the
+That fact is measured in `tests/unit/test_trail.py`, and it is why the
 false anchor of §4.4 does not work the way the PRD assumed — see `thief/anchor.py`.
 """
 
@@ -99,6 +111,54 @@ class TrailTracker:
             for d_col in range(-RADIUS, RADIUS + 1)
             if board.in_bounds((row + d_row, column + d_col))
         )
+
+    def bearing_leak(self, position: Position, heading: Position) -> float:
+        """Return how much our field already betrays that we are going *heading*.
+
+        Args:
+            position: Where we stand.
+            heading: The unit step we are about to take, as ``(d_row, d_col)``.
+
+        Returns:
+            0.0 when the trail says nothing about our bearing, rising toward 1.0
+            when it says it plainly.
+
+        **A single deposit reveals a position, not a bearing.** It is radially
+        symmetric — it says *here* and nothing about which way we came from or
+        are going. What encodes a bearing is the **asymmetry** left by movement:
+        three turns north leaves a tail of decaying deposits to the south and
+        nothing to the north, and an opponent reading that smear knows our
+        heading without being told.
+
+        So the reading splits the whole field about us, along the heading axis,
+        and compares the two halves — normalised by the total so it does not
+        drift with how long the game has run:
+
+            (behind - ahead) / (behind + ahead)
+
+        **Split by projection, not by the two adjacent cells.** The tail that
+        carries the signal sits two and three cells back, and the neighbouring
+        pair is dominated by the symmetric window we deposited this very turn: a
+        four-step run north reads 0.13 that way and 0.81 this way, for the same
+        board and the same trail. `cost_at`'s 5x5 windows do not work here either
+        — two cells apart they overlap in three rows of five, which averages away
+        the difference being measured.
+
+        Negative values — about to double back into our own trail — clamp to 0,
+        and correctly: the field records where we have *been*, so a reversal is
+        precisely the move it does not predict, and saying it out loud is real
+        information.
+        """
+        d_row, d_col = heading
+        ahead = behind = 0.0
+        for (row, column), value in self.emitted.items():
+            projection = (row - position[0]) * d_row + (column - position[1]) * d_col
+            if projection > 0:
+                ahead += value
+            elif projection < 0:
+                behind += value
+        total = ahead + behind
+        return max((behind - ahead) / total, 0.0) if total else 0.0
 
     def loudest(self) -> Position | None:
         """Return the cell carrying our strongest mark, or None if silent.

@@ -13,6 +13,15 @@ and applies the engine.
 Both agents move **simultaneously**, as commit-reveal requires: neither
 decision sees the other. Deciding sequentially would let the second brain react
 to the first and quietly inflate whichever role moved last.
+
+**Hints are exchanged here too, and on the protocol's own timing** (TODO 8.3.4).
+A hint written on turn *k* is revealed with that turn's move and is therefore
+first *readable* on turn *k+1*; delivering it to the opponent within the same
+turn would hand them a claim about a move they had not yet seen, which no
+commit-reveal exchange permits. The sentences come from the template bank, so
+this stays free and deterministic — but they are real sentences run through the
+real safety rules and read by the real parser, because the point of measuring
+the verbal layer is to measure the one that will actually play.
 """
 
 from __future__ import annotations
@@ -28,8 +37,14 @@ from core.domain.game_state import GameState
 from core.domain.movement import resolve_move
 from core.domain.rules import Outcome, Rules, Verdict
 from core.domain.scent import decay, emit, merge
+from core.infra.llm.writer import HintWriter, compass_word
 
 __all__ = ["SubGameResult", "play_sub_game"]
+
+# One writer, shared by both sides. `HintWriter.write` holds no per-peer state
+# and the template bank keys on the prompt, which already carries the step and
+# the bearing — so two writers would produce identical text at twice the cost.
+_WRITER = HintWriter()
 
 
 @dataclass
@@ -91,12 +106,16 @@ def _observe(
     remaining: int,
     belief: dict[Position, float],
     known: Position | None = None,
+    hints: tuple[str, ...] = (),
 ) -> Observation:
     """Build one side's view.
 
     Args:
         known: **Measurement only.** When set, the belief collapses to a point
             mass on that cell — a perfect-information agent.
+        hints: Every hint the opponent has revealed so far, oldest first — the
+            same cumulative tuple `PeerRuntime.observe` builds, so a brain that
+            reads it here reads the identical shape in a graded match.
 
     ``known`` exists to measure the *ceiling*: how well a strategy plays when
     its belief is perfect. The gap between that and normal play is exactly what
@@ -113,7 +132,20 @@ def _observe(
         step=state.step,
         barriers_remaining=remaining,
         belief={known: 1.0} if known else belief,
+        hints=hints,
     )
+
+
+def _said(decision: Decision, step: int) -> str:
+    """Render one turn's claim as the sentence the opponent will actually read.
+
+    Runs the decision through the same `HintWriter` a live peer uses, on the
+    `template` provider: zero tokens, deterministic from the prompt's hash, and
+    subject to every rule in `safety.py`. Writing a bare phrase here instead
+    would measure a verbal layer nobody plays — the parser's confidence is
+    computed from real sentence shape, hedges and negations included.
+    """
+    return _WRITER.write(compass_word(decision.claim), decision.intent, step).text
 
 
 def _apply(decision: Decision, position: Position, state: GameState, board: Board) -> Position:
@@ -157,6 +189,10 @@ def play_sub_game(
     thief_side = Side(belief=uniform(board))
     result = SubGameResult(outcome=Outcome(Verdict.SURVIVAL, "not started"))
     result.history.append(state)
+    # What each side has *heard*, which is what the opponent revealed on earlier
+    # turns. Never this turn's: a hint travels with the reveal it was sealed
+    # beside, so it cannot reach the opponent before their own move is committed.
+    heard: dict[str, tuple[str, ...]] = {"cop": (), "thief": ()}
 
     while True:
         if not are_connected(state.cop, state.thief, state.barriers, board):
@@ -170,7 +206,9 @@ def play_sub_game(
 
         seen = state.thief if oracle else None
         cop_move = cop.decide(
-            _observe(state, board, state.cop, barriers.remaining, cop_side.belief, seen)
+            _observe(
+                state, board, state.cop, barriers.remaining, cop_side.belief, seen, heard["cop"]
+            )
         )
         # The Thief is told the true remaining quota, not 0. Every placement is
         # declared with its exact cell (M#15), so counting what the Cop has left
@@ -179,9 +217,16 @@ def play_sub_game(
         # harness disagree with the live runtime, so a thief strategy tuned in
         # self-play would meet a different observation in a graded match.
         thief_move = thief.decide(
-            _observe(state, board, state.thief, barriers.remaining, thief_side.belief)
+            _observe(
+                state, board, state.thief, barriers.remaining, thief_side.belief, None, heard["thief"]
+            )
         )
         result.reasons.append((cop_move.reason, thief_move.reason))
+        # Each side hears what the *other* just revealed, from next turn onward.
+        heard = {
+            "cop": heard["cop"] + (_said(thief_move, state.step),),
+            "thief": heard["thief"] + (_said(cop_move, state.step),),
+        }
 
         before = state
         # The Thief's destination is resolved **first**, against the barriers as

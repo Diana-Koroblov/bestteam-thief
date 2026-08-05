@@ -112,7 +112,8 @@ def test_the_profile_grows_as_the_sub_game_runs() -> None:
     cop = AdvancedCop()
     for step in range(4):
         cop.decide(observe((3, 3), {(0, step): 1.0}, step=step))
-    assert cop.profile.peaks == [(0, 0), (0, 1), (0, 2), (0, 3)]
+    assert cop.verbal.profile.visits == 4
+    assert cop.verbal.profile.transitions == 3
 
 
 def test_a_new_sub_game_restarts_the_trajectory() -> None:
@@ -122,7 +123,11 @@ def test_a_new_sub_game_restarts_the_trajectory() -> None:
     cop = AdvancedCop()
     cop.decide(observe((3, 3), {(0, 0): 1.0}, step=7))
     cop.decide(observe((3, 3), {(6, 6): 1.0}, step=0))
-    assert cop.profile.peaks == [(6, 6)]
+    # The trait counters are **banked** across the boundary (8.3.3); what
+    # restarts is the trajectory, so the second sub-game's first peak cannot be
+    # scored as a transition from a cell in a game that is over.
+    assert cop.verbal.profile.visits == 2
+    assert cop.verbal.profile.transitions == 0
 
 
 # --- A1.3 configuration -----------------------------------------------------

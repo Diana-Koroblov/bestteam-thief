@@ -21,14 +21,38 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from core.domain.actions import Direction
 from core.domain.intent import Intent
 from core.infra.llm.base import TextProvider
 from core.infra.llm.safety import cap_words, violations
 from core.infra.llm.template import TemplateProvider
 
-__all__ = ["HintWriter", "WrittenHint", "build_prompt"]
+__all__ = ["HintWriter", "WrittenHint", "build_prompt", "compass_word"]
 
 MAX_ATTEMPTS = 2
+
+# The brain decides in `Direction`; every rule downstream — the template bank,
+# the word cap, `safety.conveys` — is written in English compass words. The
+# translation belongs here, in the module whose whole job is turning a decision
+# into a sentence, and nowhere else: a second copy is how a bluff gets written
+# as "north" and audited as "N".
+_COMPASS_WORDS: dict[Direction, str] = {
+    Direction.N: "north",
+    Direction.S: "south",
+    Direction.E: "east",
+    Direction.W: "west",
+}
+
+
+def compass_word(claim: Direction | None) -> str:
+    """Return the word for *claim*, or ``""`` when there is nothing to say.
+
+    STAY and None both map to the empty string, which is not a failure: it
+    selects the bank's direction-free taunt and the "reveal nothing" prompt. A
+    turn spent saying nothing is a legitimate move in the verbal game, and after
+    8.3.5 it is the *correct* one against an opponent measured deaf.
+    """
+    return _COMPASS_WORDS.get(claim, "") if claim is not None else ""
 
 
 @dataclass(frozen=True)

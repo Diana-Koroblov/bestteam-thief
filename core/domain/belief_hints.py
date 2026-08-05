@@ -18,7 +18,7 @@ someone we have never played, their words are worth exactly nothing.
 
 from __future__ import annotations
 
-from core.domain.actions import Direction
+from core.domain.actions import Direction, opposite
 from core.domain.belief import normalise
 from core.domain.board import Board, Position
 from core.domain.hint_parser import ParsedHint
@@ -63,7 +63,9 @@ def update_from_hint(
         return dict(belief)
 
     # A negative coefficient inverts the claim rather than discarding it.
-    bearing = hint.direction if trust > 0 else _opposite(hint.direction)
+    bearing = hint.direction if trust > 0 else opposite(hint.direction)
+    if bearing is None:
+        return dict(belief)
     strength = MAX_TILT * abs(trust) * hint.confidence
     d_row, d_col = DELTAS[bearing]
 
@@ -87,13 +89,3 @@ def update_from_hint(
         if moving:
             tilted[ahead] = tilted.get(ahead, 0.0) + mass * moving
     return normalise({c: v for c, v in tilted.items() if c in belief})
-
-
-def _opposite(direction: Direction) -> Direction:
-    """Return the reverse bearing, for reading a known liar."""
-    return {
-        Direction.N: Direction.S,
-        Direction.S: Direction.N,
-        Direction.E: Direction.W,
-        Direction.W: Direction.E,
-    }[direction]

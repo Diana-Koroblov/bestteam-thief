@@ -30,10 +30,10 @@ from core.domain.actions import Direction
 from core.domain.belief import mask, predict
 from core.domain.board import Board, Position
 from core.domain.brain_base import Observation
+from core.domain.trail import TrailTracker
 from thief.evaluation import CAPTURED, ThiefWeights, evaluate
-from thief.trail import TrailTracker
 
-__all__ = ["best_move", "expectimax", "options", "value_of", "DEFAULT_DEPTH"]
+__all__ = ["best_move", "scored_moves", "expectimax", "options", "value_of", "DEFAULT_DEPTH"]
 
 DEFAULT_DEPTH = 2
 
@@ -114,6 +114,45 @@ def expectimax(
     )
 
 
+def scored_moves(
+    observation: Observation,
+    weights: ThiefWeights,
+    trail: TrailTracker,
+    depth: int = DEFAULT_DEPTH,
+    belief: dict[Position, float] | None = None,
+) -> list[tuple[float, Direction]]:
+    """Return every legal action with its value, in the fixed `options` order.
+
+    Args:
+        belief: Overrides the observation's own posterior, so the search reads
+            the distribution the brain holds **after** folding in the Cop's hint
+            (8.3.4) rather than the pre-verbal one. `None` keeps the
+            observation's.
+
+    The trail cost is applied here and nowhere deeper, for the reason in the
+    module docstring. Every candidate is returned rather than only the winner,
+    because the near-tie draw of 8.3.1 has to see the runners-up on this exact
+    scale — a second scoring path would be choosing between incomparable numbers.
+    """
+    posterior = observation.belief if belief is None else belief
+    scored = []
+    for direction, destination in options(
+        observation.own_position, observation.barriers, observation.board
+    ):
+        value = value_of(
+            destination,
+            posterior,
+            observation.barriers,
+            observation.board,
+            depth,
+            weights,
+            observation.barriers_remaining,
+        )
+        scored.append((value - weights.scent * trail.cost_at(destination, observation.board),
+                       direction))
+    return scored
+
+
 def best_move(
     observation: Observation,
     weights: ThiefWeights,
@@ -122,26 +161,15 @@ def best_move(
 ) -> tuple[Direction, float]:
     """Return the Thief's best action and its value.
 
-    The trail cost is applied here and nowhere deeper, for the reason in the
-    module docstring. Ties break on the fixed ordering from `options` rather
-    than on whichever float compared larger, so two peers replaying one log
-    reach the same move.
+    Ties break on the fixed ordering from `options` rather than on whichever
+    float compared larger, so two peers replaying one log reach the same move.
+    Near-ties are broken deliberately in the brain (TODO 8.3.1).
     """
-    scored = []
-    for index, (direction, destination) in enumerate(
-        options(observation.own_position, observation.barriers, observation.board)
-    ):
-        value = value_of(
-            destination,
-            observation.belief,
-            observation.barriers,
-            observation.board,
-            depth,
-            weights,
-            observation.barriers_remaining,
+    ranked = [
+        (value, -index, direction)
+        for index, (value, direction) in enumerate(
+            scored_moves(observation, weights, trail, depth)
         )
-        value -= weights.scent * trail.cost_at(destination, observation.board)
-        scored.append((value, index, direction))
-
-    value, _, direction = max(scored, key=lambda entry: (entry[0], -entry[1]))
+    ]
+    value, _, direction = max(ranked, key=lambda entry: (entry[0], entry[1]))
     return direction, value

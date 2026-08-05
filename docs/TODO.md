@@ -547,6 +547,7 @@ Most of the schedule slack is allocated here — if anything slips, it slips her
   - **Two bearings in one sentence yields nothing** (0.1). Picking the first would make a smokescreen *more* effective than silence.
 - [x] 4.4.2 [I] - Bluff classification: compare the claim against the observed scent field | DoD: Feeds the reliability coefficient in 4.2.2. — `claim_matches_scent()` checks the claimed bearing against how the scent peak actually moved.
 - [x] 4.4.3 [I] - Behavioural profiling across sub-games | DoD: Opponent's lie rate and hint style recorded in the log. — `core/domain/opponent_model.py`. *(Original extension — README material.)*
+  - ⚠️ **Superseded by `core/domain/opponent_profile.py` in 8.3, and nothing imports it.** The reason is in its signature: `record` and `predict` take an *observed opponent position*, and no peer ever has one (M#8). It is a correct model of a game we do not play. Kept, annotated, and off every code path — the honest record of a design built, tested, then found to need information the rules withhold. What replaced it profiles from the belief peak's trajectory and is deliberately coarser for it.
   - **The scoring says where to look.** Capture pays the Cop **20** and the Thief 5; survival pays the Thief **10** and the Cop 5. Our three Cop games are worth double our three Thief games — and it is in the Cop games that we observe *their* Thief. Modelling their Thief is the highest-value inference in the series.
   - **Never sacrifice a sub-game to probe.** Recording is free; a deliberately weak move to test their response risks 15 points to buy information worth less. We play to win every game and learn from what happens anyway.
   - ⚠️ **Determinism does not imply predictability.** Their move depends on their belief about *us*, which we cannot see, so the same board can legitimately produce different moves. A state→move lookup would be confidently wrong. We model the **conditional response** — given roughly where we are relative to them, which way do they go — which marginalises over the hidden belief instead of pretending to reconstruct it.
@@ -787,7 +788,7 @@ truth only; the Replay App reproduces a recorded series with `Verified OK`.
   - [ ] **Screenshot `Verified OK`** — `uv run python -m core replay <log.json>`. **A required submission artefact** (PRD 7 §3.5, 7.25), and it needs a real match log, so it lands with the first completed series. ⛔ **Blocked on Phase 9**, which is what produces a log with real commitments and nonces; self-play produces no seals to verify.
 
 ## Phase 8: Advanced Strategy — the competitive edge
-**Priority:** P1 | **Status:** 8.1 ✅ · 8.2 ✅ 05/08 · 8.3 not started ☐ | **Target:** starts once Phase 4 lands; runs parallel to 5–7
+**Priority:** P1 | **Status:** ✅ **Complete 06/08** — 8.1 ✅ · 8.2 ✅ 05/08 · 8.3 ✅ 06/08 · gate closed | **Target:** starts once Phase 4 lands; runs parallel to 5–7
 **DoD:** The advanced brains beat the Phase 3 baselines in ≥70 % of self-play sub-games, measured on
 the harness built at 3.5.
 **This is where the league grade lives.** See `PRD_strategy_advanced.md`.
@@ -903,23 +904,117 @@ with its exact cell (M#15), so counting what the cop has left is public arithmet
 tuned in self-play against a zero would have met a different observation in a graded match. A2.3 and
 A2.8 both need the real number.
 
-### 8.3 Shared
-- [ ] 8.3.1 [D] - **Unexploitable default** | DoD: Near-ties resolved by a seeded random choice (seed logged); no fixed lie schedule; no rhythmic movement pattern. Unexploitability is the floor, exploitation is upside.
-- [ ] 8.3.2 [D] - Opponent profiling — **at most 4 traits, confidence-gated** | DoD: Barrier rate (public under M#15), flee-greediness, hint-responsiveness, reliability `r`. Below the confidence threshold, behaviour stays on the unexploitable default. ~200 steps per series cannot support more without fitting noise.
-- [ ] 8.3.3 [D] - Profile resets between opponents | DoD: Accumulates across the 6 sub-games of a series; cleared for a new team, since teams may change code between matches.
-- [ ] 8.3.4 [D] - **Cheap-truth bluff policy** | DoD: Compute the hint's information value beyond what our scent already reveals. Low → tell the truth free and bank credibility. High → consider a lie weighted by credibility banked. As cop, spend it in Phase A to herd.
-- [ ] 8.3.5 [D] - Disable the verbal layer when hint-responsiveness ≈ 0 | DoD: An opponent who ignores hints makes the tokens pure waste.
-- [ ] 8.3.6 [B] - Self-play benchmark on the 3.5 harness | DoD: ≥100 sub-games, both roles, seeded; adopt only on ≥70 % against the control.
-- [ ] 8.3.7 [D] - Unit tests for every scoring heuristic | DoD: Deterministic on fixed boards; coverage ≥85 %.
+### 8.3 Shared — ✅ complete 06/08
 
-### ✅ Phase 8 Quality Gate
-- [ ] 8.QG.1 [B] - `uv run ruff check .` | DoD: 0 violations. **Green 05/08**; re-run when 8.3 lands.
-- [ ] 8.QG.2 [B] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC. Brains grow fastest — split search, evaluation and policy. **Green 05/08** — nine new strategy modules and not one over the limit, which is the split doing its job rather than luck.
-- [ ] 8.QG.3 [B] - `uv run pytest --cov` | DoD: All pass; coverage ≥85 %.
-- [ ] 8.QG.4 [B] - Self-play benchmark | DoD: Advanced brains win ≥70 % against the baselines; **cop self-separation rate is 0**.
-  - Win rates are in and both halves clear 70 %: the cop captures 16/16 in 9.00 mean steps against the baseline's 17.75; the thief survives 46/48 and 40/48 where the baseline survives 0/48.
-  - ✅ **Self-separation is 0 in all four cells of the matrix, 05/08.** It briefly read 4 against the advanced thief, which turned out to be `are_connected` failing to reach a thief standing *inside* a barrier rather than the cop walling itself off — the C-006b defect above. Fixed at the cause; the counter is now measuring what it claims to.
-  - Still open: 8.3's tactics are not built, so the gate cannot close on 8.3.6's ablation yet.
+**The verbal layer is now real.** `hint_parser`, `reliability` and `belief_hints`
+were finished in Phase 4 and wired to **nothing**: `Decision` carried no claim or
+intent, the harness passed no hints, and neither advanced brain read
+`Observation.hints`. 8.3 joined them end to end — the brain decides truth or lie
+and which bearing to claim, the harness writes the sentence through the real
+`HintWriter` on the template bank (zero tokens, deterministic), and the opponent
+parses it, scores it and folds it into its posterior. Only then could 8.3.4 and
+8.3.5 be *measured* rather than asserted.
+
+**Shipped as four shared modules**, in `core/domain/` rather than a role package
+because both roles need every one of them: `tiebreak.py` (the seeded near-tie
+draw), `opponent_profile.py` (the four gated traits), `bluff.py` (truth or lie,
+and which bearing), `verbal.py` (the three joined in protocol order). `trail.py`
+moved out of `thief/` for the same reason — **both agents emit**, so the Cop
+needs its own trail to price a claim against, and a module in `thief/` does not
+exist in the Cop's repository.
+
+- [x] 8.3.1 [D] - **Unexploitable default** | DoD: **Done 06/08 — `core/domain/tiebreak.py`.** Actions within ε of the best are drawn from a seeded generator; the seed is `[game] seed` and is recorded in the match log. **The draw is in the brain, never in the search** — `best_move` and `expectimax` stay strictly deterministic, because a search that wobbled internally would make our own log unverifiable, which is a worse problem than being readable. `epsilon = 0` restores the fixed ordering exactly, which is what makes the ablation's control arm a control rather than a second randomiser. No fixed lie schedule and no rhythmic movement follow from 8.3.4 and from the draw respectively.
+- [x] 8.3.2 [D] - Opponent profiling — **at most 4 traits, confidence-gated** | DoD: **Done 06/08 — `core/domain/opponent_profile.py`.** Movement style, barrier rate, hint-responsiveness, reliability `r`. Every one answers **`None` below its gate, never a default**: "unknown" and "measured as zero" lead to opposite behaviour, and a trait returning 0.0 before it had evidence would trigger the exploitation it exists to gate.
+  - ⚠️ **The four named in A3.6 plus the orbit detection already shipped in 8.1.10 is five.** Resolved by reading flee and orbit as **two thresholds on one measured quantity** — one observation stream, one sample gate, one mutually-exclusive answer — rather than as two traits. Recorded as **CONTRADICTIONS C-016**.
+  - 🐛 **`[strategy] max_profiled_traits = 4` had shipped since Phase 0 and was read by nothing.** The weakest possible form of a limit: a fifth trait could have been added without one test noticing. It is now compared against `opponent_profile.TRAITS` by a test, against the **shipped** config rather than a literal.
+  - **Hint-responsiveness counts perpendicular moves.** Two of the four bearings are always across the claim, so an opponent moving at random lands there half the time; dropping those samples would leave one-in-four along against three-in-four not-along and report a coin-flipper as strongly responsive. Direction of the reaction is deliberately not assumed — a listening Thief runs *from* a claim and a listening Cop runs *toward* it, so what is measured is the imbalance, not its sign.
+- [x] 8.3.3 [D] - Profile resets between opponents | DoD: **Done 06/08.** Two scopes, and keeping them apart is the whole task: trait counters **bank** across the six sub-games of a series, while the trajectory they are measured from — the last peak, the cells already visited, the trail, the draw stream — restarts at every boundary. A cell "revisited" across two different sub-games says nothing about whether this opponent circles. Cleared for a new team by `OpponentProfile.for_opponent`, exposed as `brain.meets(team)`; the ordinary boundary is the **process** (M#1, M#4 — one process, one role, one peer, and no team name crosses the wire), and the hook exists for a series runner that outlives it. Asserted end-to-end on a six-sub-game series, not just on the unit.
+- [x] 8.3.4 [D] - **Cheap-truth bluff policy** | DoD: **Done 06/08 — `core/domain/bluff.py`. Measured: worth 8 sub-games in 48 to the Cop, and exactly 0 to the Thief.** Information value is `1 − bearing_leak`: how plainly our own reconstructed field already announces the direction we are about to move in. Low → the truth is free and banks credibility (A3.8). High → consider a lie, weighted by credibility banked (A3.9), claiming the reverse bearing — which is derived from the move we actually chose, so it is board-driven and not a schedule (A3.2).
+  - 🐛 **The first information-value measure was saturated on every turn of every game, and the null result would have looked exactly like a tactic that does nothing.** It read the trail's strength at our own cell — but the trail is updated before the claim is chosen, so that cell always carries a full-strength deposit we laid this turn. Every turn priced as "they already know", and no lie was ever eligible. The same failure shape as the false anchor's gate in 8.2.5, caught the same way: by asking why an arm came back suspiciously flat. **A single deposit reveals a position; only the asymmetry between deposits reveals a bearing.**
+  - The gradient is taken over the **whole field split along the heading axis**, not over the two adjacent cells: the tail that carries the signal sits two and three cells back, and the neighbouring pair is dominated by this turn's symmetric window. A four-step run north reads 0.13 the narrow way and 0.81 the right way.
+  - **The lie draw weights on `trust`, not on the raw coefficient.** Drawing against the coefficient converges to *p* = 0.5 — precisely the "mixed" record `reliability.py` calls worthless, where an opponent ignores our lies *and* our truths, and the bank we spent turns filling buys nothing. `trust` is 0 at a mixed record, so **credibility must be banked before it can be spent** — literally A3.9 — and the loop settles near two truths to one lie.
+  - `cheap_truth = 0.60` comes from the measured distribution, not from taste: claiming the way we have actually been walking reads 1.00 after two steps, 0.69 after three, 0.54 after four and 0.31 after six, while a turn reads 0.74 and a reversal 1.00.
+- [x] 8.3.5 [D] - Disable the verbal layer when hint-responsiveness ≈ 0 | DoD: **Done 06/08.** Below the floor we claim nothing at all — legal, always truthful, and the correct use of the channel against someone measured deaf. Gated on a **confident** reading: `None` means we have not looked, which is not the same as looking and finding zero, and conflating them is the one way this fires against an opponent who was listening all along.
+- [x] 8.3.6 [B] - Self-play benchmark on the 3.5 harness | DoD: **Done 06/08 — `tests/integration/test_advanced_league_benchmark.py`, 192 sub-games, both roles, seeded.** 48 mirrored openings (every cell of the 7×7 bar the centre, where the mirror puts both agents on one square) × the full 2×2 of brains. See the tables below.
+  - 🐛 **The 8.2 suite reported every figure as *n*/48 and ran 16.** `range(0, 7, 2)` yields four values per axis, so `OPENINGS` has always held sixteen mirrored pairs. The figures themselves were sound — the ablation's control arm reproduces 40/48, 30.42 steps and 41 walls exactly — but **no committed test performed the run they came from**, so the eight sub-games between 40/48 and the tripwire's threshold were unguarded. Sample sizes are now *asserted* rather than described, and the 16-opening module is honestly relabelled as the fast tripwire it always was.
+  - 🐛 **No integration benchmark had ever loaded the shipped configuration.** Brains were built from code defaults, so every config-only setting — search depth, evaluation weights, `false_anchor` — was measured at whatever the dataclass said rather than at what a graded match loads. They agreed by coincidence until 8.3 needed a per-role split (`bluff_enabled` on for the Cop, off for the Thief), which only the config files can express. The benchmark now calls `configure(load_config(role_dir(role)))`.
+  - ⚠️ **`test_it_survives_our_own_advanced_cop_most_of_the_time` was a broken gate and 8.3 was the first thing to break it.** Advanced-vs-advanced is zero-sum, so a 70 % floor on the Thief is a 30 % *ceiling* on the Cop — in the role with the 15-point spread. It went red because the Cop's verbal layer started working. A test that fails when the other role improves is measuring the wrong thing; A4.2's gate belongs against the **baselines**, where it is not zero-sum, and that is where it now lives.
+
+#### 📊 8.3.6 — the shipped configuration, 48 openings, 192 sub-games
+
+| thief survivals | baseline thief | advanced thief |
+|---|---|---|
+| **baseline cop** | 0/48 · 14.67 steps · 0w | **46/48** · 34.42 steps · 0w |
+| **advanced cop** | **0/48** · 8.04 steps · 20w | 34/48 · 27.21 steps · 34w |
+
+**Self-separation is 0 in all four cells.** Both A4.2 gates clear with room: the
+Cop captures 48/48 against the baseline Thief and the Thief survives 46/48
+against the baseline Cop. Against the 8.3 control the competitive cell moved
+**40/48 → 34/48** in the Cop's favour.
+- [x] 8.3.7 [D] - Unit tests for every scoring heuristic | DoD: **Done 06/08.** `test_tiebreak.py`, `test_opponent_profile.py`, `test_bluff.py`, `test_verbal.py` — 73 new tests, deterministic on fixed boards.
+
+#### 📊 8.3.6 — the ablation, 48 openings, advanced Cop vs advanced Thief
+
+| arm | thief survives | mean steps | walls |
+|---|---|---|---|
+| **control** — neither side has 8.3 | **40/48** | 30.42 | 41 |
+| tie-break only — cop | 36/48 | 28.17 | 24 |
+| tie-break only — thief | **42/48** | 31.54 | 34 |
+| verbal only — cop | **32/48** | 26.08 | 56 |
+| verbal only — thief | 40/48 | 32.25 | 52 |
+
+**The control arm reproduces 8.2's recorded numbers to the decimal** — 40/48,
+30.42 steps, 41 walls — which is the strongest available evidence that the
+ablation is measuring 8.3 and not a drifting engine.
+
+**Near-tie draw: adopted for both roles, at different widths.** ε was then swept
+rather than left at the first value that worked, and the two roles came out with
+**opposite optima**:
+
+| ε | 0.0 | 0.05 | 0.1 | 0.25 | 0.5 | 1.0 |
+|---|---|---|---|---|---|---|
+| **Cop** — mean captures/48 vs our advanced Thief, 3 seeds | 14.0 | 15.3 | 14.0 | 15.3 | **18.0** | — |
+| **Thief** — mean survivals/48 vs the baseline Cop, 5 seeds | 46.0 | 46.4 | **46.4** | 44.0 | 44.0 | 44.6 |
+| **Thief** — range over those seeds | 46–46 | 44–48 | 44–48 | 40–48 | 40–48 | 43–48 |
+
+**Shipped: `tie_epsilon = 0.5` for the Cop, `0.1` for the Thief.** Not a
+contradiction — ε is in *evaluation units* and the two evaluations do not share
+a scale. The Cop's is dominated by separation at 400 and capture at 1000, so
+moves within half a point really are interchangeable and shaking the pursuit
+line out of a deterministic groove finds captures. The Thief's largest
+positional term is 2.0 per cell of escape room, so half a point there spans
+genuinely different moves: at 0.5 it costs 2.4 sub-games on average and doubles
+the spread, and actions that far apart are not ties. **A single shared ε would
+have been wrong for one of the two roles, and 0.5 was wrong for the Thief.**
+
+**Verbal layer: adopted for the Cop, `bluff_enabled = false` for the Thief.**
+Giving only the Cop a verbal layer moves the Thief from 40/48 to 32/48 — eight
+sub-games, the largest single effect measured anywhere in Phase 8. Giving only
+the Thief one moves nothing at all: 40/48 either way. A3.10 explains the
+asymmetry — the lie's job is *herding*, and the Cop is the role that herds.
+Neutral is not harmless: most turns are cheap truths, so leaving it on hands a
+listening opponent our bearing for a measured gain of zero, and their Cop may
+weight hints far harder than ours does. **Measured upside of nothing against
+unmeasured downside is not a trade.** Revisit in Phase 9 against real opponents,
+where 8.3.5 would switch it off automatically for anyone who ignores hints.
+
+**Barrier rate is measured and deliberately not acted on.** §5.2 says it should
+drive the Thief — a Cop that never walls cannot catch us — and the change cannot
+be measured here, because **the only opponent in this repository that exhibits
+the trait is one we already beat 48 out of 48**. The baseline Cop places no
+barriers and the advanced Cop spends its quota, so self-play holds no game where
+acting on a low barrier rate could change an outcome. Reported in
+`describe()` and left there, in the same posture as `decayed_coefficient`.
+
+### ✅ Phase 8 Quality Gate — closed 06/08
+- [x] 8.QG.1 [B] - `uv run ruff check .` | DoD: **0 violations, 06/08**, with 8.3 landed.
+- [x] 8.QG.2 [B] - `uv run python scripts/check_file_size.py` | DoD: **No file over 150 LOC, 06/08.** Fourteen strategy and verbal-layer modules now, not one over the limit — the split doing its job rather than luck.
+- [x] 8.QG.3 [B] - `uv run pytest --cov` | DoD: **1306 pass, coverage 96.1 %, 06/08.**
+  - ⚠️ **The benchmark cost the commit gate 11 minutes and now has its own.** 192 sub-games of expectimax run in 2:00 untraced and **12:14 under `--cov`** — a 6× tracing penalty that took `ship.py`'s test gate from 4:47 to 15:48, on the path used for every single commit. Split: `pyproject.toml` deselects `-m 'not slow'` from the default run, and `pipeline.GATES` gains a sixth step running `pytest -m slow --no-cov`. It is **deselected, never skipped** — it still blocks every commit, because a headline number nobody re-checks is precisely how the 16-vs-48 discrepancy survived a whole phase. Nothing is lost to the missing trace: `police/` and `thief/` already report 98–100 % from the unit suite. Default gate is back to **4:07**, plus 2:00 for the benchmark.
+- [x] 8.QG.4 [B] - Self-play benchmark | DoD: **Closed 06/08 on 192 sub-games at the shipped configuration.**
+  - Both halves clear 70 % against the **baselines**, which is where A4.2's gate belongs: the cop captures **48/48** in 8.04 mean steps against the baseline's 14.67; the thief survives **46/48** where the baseline thief survives 0/48.
+  - ✅ **Self-separation is 0 in all four cells of the matrix.** It briefly read 4 against the advanced thief in 8.2, which turned out to be `are_connected` failing to reach a thief standing *inside* a barrier rather than the cop walling itself off — the C-006b defect above. Fixed at the cause; the counter is measuring what it claims to.
+  - The 8.2 note "win rates are in… the cop captures 16/16" described the **16-opening** tripwire while reading as though it were the 48-opening run. Both numbers now say which set they came from, and the set is asserted in the test rather than described in prose.
 
 ---
 

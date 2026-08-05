@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from core.domain.board import Board
 from core.domain.scent import decay, emit, merge
-from thief.trail import TrailTracker
+from core.domain.trail import TrailTracker
 
 BOARD = Board(grid_size=7)
 
