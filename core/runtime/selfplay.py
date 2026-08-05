@@ -172,14 +172,26 @@ def play_sub_game(
         cop_move = cop.decide(
             _observe(state, board, state.cop, barriers.remaining, cop_side.belief, seen)
         )
+        # The Thief is told the true remaining quota, not 0. Every placement is
+        # declared with its exact cell (M#15), so counting what the Cop has left
+        # is public arithmetic, not a leak — and `PeerRuntime.observe` has always
+        # passed the real number for both roles. Hardcoding 0 here made the
+        # harness disagree with the live runtime, so a thief strategy tuned in
+        # self-play would meet a different observation in a graded match.
         thief_move = thief.decide(
-            _observe(state, board, state.thief, 0, thief_side.belief)
+            _observe(state, board, state.thief, barriers.remaining, thief_side.belief)
         )
         result.reasons.append((cop_move.reason, thief_move.reason))
 
         before = state
-        placed = _place(cop_move, barriers, state)
-        state = _advance(state, cop_move, thief_move, board, placed)
+        # The Thief's destination is resolved **first**, against the barriers as
+        # they stood when both sides committed, and then handed to the placement
+        # so capture is judged on where the Thief actually ends up (C-006b).
+        # Doing it the other way round let a Thief walk into the wall being
+        # built and stand inside it — see `tests/unit/test_simultaneous_barrier.py`.
+        thief_to = _apply(thief_move, state.thief, state, board)
+        placed = _place(cop_move, barriers, state, thief_to)
+        state = _advance(state, cop_move, board, placed, thief_to)
         result.history.append(state)
 
         outcome = _resolve(before, state, rules, placed, barriers)
@@ -192,17 +204,28 @@ def play_sub_game(
     return result
 
 
-def _place(decision: Decision, barriers: BarrierManager, state: GameState):
-    """Apply a barrier placement if the Cop asked for one."""
+def _place(decision: Decision, barriers: BarrierManager, state: GameState, thief_to: Position):
+    """Apply a barrier placement if the Cop asked for one.
+
+    Args:
+        thief_to: Where the Thief ends this turn, **not** where it started.
+            `capture.resolution = "after_moves"` evaluates positions once both
+            actions apply, so this is the cell M#46 is judged against — a wall on
+            a vacated cell misses, and a wall on the cell the Thief steps onto
+            captures. Both halves follow from the same value.
+    """
     if decision.barrier is None:
         return None
-    return barriers.place(decision.barrier, state.cop, thief_pos=state.thief)
+    return barriers.place(decision.barrier, state.cop, thief_pos=thief_to)
 
 
-def _advance(state, cop_move, thief_move, board, placed) -> GameState:
-    """Return the next state with both moves applied simultaneously."""
+def _advance(state, cop_move, board, placed, thief_to: Position) -> GameState:
+    """Return the next state with both moves applied simultaneously.
+
+    *thief_to* is passed in rather than recomputed so the cell the capture was
+    judged against and the cell the Thief is recorded on cannot drift apart.
+    """
     cop_to = state.cop if placed else _apply(cop_move, state.cop, state, board)
-    thief_to = _apply(thief_move, state.thief, state, board)
     return state.advanced(
         cop=cop_to,
         thief=thief_to,

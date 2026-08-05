@@ -46,15 +46,40 @@ tunnel_provider = "ngrok"
 [strategy]
 # See docs/PRD_strategy_advanced.md. These are ours alone; the opponent must
 # never learn them, and nothing here may alter the rules of the game.
-search_depth = 3
+# 2 plies. The cop searches deeper because it is hunting and needs to see a
+# capture coming; what kills an evader is the one-move blunder into a sealable
+# cell, and depth 2 already sees that.
+search_depth = 2
 # Survival is worth 10 to us and only 5 to the cop, so we play for the clock.
 prefer_cycles = true
-# Weights over the four evasion tactics. Settled empirically by the ablation
-# in task 8.2.6, not by argument.
+# Weights over the evasion terms (thief/evaluation.py). Settled empirically by
+# the ablation in task 8.2.6, not by argument.
+#
+# capture_risk dwarfs the rest because it is the mirror of the cop's win
+# condition (§2.2) — being caught is the sub-game lost, not a weak position.
+# distance is deliberately the SMALLEST: raw distance is what sent the baseline
+# thief to (6,6), the furthest cell on the board and the one a cop seals with
+# two barriers under M#47.
+weight_capture_risk = 400.0
+weight_seal_pressure = 25.0
+weight_room = 2.0
+weight_cycle = 30.0
+weight_scent = 4.0
 weight_distance = 1.0
-weight_mobility = 1.0
-weight_cycle_membership = 1.0
-weight_false_anchor = 1.0
+# FALSE ANCHOR: BUILT, MEASURED, REJECTED. Do not flip to true without redoing
+# the ablation — over 48 openings against our own advanced cop it scored
+# 37/48 survivals against 40/48 with it off.
+#
+# It cannot work the way PRD_strategy_advanced §4.4 assumes, either: scent.merge
+# keeps the MAXIMUM, so re-emitting on a cell you already occupy restores the
+# values already there and adds nothing. Five turns of standing still produces a
+# field byte-identical to one turn. Movement accumulates scent; repetition does
+# not. See thief/anchor.py and tests/unit/test_thief_trail.py.
+#
+# ⚠️ A 16-opening sweep said 12/16 -> 16/16 and would have had us adopt it.
+false_anchor = false
+anchor_turns = 3
+break_turns = 5
 max_profiled_traits = 4
 
 [trash_talk]

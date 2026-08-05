@@ -147,9 +147,18 @@ class BarrierManager:
             target: The cell to block.
             cop_pos: Where the Cop stands this turn.
             is_forgoing_move: Whether the Cop gave up its move for this.
-            thief_pos: The Thief's cell, when known, so the two capture
-                conditions can be evaluated. Omitted when the Cop is placing
-                against a belief rather than an observation.
+            thief_pos: The Thief's cell **after its move has been applied**, so
+                the two capture conditions can be evaluated. Omitted when the Cop
+                is placing against a belief rather than an observation.
+
+                ⚠️ **Post-move, always.** `capture.resolution = "after_moves"`
+                is part of the shared config and therefore of the M#11 digest,
+                so a caller passing the pre-move cell plays different physics
+                from the opponent it agreed with. It also produces a state the
+                rules have no name for: a Thief that stepped onto the cell being
+                walled ends up standing *inside* a barrier, unreachable by
+                `are_connected`, and walks back out next turn. Both halves of
+                C-006b come from this one argument.
 
         Returns:
             A ``Placement``. ``CAPTURE`` when the barrier lands on the Thief

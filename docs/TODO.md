@@ -787,7 +787,7 @@ truth only; the Replay App reproduces a recorded series with `Verified OK`.
   - [ ] **Screenshot `Verified OK`** — `uv run python -m core replay <log.json>`. **A required submission artefact** (PRD 7 §3.5, 7.25), and it needs a real match log, so it lands with the first completed series. ⛔ **Blocked on Phase 9**, which is what produces a log with real commitments and nonces; self-play produces no seals to verify.
 
 ## Phase 8: Advanced Strategy — the competitive edge
-**Priority:** P1 | **Status:** 8.1 complete ✅ 05/08 · 8.2–8.3 not started ☐ | **Target:** starts once Phase 4 lands; runs parallel to 5–7
+**Priority:** P1 | **Status:** 8.1 ✅ · 8.2 ✅ 05/08 · 8.3 not started ☐ | **Target:** starts once Phase 4 lands; runs parallel to 5–7
 **DoD:** The advanced brains beat the Phase 3 baselines in ≥70 % of self-play sub-games, measured on
 the harness built at 3.5.
 **This is where the league grade lives.** See `PRD_strategy_advanced.md`.
@@ -846,15 +846,62 @@ now covers the role packages, which is what the rule always meant.
   `Role.COP`, so the thief repo tried to load the police brain. Both were invisible to ruff, pytest
   and the LOC check in a working tree that holds both roles.
 
-### 8.2 Thief — full tactic set, value measured not assumed
+### 8.2 Thief — full tactic set, value measured not assumed — ✅ complete 05/08
 Retained in full. Whether each tactic earns its keep is settled by ablation (8.3.4), not by prior belief.
 
-- [ ] 8.2.1 [I] - Escape-route maximisation under the belief map | DoD: Beats the baseline thief.
-- [ ] 8.2.2 [I] - **Never let exit count reach 1** while the cop is within placement range | DoD: The mirror of the cop's win condition; the single most valuable line in the thief's evaluation.
-- [ ] 8.2.3 [I] - Scent-aware movement — own emission treated as a cost | DoD: Avoids lingering in cul-de-sacs where re-emission plateaus at full strength.
-- [ ] 8.2.4 [I] - **Cycle preservation** | DoD: Prefers regions that still contain a cycle; tracks the cop's remaining barriers as the measure of how many cycles it can still destroy.
-- [ ] 8.2.5 [I] - False-anchor tactic | DoD: Lay a strong trail, then break away. Triggered only when estimated payoff exceeds the turns spent.
-- [ ] 8.2.6 [I] - Measure the false anchor | DoD: Survival rate with and without, against **both** the baseline cop and our own advanced cop. Adopted for graded matches only if it wins.
+**Shipped as four modules**: `thief/evaluation.py` (what a position is worth), `thief/search.py`
+(expectimax, depth 2), `thief/trail.py` (our own emission, reconstructed), `thief/anchor.py` (the
+false anchor), assembled in `thief/advanced.py`.
+
+**The full 2×2, 48 mirrored openings, `survival_threshold = 35`**, measured after the C-006b
+barrier-timing fix (`tests/integration/test_advanced_thief_selfplay.py`):
+
+| thief survival | baseline thief | advanced thief |
+|---|---|---|
+| **baseline cop** | 0/48 · 14.67 steps | **46/48** · 34.38 steps |
+| **advanced cop** | 0/48 · 8.17 steps · 24 walls | **40/48** · 30.42 steps · 41 walls |
+
+**Self-separations are 0 in every cell.**
+
+Survival rate is the honest metric here and it does **not** saturate: the baseline thief survives
+nothing, so every point above zero is real. That is the reverse of 8.1, where both cops caught the
+baseline thief every time and time-to-capture had to stand in.
+
+⚠️ **The advanced cop's 8.1 numbers were measured against the baseline thief only.** Against a
+competent evader it captures 8 of 48. That is the real competitive picture and it is not a regression
+— it is the first honest measurement of the cop.
+
+🐛 **8.2 also found a rules defect in the engine, and fixing it was worth four sub-games.** The turn
+loop handed `BarrierManager.place` the **pre-move** thief position, so a thief stepping onto the cell
+the cop was walling ended the turn standing *inside* the barrier and walked out again next turn — a
+state no rule describes. Found because the advanced thief reaches positions the baseline never did.
+Resolved as a **capture** (M#46 under `after_moves`, which is C-006b's own stated rule); see
+CONTRADICTIONS C-006b and `tests/unit/test_simultaneous_barrier.py`. It also cleared 8.QG.4's
+separation blocker: the four "self-separations" were `are_connected` failing to reach a thief inside
+a wall, not the cop walling itself off.
+
+- [x] 8.2.1 [I] - Escape-route maximisation under the belief map | DoD: **Done 05/08 — 0/48 → 46/48 survivals against the baseline cop.** `k_step_reach` five steps out, weighted by the posterior over the cop rather than a point estimate (A2.2). Depth 2, not the cop's 3: the cop is hunting and needs to see a capture coming, we are running and what kills an evader is the one-move blunder into a sealable cell.
+- [x] 8.2.2 [I] - **Never let exit count reach 1** while the cop is within placement range | DoD: **Done 05/08 — `evaluation.capture_risk`, weighted 400 against the next term's 30.** All three endings checked, because the cop takes whichever is available: no exits at all (M#47), one exit the cop can wall (§2.2), or the cop simply adjacent. **Standing *on* our last exit counts** — Ch. 3.4 lets the cop wall its own cell, and an adjacency-only test misses the most dangerous square on the board. Returned as mass, not a veto: a 30% chance of capture is a price to weigh.
+- [x] 8.2.3 [I] - Scent-aware movement — own emission treated as a cost | DoD: **Done 05/08 — `thief/trail.py`.** `Observation` carries no record of what we have emitted, so the brain **reconstructs** it from its own position history — exact, not estimated, and it behaves identically in self-play and in a real match (a field plumbed through `PeerRuntime` would be empty, since `belief()` is still the Phase 4 placeholder). The decay rate and model come from the *negotiated* `[pheromones]` section, because C-007 means either model may have been signed.
+  - 🔬 **The DoD's premise turned out to be false, and this is the finding of 8.2.** It says re-emission "plateaus at full strength", implying lingering is loud. It does not accumulate at all: `scent.merge` keeps the **maximum**, so re-emitting on a cell you already occupy restores exactly the values already there. Five turns of standing still produces a field byte-for-byte identical to one turn — 25 cells, total intensity 7.14 — while five turns of *moving* leaves 34 cells and 12.51. **Movement accumulates scent; repetition does not.** Measured in `test_thief_trail.py`.
+- [x] 8.2.4 [I] - **Cycle preservation** | DoD: **Done 05/08.** Reuses `cuts.region_has_cycle` — the same primitive the cop uses to *destroy* cycles, which is the point: 8.1.6 and this are the two sides of one measurement. `evaluation.seal_pressure` prices the cop's remaining quota (A2.8), so fourteen walls and two walls are read as the different games they are.
+- [x] 8.2.5 [I] - False-anchor tactic | DoD: **Built 05/08, and shipped disabled — see 8.2.6.** A2.10 enforced literally: `payoff` is the head start the break can actually convert, bounded by how far the cop must travel, against a `cost` of the turns spent. Danger cancels it mid-bluff in either stage, because a tactic that ran to completion regardless would be a scripted sequence and A3.2 forbids exactly that.
+  - 🐛 **The gate was `risk <= 0.0` and never once fired.** `belief.normalise` leaves unreachable cells holding denormals around 1e-18, so on a board where nothing could reach us the comparison was still false. Both ablation arms came back byte-identical, which reads exactly like *"the tactic does nothing"* rather than *"the tactic never ran"* — the most dangerous kind of null result. Now a stated 2% policy threshold.
+- [x] 8.2.6 [I] - Measure the false anchor | DoD: **Done 05/08 — measured, and it loses. Shipped `false_anchor = false`.**
+
+| 48 openings vs advanced cop | survivals | mean steps |
+|---|---|---|
+| anchor **off** | **40/48** | 30.42 |
+| anchor **on** | 37/48 | 29.17 |
+
+  Three sub-games lost, net. The mechanism explains it: per 8.2.3 the turns bought no extra ambiguity, so *"those turns can be bought cheaply"* is the part of §4.4 that is false — against a closing cop every one of them is distance not gained. The verdict held either side of the C-006b fix (44 → 37 before, 40 → 37 after), which is the strongest evidence available that it is the tactic and not the engine.
+  - ⚠️ **A 16-opening sweep said 12/16 → 16/16 and would have had us adopt it.** The narrow set happened to hold exactly the games the tactic fixes and none it breaks. **This is why 8.1's A/B numbers were re-measured on 48 openings too.** The suite keeps the 16-opening version as a fast regression tripwire; the 48-opening figures are the evidence.
+
+**Also fixed.** `selfplay._observe` hardcoded `barriers_remaining = 0` for the thief, while
+`PeerRuntime.observe` has always passed the true count for both roles. Every placement is declared
+with its exact cell (M#15), so counting what the cop has left is public arithmetic — and a thief
+tuned in self-play against a zero would have met a different observation in a graded match. A2.3 and
+A2.8 both need the real number.
 
 ### 8.3 Shared
 - [ ] 8.3.1 [D] - **Unexploitable default** | DoD: Near-ties resolved by a seeded random choice (seed logged); no fixed lie schedule; no rhythmic movement pattern. Unexploitability is the floor, exploitation is upside.
@@ -866,10 +913,13 @@ Retained in full. Whether each tactic earns its keep is settled by ablation (8.3
 - [ ] 8.3.7 [D] - Unit tests for every scoring heuristic | DoD: Deterministic on fixed boards; coverage ≥85 %.
 
 ### ✅ Phase 8 Quality Gate
-- [ ] 8.QG.1 [B] - `uv run ruff check .` | DoD: 0 violations.
-- [ ] 8.QG.2 [B] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC. Brains grow fastest — split search, evaluation and policy.
+- [ ] 8.QG.1 [B] - `uv run ruff check .` | DoD: 0 violations. **Green 05/08**; re-run when 8.3 lands.
+- [ ] 8.QG.2 [B] - `uv run python scripts/check_file_size.py` | DoD: No file over 150 LOC. Brains grow fastest — split search, evaluation and policy. **Green 05/08** — nine new strategy modules and not one over the limit, which is the split doing its job rather than luck.
 - [ ] 8.QG.3 [B] - `uv run pytest --cov` | DoD: All pass; coverage ≥85 %.
 - [ ] 8.QG.4 [B] - Self-play benchmark | DoD: Advanced brains win ≥70 % against the baselines; **cop self-separation rate is 0**.
+  - Win rates are in and both halves clear 70 %: the cop captures 16/16 in 9.00 mean steps against the baseline's 17.75; the thief survives 46/48 and 40/48 where the baseline survives 0/48.
+  - ✅ **Self-separation is 0 in all four cells of the matrix, 05/08.** It briefly read 4 against the advanced thief, which turned out to be `are_connected` failing to reach a thief standing *inside* a barrier rather than the cop walling itself off — the C-006b defect above. Fixed at the cause; the counter is now measuring what it claims to.
+  - Still open: 8.3's tactics are not built, so the gate cannot close on 8.3.6's ablation yet.
 
 ---
 
