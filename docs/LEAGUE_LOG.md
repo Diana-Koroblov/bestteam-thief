@@ -32,6 +32,13 @@ declaration disqualifies the whole project (M#38).
 
 **Counted matches so far: 0** ← this is the number declared to every new opponent (M#37)
 
+> ⚠️ **This table is parsed, not just read.** `core/shared/league_log.py` counts the rows whose
+> **Opponent team** cell is filled and refuses to hand the handshake a number when that count
+> disagrees with the total above — so adding a row without updating the line stops the next
+> negotiation with an error instead of declaring a wrong figure (M#38). The column is located by
+> name, so it may be reordered; the heading `## Counted matches` may not be renamed. Warm-ups and
+> booked fixtures live under their own headings and are never counted.
+
 ---
 
 ## Warm-up matches (uncounted)

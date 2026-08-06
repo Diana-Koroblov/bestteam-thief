@@ -114,7 +114,7 @@ class Ack(Message):
 
 @dataclass(frozen=True)
 class Reveal(Message):
-    """The move and its hint — **without** the nonce (M#18).
+    """The move, its hint and our scent field — **without** the nonce (M#18).
 
     Attributes:
         move: One of the five legal actions.
@@ -123,12 +123,28 @@ class Reveal(Message):
             be revised now.
         barrier_cell: Set when this turn placed a barrier. Declaring it here is
             mandatory and must be exact (M#15, M#16).
+        scent: The field we emitted this turn, as sorted ``(row, col, intensity)``
+            triples from `scent.encode`.
+
+    **The scent field rides on the reveal, and there is nowhere else it could
+    go.** There is no shared board, so a peer learns the opponent's field only
+    because the opponent sends it (C-005). The commit carries a digest and
+    nothing else, so the field travels here — which fixes the timing for the
+    whole game: a field revealed at turn *k* is first usable when deciding turn
+    *k+1*, because turn *k*'s own move was committed before it arrived. That is
+    not a limitation to work around, it *is* commit-reveal.
+
+    Under C-008 the commit may additionally seal a digest of this field, so a
+    peer cannot transmit one field and hash another. That is opt-in and
+    negotiated: sealing unilaterally would fail every digest the opponent
+    recomputes.
     """
 
     move: str = ""
     hint: str = ""
     intent: Intent = Intent.TRUTH
     barrier_cell: tuple[int, int] | None = None
+    scent: tuple[tuple[int, int, float], ...] = ()
     KIND: ClassVar[MessageKind] = MessageKind.REVEAL
 
 
@@ -189,6 +205,18 @@ class Negotiation(Message):
         role_split: Which sub-games each side plays. Not in Appendix F at all
             (C-011), so silence here means two teams assuming different things.
         readings: The C-006 and C-010 mechanism choices, by name.
+        step_zero: The signed declaration, carrying ``github_commit`` (M#24,
+            M#53). It travels **inside** the handshake rather than as a message
+            of its own because the two are one decision: a peer that agreed the
+            physics but pinned no commit can still swap agents between
+            sub-games, and there would be no moment left at which to notice.
+
+    **Every field but ``config_digest`` decodes to empty when the opponent
+    omitted it**, and that is load-bearing. Our extensions are not in the book,
+    so a peer that never built them must be distinguishable from one that
+    disagrees — the first is warned about, the second refuses the match. A
+    decoder default of ``"3-3"`` would have made an opponent who said nothing
+    indistinguishable from one who agreed, which is the C-011 failure exactly.
     """
 
     config_digest: str = ""
@@ -196,4 +224,5 @@ class Negotiation(Message):
     game_count: int = 0
     role_split: str = "3-3"
     readings: dict[str, str] = field(default_factory=dict)
+    step_zero: dict[str, Any] = field(default_factory=dict)
     KIND: ClassVar[MessageKind] = MessageKind.NEGOTIATION

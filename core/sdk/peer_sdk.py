@@ -26,6 +26,7 @@ from core.protocol.tools import build_guarded_tools
 from core.runtime.brain_loader import load_brain
 from core.runtime.orchestrator import Orchestrator
 from core.runtime.peer_runtime import PeerRuntime
+from core.runtime.prematch import PreMatch
 from core.sdk.view_state import GuiState
 from core.shared import env
 from core.shared.config_manager import load_config
@@ -87,6 +88,17 @@ class PeerSDK:
     def runtime(self) -> PeerRuntime:
         """Return the handler an MCP server registers its tools against."""
         return self._runtime
+
+    @property
+    def prematch(self) -> PreMatch:
+        """Return what this peer declares before the first move (TODO 9.1).
+
+        The **same object** the runtime settles inbound handshakes against, not
+        a second copy. Two views of one agreement that could disagree is the
+        failure the whole handshake exists to prevent, and it would be
+        embarrassing to introduce it in the facade.
+        """
+        return self._runtime.prematch
 
     def server_spec(self, port: int | None = None) -> ServerSpec:
         """Return this peer's server definition, tools already built and guarded.

@@ -10,6 +10,7 @@ from __future__ import annotations
 import pytest
 
 from core.domain.board import Board
+from core.domain.filter import BeliefFilter
 from core.domain.game_state import GameState
 from core.domain.rules import Rules, Verdict
 from core.protocol.schemas import Role
@@ -97,12 +98,46 @@ def test_the_harness_shows_brains_no_more_than_a_real_match_does(
 
     If self-play were more generous, every measurement taken here would be
     optimistic — and we would discover that against a real opponent.
+
+    🐛 **This test is named for a property it did not check, and the property
+    was false for the whole of Phase 8.** It asserted that the live belief was
+    non-empty, summed to 1.0, and that our own position was not the thief's —
+    all true of the uniform placeholder the live runtime returned at the time,
+    and all true of any posterior whatsoever. Meanwhile the harness was handing
+    both brains the opponent's *current-turn* scent deposit, which commit-reveal
+    cannot deliver: a field revealed at turn k is first readable at turn k+1.
+
+    So it now compares the two paths on the thing that differs — the evidence
+    available at decision time — instead of on invariants neither could break.
     """
     runtime = PeerRuntime(orchestrator=Orchestrator.from_config(minimal_config, Role.COP))
     live = runtime.observe()
+
+    # Both paths run the same filter, on a field that is one turn old in each.
     assert live.belief
     assert abs(sum(live.belief.values()) - 1.0) < 1e-9
-    assert runtime.orchestrator.state.thief not in {live.own_position}
+
+    # Turn 0: nothing has been revealed yet, so the live path has no reading. A
+    # harness that had already folded in the opponent's opening deposit would be
+    # strictly sharper than this, which is the discrepancy that went unnoticed.
+    assert runtime.latest_opponent_scent() == {}
+
+    # **The parity check itself.** The live belief must be exactly what the
+    # shared filter produces from the same inputs — not merely similar, and not
+    # merely a distribution. Run the reference filter alongside and compare.
+    # Note the prior is *not* uniform even with no evidence: `predict` spreads
+    # mass over legal destinations, and cells beside a wall or an edge have
+    # fewer, so an equality check is the only honest one here.
+    state = runtime.orchestrator.state
+    reference = BeliefFilter(board=runtime.orchestrator.board)
+    reference.deposit(runtime.orchestrator.own_position)
+    expected = reference.observe({}, state.barriers, runtime.orchestrator.own_position)
+    assert live.belief == expected
+
+    # The live path masks what the harness masks: a wall and our own cell hold
+    # exactly zero, never a small number that merely looks like zero.
+    assert live.own_position not in live.belief
+    assert all(cell not in live.belief for cell in runtime.orchestrator.state.barriers)
 
 
 @BOTH_BRAINS
@@ -127,22 +162,49 @@ def test_the_belief_filter_is_what_makes_the_cop_work(played, rules: Rules) -> N
     It was written to fail the moment the filter started working, so that the
     improvement would announce itself instead of being assumed. It now does.
 
-    Measured, baseline against baseline over 20 sub-games:
+    Measured baseline against baseline, re-measured 06/08 over **48 openings**
+    once the harness stopped handing the filter a turn of scent the wire cannot
+    deliver::
 
-    ==================  =========  ==========  ========
-    cop belief          win rate   mean steps  points
-    ==================  =========  ==========  ========
-    uniform (none)          0.000        35.0   100/200
-    Bayesian filter         1.000        14.0   400/100
-    oracle (perfect)        1.000        10.0   400/100
-    ==================  =========  ==========  ========
+    ==================  ==============  ==========
+    cop belief          captures / 48   mean steps
+    ==================  ==============  ==========
+    uniform (none)            0            35.00
+    Bayesian filter          27            19.62
+    oracle (perfect)         48            10.25
+    ==================  ==============  ==========
 
-    The filter reaches the oracle's **win rate**, paying four extra steps for
-    not knowing exactly where the thief is. That is close to all of the
-    available value, and it is the number Phase 4 exists to produce.
+    ⚠️ **The middle row used to read 1.000 and it was an artefact.** The old
+    figure came from one opening, and from a harness that let the filter read
+    the opponent's *current-turn* deposit — evidence commit-reveal cannot
+    deliver, since our move is sealed before their reveal arrives. With the
+    field held back one turn, the baseline Cop's filter recovers roughly **half**
+    the distance from blind to omniscient rather than all of it. That is the
+    honest number, and it is what the advanced Cop of Phase 8 was built to
+    close: it still captures 48/48.
+
+    The claim the test defends is unchanged and now rests on a real sample: a
+    uniform belief captures **nothing**, so every capture here is the filter's.
+
+    Asserted as the *ordering* of the three rows rather than as any one figure.
+    A single opening is one sample and a fixed capture count is a number that
+    goes stale the next time a weight moves; "blind < filtered < perfect" is the
+    claim, and it is the thing that would actually be false if the filter broke.
     """
-    assert played.outcome.verdict is Verdict.CAPTURE
-    assert played.steps < rules.survival_threshold
+    openings = [((0, 0), (6, 6)), ((0, 6), (6, 0)), ((2, 2), (4, 4)), ((1, 5), (5, 1))]
+
+    def captures(oracle: bool) -> int:
+        return sum(
+            play_sub_game(
+                brain_class("police")(), brain_class("thief")(), rules, 14,
+                GameState(cop=cop, thief=thief), oracle,
+            ).outcome.verdict is Verdict.CAPTURE
+            for cop, thief in openings
+        )
+
+    filtered, perfect = captures(oracle=False), captures(oracle=True)
+    assert perfect == len(openings), "a known target must always be caught"
+    assert 0 < filtered <= perfect, "the filter must be worth something, and less than perfect"
 
 
 # --- the ceiling (M3) -------------------------------------------------------

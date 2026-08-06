@@ -66,9 +66,11 @@ weight_room = 2.0
 weight_cycle = 30.0
 weight_scent = 4.0
 weight_distance = 1.0
-# FALSE ANCHOR: BUILT, MEASURED, REJECTED. Do not flip to true without redoing
-# the ablation — over 48 openings against our own advanced cop it scored
-# 37/48 survivals against 40/48 with it off.
+# FALSE ANCHOR: BUILT, MEASURED, REJECTED, RE-MEASURED. Do not flip to true
+# without redoing the ablation — over 48 openings against our own advanced cop
+# it scores 36/48 survivals against 40/48 with it off (06/08, on the engine
+# corrected for the 4.1.6 scent timing). It has now lost on three successive
+# engines: before the C-006b fix, after it, and after 4.1.6.
 #
 # It cannot work the way PRD_strategy_advanced §4.4 assumes, either: scent.merge
 # keeps the MAXIMUM, so re-emitting on a cell you already occupy restores the
@@ -112,18 +114,20 @@ tie_epsilon = 0.1
 # Whether the brain may lie at all (A3.9). False pins every turn to saying
 # nothing directional, and is the ablation's control arm.
 #
-# OFF FOR THE THIEF: BUILT, MEASURED, NOT ADOPTED. Over 48 openings against our
-# own advanced cop the thief survives 40/48 with the verbal layer off and 40/48
-# with it on — exactly neutral, no evidence to adopt on. The cop's arm of the
-# same ablation moved 40/48 -> 32/48 in the cop's favour, so the machinery
-# works; it is the THIEF that has nothing to herd. A3.10 says as much: the
-# lie's job is steering a fleeing opponent, and the cop is the one doing the
-# steering.
+# OFF FOR THE THIEF: BUILT, MEASURED, NOT ADOPTED. Leave-one-out from the
+# shipped config over 48 openings against our own advanced cop: turning the
+# thief's verbal layer ON hands the cop two more captures, 8/48 -> 10/48. The
+# machinery works — the cop's arm of the same ablation is worth six captures —
+# it is the THIEF that has nothing to herd. A3.10 says as much: the lie's job
+# is steering a fleeing opponent, and the cop is the one doing the steering.
 #
-# Neutral is not harmless. Most turns are cheap truths, so leaving it on hands
-# a listening opponent our bearing for a measured gain of zero — and their cop
-# may weight hints far harder than ours, whose tilt is capped at MAX_TILT 0.35.
-# Measured upside of nothing against unmeasured downside is not a trade.
+# The mechanism is plain enough: most turns are cheap truths, so leaving this
+# on mostly hands a listening opponent our real bearing. Their cop may weight
+# hints far harder than ours, whose tilt is capped at MAX_TILT 0.35.
+#
+# Under the pre-4.1.6 scent timing this measured as exactly neutral and the
+# decision rested on an argument rather than evidence. Re-measured 06/08 it is
+# a small loss, so the argument is no longer needed.
 #
 # Revisit in Phase 9 against real opponents, where 8.3.5 would also switch it
 # off automatically for anyone who ignores hints.

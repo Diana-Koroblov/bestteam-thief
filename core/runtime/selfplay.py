@@ -14,14 +14,24 @@ Both agents move **simultaneously**, as commit-reveal requires: neither
 decision sees the other. Deciding sequentially would let the second brain react
 to the first and quietly inflate whichever role moved last.
 
-**Hints are exchanged here too, and on the protocol's own timing** (TODO 8.3.4).
-A hint written on turn *k* is revealed with that turn's move and is therefore
-first *readable* on turn *k+1*; delivering it to the opponent within the same
-turn would hand them a claim about a move they had not yet seen, which no
-commit-reveal exchange permits. The sentences come from the template bank, so
-this stays free and deterministic — but they are real sentences run through the
-real safety rules and read by the real parser, because the point of measuring
-the verbal layer is to measure the one that will actually play.
+**Hints and scent are exchanged here too, on the protocol's own timing** (TODO
+4.1.6, 8.3.4). Both travel with the reveal of the turn that produced them, so
+both are first readable on turn *k+1*: our move for turn *k* is sealed before
+their reveal for turn *k* arrives, and that ordering is the whole of
+commit-reveal rather than an inconvenience around it.
+
+🐛 **The scent field used not to be held back, and every Phase 8 number was
+measured through that hole.** With both trails in one process there was nothing
+to stop `observe` reading the deposit the opponent was laying *this* turn, one
+turn fresher than any wire can deliver. `test_the_harness_shows_brains_no_more
+_than_a_real_match_does` is named for exactly this and asserted only that the
+live belief summed to 1.0 — a guard that could not fail. The field is now taken
+from `sent`, which is written at the end of the turn.
+
+The sentences come from the template bank, so this stays free and deterministic —
+but they are real sentences through the real safety rules, read by the real
+parser, because the point of measuring the verbal layer is to measure the one
+that will actually play.
 """
 
 from __future__ import annotations
@@ -29,14 +39,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from core.domain.barriers import BarrierManager, PlacementOutcome
-from core.domain.belief import mask, predict, uniform, update_from_scent
 from core.domain.board import Board, Position
 from core.domain.brain_base import BrainBase, Decision, Observation
 from core.domain.connectivity import are_connected, exit_count
+from core.domain.filter import BeliefFilter
 from core.domain.game_state import GameState
 from core.domain.movement import resolve_move
 from core.domain.rules import Outcome, Rules, Verdict
-from core.domain.scent import decay, emit, merge
 from core.infra.llm.writer import HintWriter, compass_word
 
 __all__ = ["SubGameResult", "play_sub_game"]
@@ -69,34 +78,6 @@ class SubGameResult:
     cop_separations: int = 0
     history: list[GameState] = field(default_factory=list)
     reasons: list[tuple[str, str]] = field(default_factory=list)
-
-
-@dataclass
-class Side:
-    """One peer's private knowledge: what it emitted, and what it believes.
-
-    Held per side because in a real match neither peer can see the other's
-    filter. Sharing one belief object between them would silently make the
-    harness measure a game nobody is playing.
-    """
-
-    belief: dict[Position, float]
-    trail: dict[Position, float] = field(default_factory=dict)
-
-    def emit_and_age(self, at: Position, board: Board, rate: float, model: str) -> None:
-        """Lay this turn's deposit over the decayed remains of earlier ones."""
-        self.trail = merge(decay(self.trail, rate, model), emit(at, board))
-
-    def observe(self, opponent_trail, board, barriers, own) -> None:
-        """Predict, then update on the opponent's transmitted field.
-
-        Prediction comes first: the opponent moved since we last looked, so the
-        prior must be widened *before* new evidence narrows it. Updating against
-        a stale prior is how a filter becomes confidently wrong.
-        """
-        self.belief = predict(self.belief, board, barriers)
-        self.belief = update_from_scent(self.belief, opponent_trail, board)
-        self.belief = mask(self.belief, barriers, own)
 
 
 def _observe(
@@ -185,8 +166,12 @@ def play_sub_game(
     barriers = BarrierManager(max_barriers=quota, board=board)
     state = start
     rate, model = 0.10, "multiplicative"
-    cop_side = Side(belief=uniform(board))
-    thief_side = Side(belief=uniform(board))
+    cop_side = BeliefFilter(board=board, rate=rate, model=model)
+    thief_side = BeliefFilter(board=board, rate=rate, model=model)
+    # What each side has *received*. A field is transmitted with the reveal of
+    # the turn that produced it, so it is first readable on the turn after —
+    # see the note in `play_sub_game`.
+    sent: dict[str, dict[Position, float]] = {"cop": {}, "thief": {}}
     result = SubGameResult(outcome=Outcome(Verdict.SURVIVAL, "not started"))
     result.history.append(state)
     # What each side has *heard*, which is what the opponent revealed on earlier
@@ -198,11 +183,15 @@ def play_sub_game(
         if not are_connected(state.cop, state.thief, state.barriers, board):
             result.cop_separations += 1
 
-        # Both agents emit, then each reads only the opponent's trail (Ch. 4).
-        cop_side.emit_and_age(state.cop, board, rate, model)
-        thief_side.emit_and_age(state.thief, board, rate, model)
-        cop_side.observe(thief_side.trail, board, state.barriers, state.cop)
-        thief_side.observe(cop_side.trail, board, state.barriers, state.thief)
+        # Both agents emit, then each reads only the opponent's trail (Ch. 4)
+        # **as it stood at the end of the previous turn**. Reading the field
+        # they are depositing right now would hand both brains a turn of scent
+        # commit-reveal cannot deliver: our move for this turn is sealed before
+        # their reveal for this turn arrives.
+        cop_side.deposit(state.cop)
+        thief_side.deposit(state.thief)
+        cop_side.observe(sent["thief"], state.barriers, state.cop)
+        thief_side.observe(sent["cop"], state.barriers, state.thief)
 
         seen = state.thief if oracle else None
         cop_move = cop.decide(
@@ -222,7 +211,9 @@ def play_sub_game(
             )
         )
         result.reasons.append((cop_move.reason, thief_move.reason))
-        # Each side hears what the *other* just revealed, from next turn onward.
+        # Both peers reveal: the hint and the scent field travel together, and
+        # neither is readable before the next turn.
+        sent = {"cop": dict(cop_side.trail), "thief": dict(thief_side.trail)}
         heard = {
             "cop": heard["cop"] + (_said(thief_move, state.step),),
             "thief": heard["thief"] + (_said(cop_move, state.step),),

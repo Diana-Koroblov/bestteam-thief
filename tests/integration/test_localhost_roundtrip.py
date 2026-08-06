@@ -138,6 +138,61 @@ async def test_a_matching_handshake_opens_the_match(minimal_config) -> None:
     assert fresh.agreed
 
 
+async def test_the_whole_pre_match_protocol_survives_the_wire(minimal_config) -> None:
+    """**TODO 9.1, end to end.** Everything 9.1 requires travels in one message,
+    and the half nobody tests is the *reply* — the decoder reading what the
+    opponent sent back. `decode_negotiation` is module-level precisely so both
+    directions use the same one; this is the test that says so.
+
+    The scent model, the readings and the role split are all our own extension
+    of Appendix F. If they failed to serialise, nothing would raise: the fields
+    would simply arrive empty, `settle` would warn instead of refuse, and we
+    would play a graded match believing we had agreed things we had not.
+    """
+    from core.protocol.tools import decode_negotiation
+    from core.runtime.prematch import PreMatch
+
+    fresh = PeerRuntime(orchestrator=Orchestrator.from_config(minimal_config, Role.THIEF))
+    server = create_server(build_server_spec(build_guarded_tools(fresh), "thief", 8082))
+    client = OpponentClient(base_url="in-process", timeout_sec=5, transport=server)
+
+    ours = PreMatch(orchestrator=Orchestrator.from_config(minimal_config, Role.COP)).proposal()
+    theirs = decode_negotiation(await client.call("negotiate", ours.payload()))
+
+    assert theirs.scent_model_digest == ours.scent_model_digest, "M#23 crossed intact"
+    assert theirs.readings == ours.readings, "the C-006/C-010 choices crossed intact"
+    assert theirs.role_split == ours.role_split, "N17 crossed intact"
+    assert theirs.step_zero["github_commit"] == ours.step_zero["github_commit"], "M#53"
+    agreement = fresh.prematch.agreement
+    assert agreement is not None and agreement.agreed
+    # Not `warnings == ()`: whether *this* tree is committed is a fact about the
+    # checkout, and a test that asserted a clean one would go red for every
+    # developer mid-change while proving nothing about the wire. What must be
+    # empty is the "they stated nothing" family, since every field just arrived.
+    assert not [item for item in agreement.warnings if "stated no" in item]
+
+
+async def test_a_scent_model_mismatch_refuses_over_the_wire(minimal_config) -> None:
+    """M#23, C-007. Identical configs and a different decay model is the case
+    the config digest cannot catch, because their *code* is what disagrees with
+    the contract they signed."""
+    fresh = PeerRuntime(orchestrator=Orchestrator.from_config(minimal_config, Role.THIEF))
+    server = create_server(build_server_spec(build_guarded_tools(fresh), "thief", 8082))
+    client = OpponentClient(base_url="in-process", timeout_sec=5, transport=server)
+
+    with pytest.raises(RemoteToolError, match="0.810 is the book"):
+        await client.call(
+            "negotiate",
+            {
+                "step": 0,
+                "role": "cop",
+                "config_digest": minimal_config.shared_digest(),
+                "scent_model_digest": "built-on-the-reference-simulator",
+            },
+        )
+    assert not fresh.agreed
+
+
 async def test_a_failure_from_the_real_transport_arrives_typed(
     cop_to_thief: OpponentClient,
 ) -> None:

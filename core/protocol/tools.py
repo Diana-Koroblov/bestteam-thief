@@ -16,6 +16,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, Protocol
 
+from core.domain.scent import decode, encode
 from core.protocol.schemas import (
     Ack,
     BarrierDeclaration,
@@ -29,7 +30,7 @@ from core.protocol.schemas import (
     Role,
 )
 
-__all__ = ["ProtocolError", "PeerHandler", "TOOL_BUILDERS", "build_tools"]
+__all__ = ["ProtocolError", "PeerHandler", "TOOL_BUILDERS", "build_tools", "decode_negotiation"]
 
 
 class ProtocolError(ValueError):
@@ -107,6 +108,10 @@ def _reveal_tool(handler: PeerHandler) -> Callable[[dict[str, Any]], dict[str, A
                 hint=payload.get("hint", ""),
                 intent=payload.get("intent", "truth"),
                 barrier_cell=tuple(cell) if cell else None,
+                # Decoded through the domain rather than trusted as it arrives:
+                # a malformed cell raises at the boundary instead of becoming a
+                # plausible wrong coordinate inside the belief filter.
+                scent=encode(decode(payload.get("scent"))),
             )
         )
         return {"received": True, "step": step}
@@ -160,22 +165,38 @@ def _barrier_tool(handler: PeerHandler) -> Callable[[dict[str, Any]], dict[str, 
     return declare_barrier
 
 
+def decode_negotiation(payload: dict[str, Any]) -> Negotiation:
+    """Return the handshake a payload describes (M#37, TODO 9.1).
+
+    Module-level because **both directions need it**: the tool decodes what
+    arrives, and the caller that initiates a handshake has to decode the reply.
+    Two decoders would drift, and the one that drifted would be the one reading
+    the opponent's answer — the half nobody tests against a real peer.
+
+    Every optional field decodes to **empty**, never to our own value. An
+    opponent who omitted `role_split` and one who agreed 3-3 are different
+    situations — the first has to be settled with a human before the first move
+    — and a decoder default would erase the difference silently (C-011).
+    """
+    step, role = _common(payload, MessageKind.NEGOTIATION)
+    _require(payload, "config_digest")
+    return Negotiation(
+        step=step,
+        role=role,
+        config_digest=payload["config_digest"],
+        scent_model_digest=payload.get("scent_model_digest", ""),
+        game_count=payload.get("game_count", 0),
+        role_split=payload.get("role_split", ""),
+        readings=dict(payload.get("readings") or {}),
+        step_zero=dict(payload.get("step_zero") or {}),
+    )
+
+
 def _negotiate_tool(handler: PeerHandler) -> Callable[[dict[str, Any]], dict[str, Any]]:
     """Exchange the pre-match handshake (M#37)."""
 
     def negotiate(payload: dict[str, Any]) -> dict[str, Any]:
-        step, role = _common(payload, MessageKind.NEGOTIATION)
-        _require(payload, "config_digest")
-        proposal = Negotiation(
-            step=step,
-            role=role,
-            config_digest=payload["config_digest"],
-            scent_model_digest=payload.get("scent_model_digest", ""),
-            game_count=payload.get("game_count", 0),
-            role_split=payload.get("role_split", "3-3"),
-            readings=payload.get("readings", {}),
-        )
-        return handler.on_negotiate(proposal).payload()
+        return handler.on_negotiate(decode_negotiation(payload)).payload()
 
     return negotiate
 

@@ -53,9 +53,9 @@ log audit will blame both teams.
 |---|---|
 | **Where** | Ch. 4 describes a decaying scent map; nothing states *how* a peer obtains the opponent's field |
 | **The gap** | There is no shared board. Each peer sends its own emitted field with its turn message, so what you receive is what the opponent chose to send. The book never says whether that field includes the sender's current-turn deposit or only the state before it. |
-| **Our choice** | The transmitted field **includes** the current turn's deposit. |
-| **Why** | It matches the reference implementation, so it is what most opponents will send. Uncertainty survives regardless: both peers move again afterwards, leaving ≥5 candidate cells. |
-| **Effect** | `pheromones.field_includes_current_turn = true`. Negotiation item **N13**. |
+| **Our choice** | The transmitted field **includes** the current turn's deposit. A received field is first acted on when deciding the **following** turn. |
+| **Why** | Including the deposit matches the reference implementation, so it is what most opponents will send. Uncertainty survives regardless: both peers move again afterwards, leaving ≥5 candidate cells. The one-turn lag is not a choice — our move for turn *k* is committed before their reveal for turn *k* can arrive — but it has to be **stated**, because a peer that acts on the current turn's field is revealing before committing, which is the single attack commit-reveal exists to prevent. |
+| **Effect** | `pheromones.field_includes_current_turn = true`. Both halves are sealed inside the M#23 scent-model digest as `field_includes_current_turn` and `sampling_mode = end_of_previous_full_turn` (`core/crypto/scent_model.py`), and both appear in the agreement artefact. Negotiation item **N13**; TODO 9.1.7. |
 
 ## C-006b — M#46 timing: a barrier on a cell the thief is leaving
 
@@ -233,6 +233,17 @@ places where a source left something undetermined and we had to choose.
 | **Our choice** | **One trait, two thresholds.** `OpponentProfile.style()` returns a three-way category — `FLEE_GREEDY`, `ORBITER`, `UNKNOWN` — read off a single observation stream (the belief-peak trajectory) behind a single sample gate. The four are then movement style, barrier rate, hint-responsiveness and reliability. |
 | **Why** | A3.6's limit exists for a statistical reason, not an arithmetic one: 200 observed steps per series cannot support many independent estimates without fitting noise. What costs sample size is an independent *observation stream* with its own gate, and flee and orbit are not that — they are two questions asked of one trajectory, gated together at `MIN_MOVEMENT_SAMPLES`, and a mutually exclusive answer is returned. Counting them as two would also make the cap depend on how a category happens to be spelled: a single `MovementStyle` enum with three values is exactly the same measurement as two fractions with two thresholds. Where they genuinely compete — a fleer on a finite board eventually revisits cells too — the tie is resolved in favour of the stronger evidence rather than by adding a trait. |
 | **Effect** | `core/domain/opponent_profile.py` — the four are listed in `TRAITS`, and `test_we_profile_exactly_the_number_of_traits_the_config_permits` compares that tuple against `[strategy] max_profiled_traits` in the **shipped** config. The key had been present since Phase 0 and read by nothing, which made the cap unenforceable: a fifth trait could have been added without a single test noticing. It is now the thing that would fail. |
+
+## C-017 — One deviation from PRD_negotiation §4's interface
+
+| | |
+|---|---|
+| **Category** | D — our own engineering, not a rulebook conflict. Appendix F fixes what must be *agreed*; the shape of the function that agrees it is ours. |
+| **Where** | `PRD_negotiation.md` §4 specifies `negotiate(proposed, opponent_url, games_played) -> tuple[NegotiationResult, LockedAgreement]`, against `core/protocol/negotiation.py` as shipped. |
+| **The problem** | One function that takes a URL cannot be tested without a network, and it is the function whose *refusals* most need testing — a refusal path nobody exercises is a refusal path that fires for the first time in a graded match. Returning the result alongside the agreement also duplicates it: `LockedAgreement.result` is the same value, and two copies of one verdict can disagree. `games_played` as a caller-supplied integer is worse still: M#38 disqualifies the whole project for one wrong declaration, and a parameter is a place to type a stale number. |
+| **Our choice** | Three functions and no network. `proposal(config, role, games_played, scent_digest, step_zero, role_split)` builds what we send; `settle(ours, theirs)` compares two messages and returns a `LockedAgreement` carrying its own `result`; `refused_by_opponent(ours, detail)` records the asymmetric case. The URL and the environment move up one layer to `core/runtime/prematch.py`, which reads the commit from git, the counted total from `LEAGUE_LOG.md` and the model from the provider registry. |
+| **Why** | Every refusal is now provokable from two plain dataclasses, so all five outcomes are tested rather than the one the happy path reaches. Splitting the environment out is also what makes the declaration honest: nothing accepts a hand-typed game count, because the only caller reads the log. The extra `refused_by_opponent` exists because the handshake **is** asymmetric — whoever answers raises, whoever asked receives an error string — and without it the initiating peer would learn of a refusal as a traceback and file no record of the outcome most likely to be disputed. |
+| **Effect** | `core/protocol/negotiation.py` (the comparison), `core/protocol/agreement.py` (the verdict and the artefact), `core/runtime/prematch.py` (the environment). `PRD_negotiation.md` is left as written: it records what we designed, this file records what we shipped and why they differ — the same posture as C-014. |
 
 ---
 

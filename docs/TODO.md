@@ -494,6 +494,10 @@ Most of the schedule slack is allocated here — if anything slips, it slips her
   - Carries a **worked example with the number**, not just a model name: `0.90 → 0.81`. A label can be agreed while the arithmetic still differs; a number cannot. If their example says **0.80** they built on the reference (C-007), which tells us both that the model must be settled *and* which implementation we are facing.
   - The emission table travels as `distance² → intensity` rather than 25 cells: same information, half the payload, and a disagreement about one radius is obvious instead of hidden among 25 numbers differing in one place.
 - [x] 4.1.6 [D] - Scent field **transmission** (not sampling) | DoD: Our field is sent inside each turn message and the opponent's is merged on receipt. `scent_field_includes_current_turn` default `true`, matching the reference. Uncertainty survives because both peers then move again, leaving ≤5 candidates. See CONTRADICTIONS C-005.
+  - 🐛 **This was ticked for a whole phase with nothing implementing it, and it is the most expensive defect the project has had.** `Reveal` carried no scent field, no codec read one, and `PeerRuntime.belief()` returned a uniform placeholder. The consequence is not subtle: a uniform posterior measures **5.61 bits** against `confident_bits = 3.5`, so a live Cop would have sat in HERD for all 35 turns and **never placed a barrier** — which PRD §2.1 calls the only way the Cop can win. Everything Phase 8 built was inert on the wire. Fixed 06/08: `Reveal.scent`, `scent.encode/decode`, and `core/runtime/local_truth.py`.
+  - 🐛 **And the harness had been reading the opponent's *current-turn* deposit**, one turn fresher than commit-reveal can deliver: our move for turn *k* is sealed before their reveal for turn *k* arrives, so their field for turn *k* is first usable at turn *k+1*. With both trails in one process nothing stopped it. **Every Phase 8 number was measured through that hole** — see the corrected tables in §8.3.
+  - The guard that should have caught it, `test_the_harness_shows_brains_no_more_than_a_real_match_does`, asserted that the live belief was non-empty and summed to 1.0 — true of the uniform placeholder and of every posterior ever. It now runs the shared filter alongside and asserts equality.
+  - **One filter now, not two.** `core/domain/filter.py` is used by both the harness and the live runtime, so the two cannot drift again without a test failing.
 - [x] 4.1.7 [D] - `decay_model` config key: `multiplicative` (book, default) and `subtractive` (reference) | DoD: Both implemented. At ρ=0.10 the book gives 0.9→**0.81**, the reference 0.9→**0.80**. See CONTRADICTIONS C-007. — both implemented and both tested, so we can play under whichever was signed.
 - [x] 4.1.8 [D] - **Seal a digest of our emitted scent field** in the per-step commit payload | DoD: The reference leaves `smell_grid` outside the seal, so a fabricated field passes audit undetected. See CONTRADICTIONS C-008.
   - ⚠️ **Corrected from "regardless of what the opponent does" — that would have been a serious mistake.** The opponent recomputes our digests during the end-of-match audit using *their* payload builder. Sealing unilaterally would make **every digest we ever sent** fail their verification, and the sanction for a mismatch is a total technical loss. Sealing alone is worse than not sealing.
@@ -854,6 +858,17 @@ Retained in full. Whether each tactic earns its keep is settled by ablation (8.3
 (expectimax, depth 2), `thief/trail.py` (our own emission, reconstructed), `thief/anchor.py` (the
 false anchor), assembled in `thief/advanced.py`.
 
+⛔ **SUPERSEDED 06/08 — the table below was measured through the 4.1.6 scent-timing
+defect.** The harness fed both belief filters the opponent's *current-turn*
+deposit, which commit-reveal cannot deliver. No brain changed; the measurement
+did. **The current figures are in §8.3.6**, and the summary of what moved is:
+the baseline cop fell from 48/48 captures to 27/48 (most of its old score came
+from scent it could not have read yet), the advanced cop still captures 48/48,
+and the advanced thief survives 42/48 against the baseline cop and 40/48 against
+our own advanced cop. **Every 8.2 adoption decision survived the re-measurement**,
+including 8.2.6's rejection of the false anchor. Kept as the record of what was
+measured at the time.
+
 **The full 2×2, 48 mirrored openings, `survival_threshold = 35`**, measured after the C-006b
 barrier-timing fix (`tests/integration/test_advanced_thief_selfplay.py`):
 
@@ -896,6 +911,7 @@ a wall, not the cop walling itself off.
 | anchor **on** | 37/48 | 29.17 |
 
   Three sub-games lost, net. The mechanism explains it: per 8.2.3 the turns bought no extra ambiguity, so *"those turns can be bought cheaply"* is the part of §4.4 that is false — against a closing cop every one of them is distance not gained. The verdict held either side of the C-006b fix (44 → 37 before, 40 → 37 after), which is the strongest evidence available that it is the tactic and not the engine.
+  - ✅ **Re-measured 06/08 on the corrected engine and the verdict is unchanged: 40/48 with the anchor off, 36/48 with it on.** This is now the *third* engine the tactic has lost on — before C-006b, after it, and after the 4.1.6 scent-timing fix. A shipped decision resting on a measurement taken through a defect had to be re-run rather than assumed, and this one holds.
   - ⚠️ **A 16-opening sweep said 12/16 → 16/16 and would have had us adopt it.** The narrow set happened to hold exactly the games the tactic fixes and none it breaks. **This is why 8.1's A/B numbers were re-measured on 48 openings too.** The suite keeps the 16-opening version as a fast regression tripwire; the 48-opening figures are the evidence.
 
 **Also fixed.** `selfplay._observe` hardcoded `barriers_remaining = 0` for the thief, while
@@ -936,40 +952,65 @@ exist in the Cop's repository.
   - `cheap_truth = 0.60` comes from the measured distribution, not from taste: claiming the way we have actually been walking reads 1.00 after two steps, 0.69 after three, 0.54 after four and 0.31 after six, while a turn reads 0.74 and a reversal 1.00.
 - [x] 8.3.5 [D] - Disable the verbal layer when hint-responsiveness ≈ 0 | DoD: **Done 06/08.** Below the floor we claim nothing at all — legal, always truthful, and the correct use of the channel against someone measured deaf. Gated on a **confident** reading: `None` means we have not looked, which is not the same as looking and finding zero, and conflating them is the one way this fires against an opponent who was listening all along.
 - [x] 8.3.6 [B] - Self-play benchmark on the 3.5 harness | DoD: **Done 06/08 — `tests/integration/test_advanced_league_benchmark.py`, 192 sub-games, both roles, seeded.** 48 mirrored openings (every cell of the 7×7 bar the centre, where the mirror puts both agents on one square) × the full 2×2 of brains. See the tables below.
-  - 🐛 **The 8.2 suite reported every figure as *n*/48 and ran 16.** `range(0, 7, 2)` yields four values per axis, so `OPENINGS` has always held sixteen mirrored pairs. The figures themselves were sound — the ablation's control arm reproduces 40/48, 30.42 steps and 41 walls exactly — but **no committed test performed the run they came from**, so the eight sub-games between 40/48 and the tripwire's threshold were unguarded. Sample sizes are now *asserted* rather than described, and the 16-opening module is honestly relabelled as the fast tripwire it always was.
+  - 🐛 **The 8.2 suite reported every figure as *n*/48 and ran 16.** `range(0, 7, 2)` yields four values per axis, so `OPENINGS` has always held sixteen mirrored pairs. The figures were reproducible at the time — the first ablation's control arm returned 40/48, 30.42 steps and 41 walls exactly — but **no committed test performed the run they came from**, so the eight sub-games between 40/48 and the tripwire's threshold were unguarded. That exactness is also what made the whole set look trustworthy right up until 4.1.6 was found: it was faithfully reproducing a game neither peer can play. Sample sizes are now *asserted* rather than described, and the 16-opening module is honestly relabelled as the fast tripwire it always was.
   - 🐛 **No integration benchmark had ever loaded the shipped configuration.** Brains were built from code defaults, so every config-only setting — search depth, evaluation weights, `false_anchor` — was measured at whatever the dataclass said rather than at what a graded match loads. They agreed by coincidence until 8.3 needed a per-role split (`bluff_enabled` on for the Cop, off for the Thief), which only the config files can express. The benchmark now calls `configure(load_config(role_dir(role)))`.
   - ⚠️ **`test_it_survives_our_own_advanced_cop_most_of_the_time` was a broken gate and 8.3 was the first thing to break it.** Advanced-vs-advanced is zero-sum, so a 70 % floor on the Thief is a 30 % *ceiling* on the Cop — in the role with the 15-point spread. It went red because the Cop's verbal layer started working. A test that fails when the other role improves is measuring the wrong thing; A4.2's gate belongs against the **baselines**, where it is not zero-sum, and that is where it now lives.
 
 #### 📊 8.3.6 — the shipped configuration, 48 openings, 192 sub-games
 
+Re-measured 06/08 with the scent timing corrected (4.1.6). Thief survivals:
+
 | thief survivals | baseline thief | advanced thief |
 |---|---|---|
-| **baseline cop** | 0/48 · 14.67 steps · 0w | **46/48** · 34.42 steps · 0w |
-| **advanced cop** | **0/48** · 8.04 steps · 20w | 34/48 · 27.21 steps · 34w |
+| **baseline cop** | 21/48 · 19.62 steps · 0w | **42/48** · 32.25 steps · 0w |
+| **advanced cop** | **0/48** · 8.96 steps · 27w | 40/48 · 31.50 steps · 47w |
 
 **Self-separation is 0 in all four cells.** Both A4.2 gates clear with room: the
-Cop captures 48/48 against the baseline Thief and the Thief survives 46/48
-against the baseline Cop. Against the 8.3 control the competitive cell moved
-**40/48 → 34/48** in the Cop's favour.
+Cop captures **48/48** against the baseline Thief and the Thief survives **42/48**
+against the baseline Cop.
+
+⚠️ **The baseline Cop's own capture rate fell from 48/48 to 27/48 under the
+correction**, so most of what it used to score was borrowed from scent it could
+not have read yet. The advanced Cop's 48/48 is unchanged — the gap between the
+two is *wider* than the old numbers showed, not narrower.
 - [x] 8.3.7 [D] - Unit tests for every scoring heuristic | DoD: **Done 06/08.** `test_tiebreak.py`, `test_opponent_profile.py`, `test_bluff.py`, `test_verbal.py` — 73 new tests, deterministic on fixed boards.
 
 #### 📊 8.3.6 — the ablation, 48 openings, advanced Cop vs advanced Thief
 
-| arm | thief survives | mean steps | walls |
+**Re-measured 06/08** once the scent timing was corrected (4.1.6), as a
+**leave-one-out from the shipped configuration** rather than a build-up from
+zero — which is the form that actually answers *"does each thing we ship earn
+its keep?"*. Cop captures out of 48:
+
+| arm | cop captures | mean steps | walls |
 |---|---|---|---|
-| **control** — neither side has 8.3 | **40/48** | 30.42 | 41 |
-| tie-break only — cop | 36/48 | 28.17 | 24 |
-| tie-break only — thief | **42/48** | 31.54 | 34 |
-| verbal only — cop | **32/48** | 26.08 | 56 |
-| verbal only — thief | 40/48 | 32.25 | 52 |
+| **SHIPPED** | **8/48** | 31.50 | 47 |
+| − cop near-tie draw | 4/48 | 33.75 | 80 |
+| − cop verbal layer | 2/48 | 34.79 | 24 |
+| − thief near-tie draw | 8/48 | 31.50 | 49 |
+| + thief verbal layer | 10/48 | 31.46 | 63 |
+| **CONTROL** — no 8.3 on either side | **0/48** | 35.00 | 43 |
 
-**The control arm reproduces 8.2's recorded numbers to the decimal** — 40/48,
-30.42 steps, 41 walls — which is the strongest available evidence that the
-ablation is measuring 8.3 and not a drifting engine.
+⚠️ **The first version of this table was measured through the 4.1.6 timing hole
+and its control arm reproduced §8.2's numbers exactly — which is why it looked
+trustworthy.** It was: it faithfully measured a game neither peer can play. Every
+adoption decision below survived the correction, and two are now better
+supported than they were.
 
-**Near-tie draw: adopted for both roles, at different widths.** ε was then swept
-rather than left at the first value that worked, and the two roles came out with
-**opposite optima**:
+**8.3 as a whole is worth 8 captures in 48.** Without it the advanced Cop takes
+*nothing* off the advanced Thief; with it, 8. In the role carrying a 15-point
+spread against the Thief's 5, that is the phase paying for itself.
+
+**Near-tie draw: adopted for both roles, at different widths.** Removing it from
+the Cop halves its captures (8/48 → 4/48). For the Thief it is **measurably
+neutral** in the competitive cell (8/48 either way) and is kept anyway, because
+A3.1 is a requirement rather than an optimisation: a deterministic tie-break is a
+signature an opponent learns for free, and 0.1 buys unexploitability at a
+measured cost of zero.
+
+ε was swept rather than left at the first value that worked, and the two roles
+came out with **opposite optima** — the sweep below predates the 4.1.6 timing
+fix, so read it as *why the widths differ*, not as current absolute figures:
 
 | ε | 0.0 | 0.05 | 0.1 | 0.25 | 0.5 | 1.0 |
 |---|---|---|---|---|---|---|
@@ -988,15 +1029,19 @@ the spread, and actions that far apart are not ties. **A single shared ε would
 have been wrong for one of the two roles, and 0.5 was wrong for the Thief.**
 
 **Verbal layer: adopted for the Cop, `bluff_enabled = false` for the Thief.**
-Giving only the Cop a verbal layer moves the Thief from 40/48 to 32/48 — eight
-sub-games, the largest single effect measured anywhere in Phase 8. Giving only
-the Thief one moves nothing at all: 40/48 either way. A3.10 explains the
-asymmetry — the lie's job is *herding*, and the Cop is the role that herds.
-Neutral is not harmless: most turns are cheap truths, so leaving it on hands a
-listening opponent our bearing for a measured gain of zero, and their Cop may
-weight hints far harder than ours does. **Measured upside of nothing against
-unmeasured downside is not a trade.** Revisit in Phase 9 against real opponents,
-where 8.3.5 would switch it off automatically for anyone who ignores hints.
+It is the **largest single contributor in Phase 8**: removing it from the Cop
+drops captures from 8/48 to 2/48, three quarters of everything 8.3 is worth.
+Turning it *on* for the Thief hands the Cop two more captures (8 → 10), so the
+Thief ships silent. A3.10 explains the asymmetry — the lie's job is *herding*,
+and the Cop is the role that herds; the Thief has nothing to herd and most of
+its turns are cheap truths, which simply help a listening opponent.
+
+⚠️ **Under the old timing this read as "neutral for the Thief", and the decision
+to ship it off rested on the argument that measured-nothing against unmeasured
+downside is not a trade.** The correction turned that argument into evidence: it
+is not neutral, it costs two sub-games. Same decision, and now it does not need
+the argument. Revisit in Phase 9 against real opponents, where 8.3.5 switches it
+off automatically for anyone who ignores hints anyway.
 
 **Barrier rate is measured and deliberately not acted on.** §5.2 says it should
 drive the Thief — a Cop that never walls cannot catch us — and the change cannot
@@ -1012,7 +1057,7 @@ acting on a low barrier rate could change an outcome. Reported in
 - [x] 8.QG.3 [B] - `uv run pytest --cov` | DoD: **1306 pass, coverage 96.1 %, 06/08.**
   - ⚠️ **The benchmark cost the commit gate 11 minutes and now has its own.** 192 sub-games of expectimax run in 2:00 untraced and **12:14 under `--cov`** — a 6× tracing penalty that took `ship.py`'s test gate from 4:47 to 15:48, on the path used for every single commit. Split: `pyproject.toml` deselects `-m 'not slow'` from the default run, and `pipeline.GATES` gains a sixth step running `pytest -m slow --no-cov`. It is **deselected, never skipped** — it still blocks every commit, because a headline number nobody re-checks is precisely how the 16-vs-48 discrepancy survived a whole phase. Nothing is lost to the missing trace: `police/` and `thief/` already report 98–100 % from the unit suite. Default gate is back to **4:07**, plus 2:00 for the benchmark.
 - [x] 8.QG.4 [B] - Self-play benchmark | DoD: **Closed 06/08 on 192 sub-games at the shipped configuration.**
-  - Both halves clear 70 % against the **baselines**, which is where A4.2's gate belongs: the cop captures **48/48** in 8.04 mean steps against the baseline's 14.67; the thief survives **46/48** where the baseline thief survives 0/48.
+  - Both halves clear 70 % against the **baselines**, which is where A4.2's gate belongs: the cop captures **48/48** in 8.96 mean steps where the baseline cop manages 27/48 in 19.62; the thief survives **42/48** where the baseline thief survives 21/48. Re-measured 06/08 on the corrected engine (4.1.6).
   - ✅ **Self-separation is 0 in all four cells of the matrix.** It briefly read 4 against the advanced thief in 8.2, which turned out to be `are_connected` failing to reach a thief standing *inside* a barrier rather than the cop walling itself off — the C-006b defect above. Fixed at the cause; the counter is measuring what it claims to.
   - The 8.2 note "win rates are in… the cop captures 16/16" described the **16-opening** tripwire while reading as though it were the 48-opening run. Both numbers now say which set they came from, and the set is asserted in the test rather than described in prose.
 
@@ -1032,6 +1077,71 @@ Graded matches are hosted from Itay's machine on Ollama (zero tokens). (ADR-003)
 - [ ] 9.1.6 [B] - **Agree the capture-resolution clause in writing** | DoD: M#46 timing, M#47 vs STAY, and the swap case all settled before the first move. With no referee, a disagreement found mid-match is unresolvable and can void the result for **both** teams (M#35). See PRD_negotiation §3.6.
 - [ ] 9.1.7 [B] - **Agree the scent sampling mode** | DoD: `end_of_previous_full_turn` proposed; recorded in the config JSON as part of the M#23 exchange. See CONTRADICTIONS C-005.
 - [ ] 9.1.8 [B] - **Confirm the role split across the series** | DoD: How the 6 sub-games divide between cop and thief. Do not assume 3/3 — the scoring analysis depends on it.
+
+#### ⚙️ 9.1 machinery — landed 06/08, boxes stay open until a real opponent ticks them
+
+Every DoD above ends in *"both sides confirm"*, so none of them can be closed by code. What code can
+do is make each one **executable and evidenced** instead of remembered, which is what landed:
+
+```
+uv run python -m core negotiate --role cop                      # print our side + the clause
+uv run python -m core negotiate --role cop --opponent <url> --out results/
+```
+
+Exits non-zero on a refusal, so a match cannot be started from a script that ignored the verdict.
+
+- **`core/protocol/negotiation.py`** — PRD_negotiation §4's interface, at last, in three functions
+  rather than one and with the network taken out (**C-017**). `settle()` returns `AGREED` or one of
+  five refusals and knows nothing about the environment, so every refusal is provokable from two
+  plain dataclasses instead of only the one the happy path reaches.
+  **`core/protocol/agreement.py`** holds the verdict and the artefact;
+  **`core/runtime/prematch.py`** gathers the environment half — git, the league log, the provider.
+- ⚠️ **The handshake is asymmetric and only one side gets a verdict.** Whoever answers raises a
+  `ProtocolError`; whoever asked receives it as a remote error string. Found by the CLI test, which
+  expected exit 1 and got a traceback. `REFUSED_BY_OPPONENT` is that case, and it files the record
+  with their wording preserved — a refusal is the outcome most likely to be argued about, so it is
+  the one that most needs to be on disk.
+- 🐛 **`on_negotiate` echoed the opponent's own values back at them.** `game_count`, `role_split`
+  and `readings` were copied from the incoming message into the reply, so the exchange was
+  structurally incapable of detecting the disagreements it exists to detect — agreement was
+  guaranteed, because we repeated whatever arrived. 9.1.2, 9.1.3, 9.1.6 and 9.1.8 all had a field
+  on the wire and **no comparison behind it**. Same shape as 4.1.6: the DoD was ticked, the
+  plumbing was absent, and nothing failed loudly enough to say so.
+- **Silence warns, contradiction refuses.** Half of this handshake is our own extension of Appendix
+  F. A peer that never built `scent_model_digest` is not disagreeing with us, and refusing would
+  forfeit a fixture over a rule the book does not state (§3.6b); a peer that sent one and disagrees
+  refuses the match. The two paths are tested separately, because collapsing them is the cheap
+  mistake in either direction.
+- 9.1.3 🐛 **the counted total is read from `docs/LEAGUE_LOG.md`, never typed.** Nothing takes the
+  number as a parameter, and `counted_matches()` refuses when the table and the prose total
+  disagree rather than guessing which is true. Zero is a legitimate declaration today, so a
+  parser that fell back to it would have been indistinguishable from a working one — and M#38
+  disqualifies the **whole project** for that single value. Booked fixtures and warm-ups sit under
+  their own headings and are never counted.
+- 9.1.4 🐛 **the Step-0 declaration named the wrong model.** Its only caller read
+  `llm.ollama_model` directly, so a machine whose `.env` selected `template` or `groq` declared
+  Ollama anyway. Appendix F Table 21 makes the *model* the declared thing and the *provider*
+  private, so that was a false declaration, not a cosmetic one. Now resolved through
+  `factory.model_name`, which asks the provider that will really be called.
+- 9.1.7 **the sampling mode is sealed, not just written down.** `field_includes_current_turn` said
+  what the field *contains*; nothing said when a received field may be *acted on*. Both are now
+  inside the M#23 digest (`sampling_mode = end_of_previous_full_turn`). The lag is forced by
+  commit-reveal rather than chosen — but an opponent acting on the current turn's field is
+  revealing before committing, and this is the field in which they say so. See C-005.
+- 9.1.6 **the clause is generated from the live config, never quoted.** The worked scent example is
+  computed, so it reads 0.810 under the book's decay and 0.800 under the reference's — the number
+  that identifies which implementation an opponent built on. A clause with the figure typed into it
+  would keep saying 0.810 after the flag was flipped: agreeing, in writing, to physics we were not
+  running.
+- **The agreement artefact carries what was agreed, not only that it was.** `agreement_<game_id>.json`
+  holds the scent-model payload, the readings, the clause text and every unsettled warning beside
+  the two digests. A hash proves agreement and says nothing about its content, and the file is read
+  months later by someone who was not in the conversation.
+- ⚠️ **A dirty tree is currently reported by the handshake** — 9.1.4's DoD is *tree clean*, so the
+  4.1.6 work must be committed before any Step-0 declaration is honest.
+- Tests: `test_negotiation.py` (19), `test_prematch.py` (12), `test_readings.py` (11),
+  `test_league_log.py` (14), `test_cli_negotiate.py` (6, driving `python -m core negotiate` against
+  a live peer), plus two end-to-end handshakes in `test_localhost_roundtrip.py`. **62 in total.**
 
 ### 9.2 Matches
 - [ ] 9.2.1 [B] - Warm-up match (uncounted) | DoD: Protocol bugs shaken out before anything counts. (M#52)

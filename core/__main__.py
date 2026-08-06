@@ -62,6 +62,20 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--gui", action="store_true", help="Open the Live GUI. Shows local truth only (M#8)."
     )
 
+    settle = sub.add_parser("negotiate", help="Run the pre-match protocol (TODO 9.1).")
+    settle.add_argument("--role", required=True, choices=sorted(CONFIG_DIRS))
+    settle.add_argument("--opponent", help="Their public MCP URL. Omit to print our side only.")
+    settle.add_argument(
+        "--role-split",
+        default="3-3",
+        help="How the sub-games divide. Stated, never assumed - it is in no Appendix (N17).",
+    )
+    settle.add_argument(
+        "--out",
+        type=Path,
+        help="Directory for agreement_<game_id>.json. Omit to settle without filing.",
+    )
+
     replay = sub.add_parser("replay", help="Open a saved match log and verify it (M#20).")
     replay.add_argument("log", type=Path, help="Path to log_<game_id>_gNN.json.")
     replay.add_argument("--grid", type=int, default=7, help="Board edge; a log records positions.")
@@ -105,6 +119,9 @@ def main(argv: list[str] | None = None) -> int:
         sdk.verify_budget()
     except BudgetError as error:
         raise SystemExit(str(error)) from error
+
+    if args.command == "negotiate":
+        return cli_commands.negotiate(sdk, args)
 
     view = sdk.board_view()
     print(f"role            : {sdk.role.value}")

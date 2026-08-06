@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from core.domain.board import Board, Position
 
-__all__ = ["EMISSION", "RADIUS", "emit", "decay", "merge", "sample"]
+__all__ = ["EMISSION", "RADIUS", "emit", "decay", "merge", "sample", "encode", "decode"]
 
 # Intensity by **squared Euclidean distance** from the emitting cell.
 # d² = 0, 1, 2, 4, 5, 8 — the only distances a 5×5 window can produce.
@@ -92,6 +92,48 @@ def merge(
     for cell, value in fresh.items():
         combined[cell] = max(combined.get(cell, 0.0), value)
     return combined
+
+
+def encode(field: dict[Position, float]) -> tuple[tuple[int, int, float], ...]:
+    """Return *field* as sorted ``(row, col, intensity)`` triples, for the wire.
+
+    **A field has to leave this process to be worth anything** (C-005): there is
+    no shared board, so each peer transmits what it emitted and the opponent
+    merges it. JSON has no tuple keys, so a `dict[Position, float]` cannot cross
+    as it stands.
+
+    Triples rather than a ``"r,c"``-keyed object because the receiver then parses
+    integers instead of splitting strings, and a malformed cell fails loudly at
+    the boundary rather than becoming a plausible wrong coordinate.
+
+    Sorted, because the field is hashed under C-008 and two peers must produce
+    identical bytes from identical data. `canonical_json` sorts *keys*, and this
+    is a list — so the ordering has to be settled here or not at all.
+    """
+    return tuple((row, column, field[(row, column)]) for row, column in sorted(field))
+
+
+def decode(rows: object) -> dict[Position, float]:
+    """Return the field encoded by :func:`encode`, or ``{}`` for nothing.
+
+    Raises:
+        ValueError: A row is not three values. Loud on purpose — a silently
+            dropped cell is a hole in the one channel that cannot lie, and it
+            would show up as a belief filter that mysteriously underperforms.
+
+    Absent and empty both decode to ``{}``, which the filter treats as *silence,
+    not absence* (Ch. 4): no reading is no evidence, and a peer whose trail has
+    genuinely decayed to nothing is not making a claim about where it is not.
+    """
+    if not rows:
+        return {}
+    field: dict[Position, float] = {}
+    for row in rows:  # type: ignore[union-attr]
+        if len(row) != 3:
+            raise ValueError(f"a scent cell needs [row, col, intensity], got {row!r}")
+        line, column, intensity = row
+        field[(int(line), int(column))] = float(intensity)
+    return field
 
 
 def sample(field: dict[Position, float], cell: Position) -> float:

@@ -209,17 +209,49 @@ def test_the_hint_channel_carries_no_position_field() -> None:
     `barrier_cell` is a coordinate and is allowed: a barrier is a public,
     audited board fact declared on the move channel, not a hint. The hint itself
     stays a bare `str`, with no structure to fill in.
+
+    **`scent` is coordinates too, and it is the one field the rulebook
+    requires.** Ch. 4 makes the pheromone trail the game's information channel,
+    and C-005 settles that with no shared board a peer learns the opponent's
+    field only because the opponent transmits it. So it is not a shortcut around
+    the inference problem, it *is* the inference problem: a 5x5 smear of
+    intensities that says roughly-here-recently and never *where*. Recovering a
+    position from it is what `core/domain/belief.py` exists to do, imperfectly,
+    which is precisely the grade M#26 protects.
+
+    The line M#26 actually draws is between a channel that states a position and
+    one that leaves it to be inferred. `scent` is on the right side of it; a
+    field named `position`, or a hint with structure to fill in, would not be.
     """
     from dataclasses import fields
 
     from core.protocol.schemas import Reveal
 
-    allowed = {"step", "role", "move", "hint", "intent", "barrier_cell"}
+    allowed = {"step", "role", "move", "hint", "intent", "barrier_cell", "scent"}
     present = {f.name for f in fields(Reveal)}
     assert present == allowed, f"Reveal changed shape: {present ^ allowed}"
 
     hint_field = next(f for f in fields(Reveal) if f.name == "hint")
     assert hint_field.type in ("str", str), "the hint must stay free text"
+
+
+def test_the_scent_field_states_no_position() -> None:
+    """**The distinction M#26 rests on, asserted rather than argued.**
+
+    A transmitted trail must remain ambiguous about where the sender actually
+    is. One deposit covers 25 cells and its peak is the only cell that is
+    special, so a receiver has to run a filter and can still be wrong — which is
+    the whole game. A field that named a single cell would be a position
+    protocol wearing a pheromone's name.
+    """
+    from core.domain.board import Board
+    from core.domain.scent import emit, encode
+
+    field = emit((3, 3), Board(grid_size=7))
+    assert len(encode(field)) == 25, "a deposit must cover a window, not a cell"
+    peak = max(field.values())
+    assert sum(1 for value in field.values() if value == peak) == 1
+    assert sum(1 for value in field.values() if value < peak) == 24
 
 
 def test_the_empty_instruction_does_not_name_the_directions_it_forbids() -> None:

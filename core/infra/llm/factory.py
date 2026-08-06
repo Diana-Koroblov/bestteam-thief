@@ -21,7 +21,7 @@ from core.infra.llm.remote import GroqProvider, OllamaProvider
 from core.infra.llm.template import TemplateProvider
 from core.infra.llm.writer import HintWriter
 
-__all__ = ["build_provider", "build_writer", "PROVIDERS"]
+__all__ = ["build_provider", "build_writer", "model_name", "PROVIDERS"]
 
 PROVIDERS = ("template", "ollama", "groq")
 
@@ -43,6 +43,22 @@ def build_provider(config) -> TextProvider:
         model = str(config.get("llm.groq_model", "llama-3.3-70b-versatile"))
         return GroqProvider(model, timeout, tokens)
     return TemplateProvider()
+
+
+def model_name(config) -> str:
+    """Return the model this machine will actually run (M#24, TODO 9.1.4).
+
+    Resolved through `build_provider`, so the **environment override is
+    honoured**. A Step-0 declaration that read `llm.ollama_model` directly would
+    name Ollama on a machine whose `.env` selected groq or template, and Appendix
+    F Table 21 makes the model — not the provider — the thing we declare. A
+    declaration naming a model we never called is a false one.
+
+    Template mode has no model, so it names itself: "template" is the honest
+    answer to "which model produced these hints" when none did.
+    """
+    provider = build_provider(config)
+    return str(getattr(provider, "model", "") or provider.name)
 
 
 def build_writer(config) -> HintWriter:

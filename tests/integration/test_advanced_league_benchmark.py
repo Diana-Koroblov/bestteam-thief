@@ -14,29 +14,41 @@ openings, 192 sub-games.**
 
 🐛 **Why this file exists at all.** `test_advanced_thief_selfplay.py` reported
 every 8.2 figure as *n*/48 while running `range(0, 7, 2)` — four values per axis,
-sixteen openings. The figures themselves were sound: re-measured here with both
-8.3 features disabled, the advanced Thief survives 40 of 48 in 30.42 mean steps
-against 41 walls, matching §8.2's record exactly. What was missing was that **no
-committed test performed the run those numbers came from**, so the eight
-sub-games between 40/48 and the tripwire's threshold were unguarded. The
-discrepancy was invisible because 16 and 48 both read as plausible sample sizes
-in prose, which is why the sizes are asserted here rather than described.
+sixteen openings. What was missing was that **no committed test performed the run
+those numbers came from**, so the eight sub-games between 40/48 and the
+tripwire's threshold were unguarded. The discrepancy was invisible because 16 and
+48 both read as plausible sample sizes in prose, which is why the sizes are
+asserted here rather than described.
+
+The sequel makes the point better than the original did. With this file in place,
+the 8.2 numbers reproduced *exactly* — which is precisely why they looked
+trustworthy, and they were not: the harness was reading a turn of scent the wire
+cannot deliver, so the run was faithfully reproducing a game neither peer can
+play (TODO 4.1.6). **A reproducible measurement is not necessarily a valid one.**
+Hence the assertions below are comparisons between arms, not fixed counts.
 
 Measured 06/08 at the **shipped configuration** — the real `config/*/game.toml`,
-loaded per role — with `survival_threshold = 35` and seed 20260812. Thief
+loaded per role — with `survival_threshold = 35` and seed 20260812, and with the
+transmitted scent field held back one turn as commit-reveal requires. Thief
 survivals, mean steps, and the Cop's walls spent::
 
                           baseline thief              advanced thief
-    baseline cop      0/48 · 14.67 steps ·  0w    46/48 · 34.42 steps ·  0w
-    advanced cop      0/48 ·  8.04 steps · 20w    34/48 · 27.21 steps · 34w
+    baseline cop     21/48 · 19.62 steps ·  0w    42/48 · 32.25 steps ·  0w
+    advanced cop      0/48 ·  8.96 steps · 27w    40/48 · 31.50 steps · 47w
 
 **Self-separation is 0 in all four cells**, which is the gate no other number
 matters until it passes.
 
-Against the 8.3 control — both features disabled, which reproduces §8.2's record
-to the decimal — the competitive cell moved from 40/48 to 34/48 in the Cop's
-favour: six sub-games, in the role that carries a 15-point spread against the
-Thief's 5.
+⚠️ **Every figure here moved on 06/08 and none of it was a strategy change.**
+The harness had been feeding both filters the opponent's *current-turn* scent
+deposit, which no peer can have: a field revealed at turn *k* is first readable
+at turn *k+1*, because turn *k*'s own move was sealed before it arrived. The
+brains are untouched; they are simply being measured on the game they will play.
+
+What that cost, and what it did not: the **baseline** Cop's capture rate fell
+from 48/48 to 27/48, so its old figure was largely borrowed from information it
+could not have had. The **advanced** Cop still captures 48/48. Both A4.2 gates
+therefore still clear, and the gap between the two Cops is wider than it was.
 """
 
 from __future__ import annotations
@@ -207,9 +219,23 @@ def test_the_competitive_cell_is_reported_and_not_gated(matrix: dict) -> None:
 
 def test_the_baselines_are_unchanged_and_still_a_floor(matrix: dict) -> None:
     """Every claim above is relative to them, and a floor edited to flatter the
-    thing measured against it is not a floor."""
-    assert survivals(matrix[("baseline", "baseline")]) == 0
-    assert survivals(matrix[("advanced", "baseline")]) == 0
+    thing measured against it is not a floor.
+
+    ⚠️ **This used to assert the baseline Thief survives nothing, and that was
+    an artefact.** It held only while the harness handed the Cop's filter the
+    Thief's current-turn scent deposit — evidence commit-reveal cannot deliver.
+    With the field held back one turn the baseline Thief survives a fair share
+    of openings against the baseline Cop, which is what a floor with headroom
+    should look like.
+
+    The floor property was never "the baseline loses every game" anyway. It is
+    that **each advanced brain beats its own baseline against a common
+    opponent**, which is what makes the A/B above a measurement rather than a
+    comparison of two unrelated numbers.
+    """
+    baseline = survivals(matrix[("baseline", "baseline")])
+    assert survivals(matrix[("baseline", "advanced")]) > baseline, "the thief improved"
+    assert survivals(matrix[("advanced", "baseline")]) < baseline, "the cop improved"
 
 
 def test_a_better_cop_is_still_a_harder_cop(matrix: dict) -> None:

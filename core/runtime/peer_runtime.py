@@ -1,14 +1,20 @@
 """What this peer does when a message arrives. Implements ``PeerHandler``.
 
-The turn loop itself lands in Phase 3, once there is a strategy to ask for a
-move. What exists here is the receiving half: the state machine that decides
-whether an incoming message is *allowed* right now.
+The receiving half: the state machine that decides whether an incoming message
+is *allowed* right now.
 
 That ordering check is the point. Under commit-reveal a peer that accepted a
 reveal before the matching commit would let an opponent see our move and then
 choose theirs — the single failure the whole protocol exists to prevent. So
 every handler validates its position in the sequence before doing anything, and
 refuses out of order with a message we can quote.
+
+**What this peer *knows* lives next door**, in `local_truth.py`: the scent it
+emits, the posterior it maintains, the observation a brain is handed and the
+reveal that carries a decision back out. Two jobs, and only one of them is about
+what an opponent is permitted to do to us. The methods below that touch belief,
+scent or hints are one-line delegations, kept here so callers still have one
+object to talk to.
 """
 
 from __future__ import annotations
@@ -29,7 +35,9 @@ from core.protocol.schemas import (
     Role,
 )
 from core.protocol.tools import ProtocolError
+from core.runtime.local_truth import LocalTruth
 from core.runtime.orchestrator import Orchestrator
+from core.runtime.prematch import PreMatch
 
 __all__ = ["PeerRuntime"]
 
@@ -42,58 +50,65 @@ class PeerRuntime:
         orchestrator: Owns the state; the only thing allowed to change it.
         agreed: True once the handshake matched. Nothing else is accepted first.
         commits: Opponent digest per step, kept until the final reveal proves it.
-        reveals: Opponent move per step, checked against the digest at the end.
         barriers: Every barrier the opponent declared, for the log (M#15).
+        truth: What we emit, believe and say. Built against the same
+            orchestrator, because two views of one game that could disagree are
+            worse than one view that is wrong.
+        prematch: What we declare about ourselves, and the agreement we reached.
     """
 
     orchestrator: Orchestrator
     brain: BrainBase | None = None
     agreed: bool = False
     commits: dict[int, str] = field(default_factory=dict)
-    reveals: dict[int, Reveal] = field(default_factory=dict)
     barriers: list[BarrierDeclaration] = field(default_factory=list)
     opponent_nonces: dict[str, str] = field(default_factory=dict)
+    truth: LocalTruth = None  # type: ignore[assignment]
+    prematch: PreMatch = None  # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
+        """Attach both halves to the same orchestrator we were given."""
+        if self.truth is None:
+            self.truth = LocalTruth(orchestrator=self.orchestrator)
+        if self.prematch is None:
+            self.prematch = PreMatch(orchestrator=self.orchestrator)
+
+    @property
+    def reveals(self) -> dict[int, Reveal]:
+        """Opponent move per step, with the scent field that came with it.
+
+        Owned by `LocalTruth`, because reading these is what that file is for
+        and recording them is one line here. Exposed as a property so callers
+        and the audit see one record rather than two that can disagree.
+        """
+        return self.truth.reveals
 
     def observe(self) -> Observation:
-        """Build what the brain is allowed to see.
-
-        Deliberately **excludes the opponent's position**. In a real match
-        nobody has it; handing it over here would produce a strategy that
-        works in self-play and collapses against a real peer. The brain gets a
-        belief distribution instead — uniform until Phase 4 supplies a real
-        posterior — so it is written against the information it will actually
-        have from the start.
-        """
-        state = self.orchestrator.state
-        quota = self.orchestrator.config.require("movement_and_barriers.max_barriers")
-        return Observation(
-            board=self.orchestrator.board,
-            own_position=self.orchestrator.own_position,
-            barriers=state.barriers,
-            step=state.step,
-            barriers_remaining=quota - state.barriers_placed,
-            belief=self.belief(),
-            hints=tuple(reveal.hint for reveal in self.reveals.values() if reveal.hint),
-        )
+        """Build what the brain is allowed to see. See `LocalTruth.observe`."""
+        return self.truth.observe()
 
     def belief(self) -> dict[Position, float]:
-        """Return a uniform posterior over every cell we could be wrong about.
+        """Return the posterior over where the opponent is (4.2.1)."""
+        return self.truth.belief()
 
-        A placeholder with a real shape: Phase 4 replaces the *contents* with a
-        Bayesian update from the scent field, and no brain has to change,
-        because the type it consumes is already the right one.
-        """
-        board = self.orchestrator.board
-        candidates = [
-            cell
-            for cell in board.cells()
-            if cell not in self.orchestrator.state.barriers
-            and cell != self.orchestrator.own_position
-        ]
-        if not candidates:
-            return {}
-        share = 1.0 / len(candidates)
-        return dict.fromkeys(candidates, share)
+    def latest_opponent_scent(self) -> dict[Position, float]:
+        """Return the newest field the opponent transmitted, or ``{}``."""
+        return self.truth.latest_opponent_scent()
+
+    def reveal_for(self, decision: Decision, step: int | None = None) -> Reveal:
+        """Turn this turn's decision into the reveal that carries it (4.5.1)."""
+        return self.truth.reveal_for(decision, self.own_role, step)
+
+    def scent_digest(self) -> str | None:
+        """Return the digest of the field we transmit, or None (C-008)."""
+        return self.truth.scent_digest()
+
+    def start_sub_game(self) -> None:
+        """Clear everything belonging to the sub-game just finished."""
+        self.truth.reset()
+        self.commits.clear()
+        self.barriers.clear()
+        self.opponent_nonces.clear()
 
     def decide(self) -> Decision:
         """Ask the brain for this turn's decision.
@@ -131,28 +146,29 @@ class PeerRuntime:
             raise ProtocolError(f"{what} claims role {role.value}, which is our own")
 
     def on_negotiate(self, message: Negotiation) -> Negotiation:
-        """Compare digests and answer with ours.
+        """Settle the handshake and answer with our own proposal (TODO 9.1).
 
-        A mismatch does **not** start a match that cannot be audited: the two
+        A refusal does **not** start a match that cannot be audited: the two
         peers would be enforcing different physics, and the end-of-game audit
         would report forgery against two honest teams (M#11).
+
+        **The reply is our proposal, never an echo of theirs.** This used to
+        return the opponent's `game_count`, `role_split` and `readings` back at
+        them, which made the exchange incapable of detecting the disagreements
+        it exists to detect: agreement was guaranteed because we simply repeated
+        whatever arrived. What we send now is what we independently believe, and
+        `prematch` sources every value from git, the league log and the config
+        rather than from the message being answered.
+
+        Warnings — the readings they never signed, a dirty tree on either side —
+        are recorded on `prematch.agreement` and do not block. See
+        `negotiation.settle` for why silence warns and contradiction refuses.
         """
-        ours = self.orchestrator.config.shared_digest()
-        self.agreed = message.config_digest == ours
+        locked = self.prematch.settle(message)
+        self.agreed = locked.agreed
         if not self.agreed:
-            raise ProtocolError(
-                f"config digest mismatch: opponent {message.config_digest[:16]}..., "
-                f"ours {ours[:16]}... - refusing the match rather than playing "
-                "two different rulebooks (M#11)"
-            )
-        return Negotiation(
-            step=0,
-            role=self.own_role,
-            config_digest=ours,
-            game_count=message.game_count,
-            role_split=message.role_split,
-            readings=message.readings,
-        )
+            raise ProtocolError(f"{locked.result} - " + "; ".join(locked.reasons))
+        return self.prematch.proposal()
 
     def on_commit(self, message: Commit) -> Ack:
         """Store the opponent's sealed move and confirm we are locked too."""

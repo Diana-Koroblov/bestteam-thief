@@ -4,27 +4,27 @@
 are measurements rather than arguments and both are made on the engine a graded
 match runs on.
 
-**Survival rate is the metric here, and it has signal.** The Cop's A/B had to fall
-back on time-to-capture because both Cops caught the baseline Thief every time;
-the reverse is not true. The baseline Thief survives **nothing** against either
-Cop, so anything above zero is a real gain and the number is not saturated.
+**Survival rate is the metric here, and it has signal.** The Cop's A/B had to
+fall back on time-to-capture because both Cops caught the baseline Thief every
+time; the reverse is not true. The **advanced** Cop still shuts the baseline
+Thief out completely, so anything above zero against it is a real gain.
 
 🐛 **This file used to claim 48 openings and run 16.** `range(0, 7, 2)` yields
 four values per axis, so `OPENINGS` has always held sixteen mirrored pairs, while
 the docstring — and `docs/TODO.md` §8.2 with it — reported every figure as *n*/48.
+The 48-opening run those numbers came from was real; what was missing is that
+**no committed test performed it**. Corrected in both directions: this module is
+honestly labelled the **16-opening tripwire**, and the 48-opening matrix that
+8.3.6 requires is run — not just cited — in `test_advanced_league_benchmark.py`,
+with its sample size asserted rather than described.
 
-**The 48-opening numbers were real.** Re-measured on 06/08 against the full
-mirrored set, the advanced Thief survives 40 of 48 against the advanced Cop in
-30.42 mean steps having faced 41 walls — the recorded figure to the decimal. What
-was wrong was never the measurement; it was that **the committed test did not
-perform it**, so a regression in the eight sub-games between 40/48 and the
-tripwire's threshold could have landed without a red test. The warning below made
-that worse by resting on it: it argues that sixteen openings are too narrow to
-adopt a tactic on, in a file whose own assertions came from sixteen.
-
-Corrected in both directions. This module is now honestly labelled the
-**16-opening tripwire**, and the 48-opening matrix that 8.3.6 requires is run —
-not just cited — in `test_advanced_league_benchmark.py`.
+🐛 **Every figure this file once recorded has since moved, and not because any
+brain changed.** The harness had been handing both belief filters the opponent's
+*current-turn* scent deposit, which commit-reveal cannot deliver: a field
+revealed at turn *k* is first readable at turn *k+1*. See TODO 4.1.6. The
+assertions here are written as **comparisons between arms** rather than as fixed
+counts, precisely so that a correction of this kind shows up as a changed number
+in one place instead of a suite full of red.
 
 ⚠️ **Sample size is not a formality, and that lesson survives the correction.**
 The false-anchor ablation came out 12/16 → 16/16 on the narrow sweep and lost
@@ -88,11 +88,19 @@ def results() -> dict:
     }
 
 
-def test_the_baseline_thief_survives_nothing(results: dict) -> None:
-    """The floor, and the reason survival rate is the honest metric: it starts
-    at zero, so it cannot saturate the way the Cop's win rate did."""
-    assert survivals(results[("baseline", "baseline")]) == 0
+def test_the_advanced_cop_shuts_the_baseline_thief_out(results: dict) -> None:
+    """The floor, and the reason survival rate is the honest metric here.
+
+    ⚠️ **This used to be `test_the_baseline_thief_survives_nothing` and asserted
+    zero against *both* Cops.** That held only while the harness gave the Cop's
+    filter a turn of scent the wire cannot deliver; with the field held back one
+    turn the baseline Cop no longer shuts the baseline Thief out. What survived
+    the correction is the stronger half: the **advanced** Cop still does.
+    """
     assert survivals(results[("baseline", "advanced")]) == 0
+    assert survivals(results[("baseline", "baseline")]) > 0, (
+        "a floor with no headroom cannot show an improvement"
+    )
 
 
 def test_it_beats_the_baseline_against_the_baseline_cop(results: dict) -> None:
