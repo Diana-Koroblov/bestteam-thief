@@ -90,6 +90,27 @@ class PeerSDK:
         return self._runtime
 
     @property
+    def shared_config(self) -> dict:
+        """Return the negotiated contract, verbatim — the file we send them.
+
+        The **shared** half only. Private settings are not part of the agreement
+        and including them would put our ngrok domain and provider choice in an
+        opponent's hands, which Appendix F Table 21 keeps private on purpose.
+        Copied, so a caller writing it out cannot edit the config we are hashing.
+        """
+        return dict(self._config.shared)
+
+    @property
+    def team_name(self) -> str:
+        """Return our team name as declared at Step-0."""
+        return str(self._config.get("identity.team_name", ""))
+
+    @property
+    def opponent(self):
+        """Return the attached peer, or None before `connect`."""
+        return self._orchestrator.opponent
+
+    @property
     def prematch(self) -> PreMatch:
         """Return what this peer declares before the first move (TODO 9.1).
 

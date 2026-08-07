@@ -25,6 +25,8 @@ __all__ = [
     "Parameter",
     "PARAMETERS",
     "dotted_get",
+    "legal",
+    "classify",
     "violations",
     "invariant_violations",
 ]
@@ -42,11 +44,18 @@ class Parameter:
         path: Dotted location in the shared config, e.g. ``scoring.tie_score``.
         status: ``fixed``, ``minimum`` or ``negotiable``.
         default: The published value. For ``minimum`` this is the floor.
+        ours: True for the six rows **we** added, which are in no Appendix at
+            all. It was a comment until an opponent's proposal needed reviewing
+            and the distinction turned out to decide fixtures: a peer sending a
+            plain Appendix F config is missing our extensions and is entirely
+            legal, so refusing them over a row we invented would forfeit a match
+            for nothing. See `classify`.
     """
 
     path: str
     status: str
     default: Any
+    ours: bool = False
 
 
 PARAMETERS: tuple[Parameter, ...] = (
@@ -77,13 +86,13 @@ PARAMETERS: tuple[Parameter, ...] = (
     Parameter("pheromones.pheromone_decay", FIXED, 0.10),
     Parameter("pheromones.pheromone_grid_size", FIXED, 5),
     # Our additions, all negotiable. See CONTRADICTIONS C-005, C-007, C-008.
-    Parameter("pheromones.decay_model", NEGOTIABLE, "multiplicative"),
-    Parameter("pheromones.field_includes_current_turn", NEGOTIABLE, True),
-    Parameter("pheromones.seal_scent_digest", NEGOTIABLE, True),
+    Parameter("pheromones.decay_model", NEGOTIABLE, "multiplicative", ours=True),
+    Parameter("pheromones.field_includes_current_turn", NEGOTIABLE, True, ours=True),
+    Parameter("pheromones.seal_scent_digest", NEGOTIABLE, True, ours=True),
     # --- capture resolution (C-006), all negotiable ------------------------
-    Parameter("capture.resolution", NEGOTIABLE, "after_moves"),
-    Parameter("capture.stay_counts_as_move", NEGOTIABLE, False),
-    Parameter("capture.swap_is_capture", NEGOTIABLE, True),
+    Parameter("capture.resolution", NEGOTIABLE, "after_moves", ours=True),
+    Parameter("capture.stay_counts_as_move", NEGOTIABLE, False, ours=True),
+    Parameter("capture.swap_is_capture", NEGOTIABLE, True, ours=True),
     # --- network and league ----------------------------------------------
     Parameter("network_and_league.response_timeout_sec", NEGOTIABLE, 30),
     Parameter("network_and_league.watchdog_timeout_sec", NEGOTIABLE, 60),
@@ -115,27 +124,70 @@ def dotted_get(data: dict, path: str, default: Any = _MISSING) -> Any:
     return node
 
 
+def classify(config: dict) -> tuple[list[str], list[str]]:
+    """Return *config*'s breaches split into ``(illegal, absent)``.
+
+    The split exists because the two call for opposite responses, and merging
+    them is only safe when the configuration is our own.
+
+    * **illegal** — a *fixed* value changed or a *minimum* lowered. Agreeing to
+      one disqualifies **both** teams, so "the opponent asked for it" is not a
+      defence (M#12). Never negotiable, by us or by them.
+    * **absent** — a key their proposal does not carry. Six of the rows above
+      are **our own** additions and appear in no Appendix, so a peer sending a
+      plain Appendix F config is missing them and is entirely legal; refusing
+      would forfeit a fixture over a rule the book does not state. Each line
+      therefore says which kind it is, and a human settles it before play.
+
+    For our own configuration the distinction does not arise — an absent key is
+    a value we cannot play with either way — which is why `violations` still
+    returns both together and `load_config` still refuses on either.
+    """
+    illegal: list[str] = []
+    absent: list[str] = []
+    for parameter in PARAMETERS:
+        value = dotted_get(config, parameter.path, None)
+        if value is None:
+            source = "our extension, in no Appendix" if parameter.ours else "Appendix F"
+            absent.append(f"{parameter.path}: missing ({source})")
+        elif legal(parameter, value):
+            continue
+        elif parameter.status == FIXED:
+            illegal.append(
+                f"{parameter.path}: {value!r} but this value is FIXED at {parameter.default!r}"
+            )
+        else:
+            illegal.append(
+                f"{parameter.path}: {value!r} is below the binding minimum "
+                f"{parameter.default!r} - raising is legal, lowering is not (M#12)"
+            )
+    return illegal, absent
+
+
+def legal(parameter: Parameter, value: Any) -> bool:
+    """Whether *value* is permitted for *parameter* by Appendix F's status column.
+
+    Separate from `classify` because two callers need the same answer and only
+    one of them wants a sentence. A reviewer listing an opponent's changes must
+    not present a lowered minimum as a judgement call *and* refuse it two lines
+    higher — a document that contradicts itself is worse than one that is merely
+    wrong, and this one exists to settle disputes.
+    """
+    if parameter.status == FIXED:
+        return value == parameter.default
+    if parameter.status == MINIMUM:
+        return value >= parameter.default
+    return True
+
+
 def violations(config: dict) -> list[str]:
     """Return a human-readable list of Appendix F breaches in *config*.
 
     An empty list means the configuration is legal to play. Missing keys are
     reported too: a value that is absent is a value neither peer agreed on.
     """
-    found: list[str] = []
-    for parameter in PARAMETERS:
-        value = dotted_get(config, parameter.path, None)
-        if value is None:
-            found.append(f"{parameter.path}: missing")
-        elif parameter.status == FIXED and value != parameter.default:
-            found.append(
-                f"{parameter.path}: {value!r} but this value is FIXED at {parameter.default!r}"
-            )
-        elif parameter.status == MINIMUM and value < parameter.default:
-            found.append(
-                f"{parameter.path}: {value!r} is below the binding minimum "
-                f"{parameter.default!r} — raising is legal, lowering is not (M#12)"
-            )
-    return found
+    illegal, absent = classify(config)
+    return illegal + absent
 
 
 def invariant_violations(config: dict) -> list[str]:

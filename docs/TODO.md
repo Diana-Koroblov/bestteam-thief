@@ -1084,11 +1084,48 @@ Every DoD above ends in *"both sides confirm"*, so none of them can be closed by
 do is make each one **executable and evidenced** instead of remembered, which is what landed:
 
 ```
-uv run python -m core negotiate --role cop                      # print our side + the clause
+uv run python -m core negotiate --role cop                        # our side + the clause
+uv run python -m core negotiate --role cop --pack outbox/         # what we send them
+uv run python -m core negotiate --role cop --review their.json    # what they sent us
 uv run python -m core negotiate --role cop --opponent <url> --out results/
+uv run python scripts/rehearse_handshake.py                       # warm-up, handshake only
 ```
 
-Exits non-zero on a refusal, so a match cannot be started from a script that ignored the verdict.
+Every one exits non-zero when the answer is no, so a match cannot be started from a script that
+ignored the verdict.
+
+- **`--pack`** writes the three files an opponent needs into one directory: `game.json` (the file
+  they load byte-identically — the config travels as *the file we hash*, never as a paraphrase),
+  `handshake.json` (exactly what our peer sends, so they can diff before connecting) and
+  `AGREEMENT.md` (the clauses, the digests, and the four things we need back). A test asserts the
+  digest of the file we send equals the figure printed beside it — if those ever diverge the
+  handshake refuses and the fixture is lost to a formatting decision nobody looked at.
+- **`--review`** reads a `game.json` **they** proposed and splits it into refuse / settle / legal
+  changes / unrecognised. `load_config(enforce_rules=False)` was written for exactly this and had
+  no caller but a test — the same wired-to-nothing shape as the verbal layer and 4.1.6. It runs
+  *before* our own proposal is built, so reviewing their file cannot fail because our league log
+  has a typo.
+- **`rehearse_handshake.py`** runs the whole protocol between two local peers over the real FastMCP
+  transport (M#52 permits warm-ups). It proves the exchange serialises, registers, decodes and
+  settles end to end — both bugs found this phase were of exactly that shape, invisible to unit
+  tests and fatal on the wire. It proves **nothing** about agreement: identical peers always agree,
+  which is why every refusal is unit-tested against hand-built messages instead. The artefact is
+  filed under a `bestteam-vs-bestteam` game id, because a rehearsal that could be mistaken for a
+  counted match would be worse than no rehearsal.
+- 🐛 **Our `PARAMETERS` table mixes Appendix F's rows with six we invented, and `violations()`
+  reported a missing key as illegal.** An opponent sending a plain Appendix F config carries none
+  of `decay_model`, `capture.*` or `seal_scent_digest` — and we would have refused them over rules
+  the book does not state. `Parameter.ours` makes the distinction machine-readable (it was a
+  comment) and `classify()` splits *illegal* from *absent*: the first refuses under M#12, the
+  second is settled with a human. Same "silence is not disagreement" mistake as the handshake, in a
+  second place.
+- ⚠️ **The first reviewer contradicted itself**, listing a lowered minimum as a legal judgement call
+  four lines below refusing it. One `config_spec.legal()` predicate now answers both callers. A
+  document that argues with itself in front of the opponent it is meant to convince is worse than
+  one that is simply wrong.
+- ⚠️ **`core.cli_negotiate` was caught by the M#3 layering test on the run that created it** — a new
+  module quietly acquiring gateway privileges is not something anyone spots in review, which is the
+  whole reason the architecture is written down rather than remembered.
 
 - **`core/protocol/negotiation.py`** — PRD_negotiation §4's interface, at last, in three functions
   rather than one and with the network taken out (**C-017**). `settle()` returns `AGREED` or one of
@@ -1137,11 +1174,17 @@ Exits non-zero on a refusal, so a match cannot be started from a script that ign
   holds the scent-model payload, the readings, the clause text and every unsettled warning beside
   the two digests. A hash proves agreement and says nothing about its content, and the file is read
   months later by someone who was not in the conversation.
-- ⚠️ **A dirty tree is currently reported by the handshake** — 9.1.4's DoD is *tree clean*, so the
-  4.1.6 work must be committed before any Step-0 declaration is honest.
-- Tests: `test_negotiation.py` (19), `test_prematch.py` (12), `test_readings.py` (11),
-  `test_league_log.py` (14), `test_cli_negotiate.py` (6, driving `python -m core negotiate` against
-  a live peer), plus two end-to-end handshakes in `test_localhost_roundtrip.py`. **62 in total.**
+- 🐛 **`scripts/step_zero_demo.py` had the same wrong-model defect** and is fixed alongside it.
+- Tests: `test_negotiation.py` (20), `test_prematch.py` (12), `test_readings.py` (11),
+  `test_league_log.py` (14), `test_config_review.py` (16), `test_cli_negotiate.py` (15, driving
+  `python -m core negotiate` and the rehearsal against a live peer), four added to
+  `test_config_spec.py`, plus two end-to-end handshakes in `test_localhost_roundtrip.py`.
+  **94 in total.**
+
+**What remains, and it is not code.** All eight boxes need a second party. The commands above
+produce everything a fixture needs; `LEAGUE_LOG.md`'s scheduling table is empty, and until a row
+in it is filled the honest declaration stays **0 counted matches** — which is itself below the
+M#31 minimum of 2, and the handshake says so every time it runs.
 
 ### 9.2 Matches
 - [ ] 9.2.1 [B] - Warm-up match (uncounted) | DoD: Protocol bugs shaken out before anything counts. (M#52)

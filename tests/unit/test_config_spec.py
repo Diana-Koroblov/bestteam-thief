@@ -162,3 +162,65 @@ def test_raising_both_limits_together_is_allowed(legal_config: dict) -> None:
     config["movement_and_barriers"]["survival_threshold"] = 45
     assert violations(config) == []
     assert invariant_violations(config) == []
+
+
+# --- the split that reviewing an opponent's proposal needed (TODO 9.1.1) -----
+
+
+def test_the_rows_we_invented_are_marked_as_ours() -> None:
+    """It was a comment until an opponent's proposal had to be reviewed, and the
+    distinction turned out to decide fixtures: a peer sending a plain Appendix F
+    config is missing all six and is entirely legal."""
+    from core.shared.config_spec import PARAMETERS
+
+    ours = {parameter.path for parameter in PARAMETERS if parameter.ours}
+    assert ours == {
+        "pheromones.decay_model",
+        "pheromones.field_includes_current_turn",
+        "pheromones.seal_scent_digest",
+        "capture.resolution",
+        "capture.stay_counts_as_move",
+        "capture.swap_is_capture",
+    }
+
+
+def test_an_absent_key_is_not_an_illegal_one() -> None:
+    """The two call for opposite responses. Refusing a peer for not carrying a
+    key we invented forfeits a fixture over a rule the book does not state; not
+    refusing a lowered minimum disqualifies **both** teams (M#12)."""
+    from core.shared.config_spec import classify
+    from tests.paths import shared_config
+
+    proposal = shared_config()
+    proposal["pheromones"].pop("decay_model")
+    proposal["movement_and_barriers"]["max_barriers"] = 10
+    illegal, absent = classify(proposal)
+    assert any("max_barriers" in item for item in illegal)
+    assert any("decay_model" in item for item in absent)
+    assert not any("decay_model" in item for item in illegal)
+
+
+def test_violations_still_reports_both_together() -> None:
+    """`load_config` refuses on either, and must keep doing so: for our *own*
+    configuration an absent key is a value we cannot play with either way."""
+    from core.shared.config_spec import classify, violations
+    from tests.paths import shared_config
+
+    proposal = shared_config()
+    proposal["pheromones"].pop("decay_model")
+    illegal, absent = classify(proposal)
+    assert violations(proposal) == illegal + absent
+    assert violations(proposal), "an absent key still makes our own config unplayable"
+
+
+def test_legality_is_decided_by_the_status_column() -> None:
+    """One predicate, two callers. `classify` wants a sentence and the reviewer
+    wants a boolean, and the first version of the reviewer disagreed with
+    `classify` about a lowered minimum — listing it as a legal judgement call
+    four lines below refusing it."""
+    from core.shared.config_spec import FIXED, MINIMUM, NEGOTIABLE, Parameter, legal
+
+    assert legal(Parameter("p", MINIMUM, 14), 20) and legal(Parameter("p", MINIMUM, 14), 14)
+    assert not legal(Parameter("p", MINIMUM, 14), 13)
+    assert legal(Parameter("p", FIXED, 20), 20) and not legal(Parameter("p", FIXED, 20), 21)
+    assert legal(Parameter("p", NEGOTIABLE, "New York"), "Tel Aviv")

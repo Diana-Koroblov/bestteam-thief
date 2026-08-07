@@ -156,3 +156,117 @@ def test_a_peer_we_never_heard_from_is_not_reported_as_declaring_zero(
     monkeypatch.setattr(PeerSDK, "__init__", patched)
     main(["negotiate", "--role", ROLE, "--opponent", "in-process"])
     assert "they declare" not in capsys.readouterr().out
+
+
+# --- what we send them (9.1.1-9.1.8) -----------------------------------------
+
+
+def test_the_pack_holds_everything_an_opponent_needs(tmp_path, capsys) -> None:
+    """One command instead of a terminal dump retyped into an email."""
+    assert main(["negotiate", "--role", ROLE, "--pack", str(tmp_path)]) == 0
+    assert {p.name for p in tmp_path.iterdir()} == {"game.json", "handshake.json", "AGREEMENT.md"}
+    agreement = (tmp_path / "AGREEMENT.md").read_text(encoding="utf-8")
+    assert "0.810" in agreement and "0.800" in agreement, "the number that identifies their lineage"
+    assert "end_of_previous_full_turn" in agreement
+    assert "row 0, column 1" in agreement, "C-010 confirmed by example, never by label"
+
+
+def test_the_config_we_send_hashes_to_the_digest_we_declare(tmp_path) -> None:
+    """**The one property the pack must have.** If their digest over the file we
+    sent differs from the figure beside it, the handshake refuses (M#11) and the
+    fixture is lost to a formatting decision nobody looked at.
+    """
+    from core.crypto.canonical import digest
+
+    main(["negotiate", "--role", ROLE, "--pack", str(tmp_path)])
+    sent = json.loads((tmp_path / "game.json").read_text(encoding="utf-8"))
+    declared = json.loads((tmp_path / "handshake.json").read_text(encoding="utf-8"))
+    assert digest(sent) == declared["config_digest"]
+
+
+def test_the_pack_carries_no_private_setting(tmp_path) -> None:
+    """Appendix F Table 21 keeps the provider private, and `[network]` holds our
+    ngrok domain. Only the negotiated half is theirs to see."""
+    main(["negotiate", "--role", ROLE, "--pack", str(tmp_path)])
+    body = (tmp_path / "game.json").read_text(encoding="utf-8")
+    for private in ("ngrok", "provider", "listen_port", "strategy", "tie_epsilon"):
+        assert private not in body, f"{private!r} is ours alone and must not travel"
+
+
+# --- what they send us (TN.6-TN.8) -------------------------------------------
+
+
+def test_reviewing_a_legal_proposal_exits_zero(tmp_path, capsys) -> None:
+    from tests.paths import shared_config
+
+    path = tmp_path / "their_game.json"
+    path.write_text(json.dumps(shared_config()), encoding="utf-8")
+    assert main(["negotiate", "--role", ROLE, "--review", str(path)]) == 0
+    assert "legal to sign" in capsys.readouterr().out
+
+
+def test_reviewing_an_illegal_proposal_exits_non_zero(tmp_path, capsys) -> None:
+    """M#12 disqualifies **both** teams, so the exit code has to carry it: a
+    script that reviewed a proposal and started the match anyway would be the
+    exact failure this check exists to prevent."""
+    from tests.paths import shared_config
+
+    proposal = shared_config()
+    proposal["movement_and_barriers"]["max_barriers"] = 10
+    path = tmp_path / "illegal.json"
+    path.write_text(json.dumps(proposal), encoding="utf-8")
+    assert main(["negotiate", "--role", ROLE, "--review", str(path)]) == 1
+    assert "M#12" in capsys.readouterr().out
+
+
+def test_a_review_does_not_need_our_own_declaration_to_work(tmp_path, monkeypatch) -> None:
+    """Reviewing *their* file must not fail because *our* league log has a typo.
+    The two are unrelated, and a reviewer that needed a healthy local state
+    would be unusable on precisely the day something local was broken.
+    """
+    from core.runtime import prematch as prematch_module
+    from tests.paths import shared_config
+
+    def refuse(self):
+        raise AssertionError("--review must not build our proposal")
+
+    monkeypatch.setattr(prematch_module.PreMatch, "proposal", refuse)
+    path = tmp_path / "their_game.json"
+    path.write_text(json.dumps(shared_config()), encoding="utf-8")
+    assert main(["negotiate", "--role", ROLE, "--review", str(path)]) == 0
+
+
+# --- the rehearsal (9.2.1's shape, handshake only) ---------------------------
+
+
+async def test_the_rehearsal_runs_the_protocol_over_the_real_transport(tmp_path, capsys) -> None:
+    """M#52 permits warm-ups; this is the cheapest useful one.
+
+    It proves the exchange serialises, registers, decodes and settles end to end
+    — 4.1.6 and the echoing `on_negotiate` were both bugs of exactly that shape,
+    invisible to unit tests and fatal on the wire. It proves **nothing** about
+    agreement: two identical peers always agree, which is why every refusal is
+    unit-tested against hand-built messages instead.
+    """
+    from scripts.rehearse_handshake import rehearse
+
+    assert await rehearse(tmp_path) == 0
+    printed = capsys.readouterr().out
+    assert "result: AGREED" in printed
+    assert "DID NOT ARRIVE" not in printed, "every 9.1 field must survive the wire"
+
+    filed = list(tmp_path.glob("rehearsal_*.json"))
+    assert len(filed) == 1
+    assert "bestteam-vs-bestteam" in filed[0].name, (
+        "a rehearsal that could be mistaken for a counted match is worse than none"
+    )
+    assert json.loads(filed[0].read_text(encoding="utf-8"))["result"] == "AGREED"
+
+
+async def test_the_rehearsal_can_run_without_writing_anything(capsys) -> None:
+    """`--no-file` exists so the check can be run on a machine mid-match without
+    dropping an artefact into results/ that a later reader has to interpret."""
+    from scripts.rehearse_handshake import rehearse
+
+    assert await rehearse(None) == 0
+    assert "filed:" not in capsys.readouterr().out

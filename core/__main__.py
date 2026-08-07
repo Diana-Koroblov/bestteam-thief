@@ -71,6 +71,18 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="How the sub-games divide. Stated, never assumed - it is in no Appendix (N17).",
     )
     settle.add_argument(
+        "--pack",
+        type=Path,
+        help="Write everything an opponent needs into this directory: the config "
+        "to load byte-identically, the handshake we send, and the clauses to agree.",
+    )
+    settle.add_argument(
+        "--review",
+        type=Path,
+        help="Review a game.json THEY proposed against Appendix F and ours. Exits "
+        "non-zero on a breach: agreeing to one disqualifies BOTH teams (M#12).",
+    )
+    settle.add_argument(
         "--out",
         type=Path,
         help="Directory for agreement_<game_id>.json. Omit to settle without filing.",
@@ -121,7 +133,9 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(str(error)) from error
 
     if args.command == "negotiate":
-        return cli_commands.negotiate(sdk, args)
+        from core import cli_negotiate
+
+        return cli_negotiate.negotiate(sdk, args)
 
     view = sdk.board_view()
     print(f"role            : {sdk.role.value}")

@@ -16,6 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from core.infra.llm.factory import model_name  # noqa: E402
 from core.protocol.step_zero import build  # noqa: E402
 from core.shared.config_manager import load_config  # noqa: E402
 
@@ -30,7 +31,10 @@ def main() -> int:
         team_name=str(config.get("identity.team_name", "bestteam")),
         role="cop" if role == "police" else "thief",
         sub_game=1,
-        llm_model=str(config.get("llm.ollama_model", "unknown")),
+        # Not `llm.ollama_model`, which this script used to read directly: on a
+        # machine whose .env selects template or groq that declares a model we
+        # never call, and Appendix F Table 21 makes the model the declared thing.
+        llm_model=model_name(config),
         repo=ROOT,
     )
 

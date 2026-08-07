@@ -33,9 +33,20 @@ FOUNDATIONS = ("core.domain", "core.shared", "core.crypto")
 
 # The gateway. Only these may join subsystems together.
 # `core.cli_commands` is `__main__`'s body, moved out when that file reached 149
-# of its 150 permitted lines. It is the same gateway with the same permission —
-# listing it here is recording where the CLI now lives, not widening the rule.
-GATEWAY = ("core.runtime", "core.sdk", "core.__main__", "core.cli_commands")
+# of its 150 permitted lines, and `core.cli_negotiate` is the pre-match protocol
+# moved out of *that* one at 110. All three are one gateway with one permission —
+# listing them here records where the CLI now lives, it does not widen the rule.
+#
+# This test is what noticed the third file, on the run that added it. That is the
+# point of writing the layering down rather than remembering it: a new module
+# quietly acquiring gateway privileges is not something anyone spots in review.
+GATEWAY = (
+    "core.runtime",
+    "core.sdk",
+    "core.__main__",
+    "core.cli_commands",
+    "core.cli_negotiate",
+)
 
 
 # The shipped packages. Tests and scripts legitimately reach across subsystems —
