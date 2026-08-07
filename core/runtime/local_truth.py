@@ -156,6 +156,25 @@ class LocalTruth:
             return None
         return digest(encode(self.filter.trail))
 
+    def sealed_barrier(self, decision: Decision) -> Position | None:
+        """Return the cell to seal into this turn's commitment, or None (C-018).
+
+        Two conditions, both of which have to hold, and neither of which a
+        caller should be trusted to remember: a barrier was actually placed, and
+        the opponent agreed to the payload shape that carries it. Sealing
+        unilaterally is worse than not sealing — every digest we sent would fail
+        their audit and an honest peer would look like a forger.
+
+        The declaration is unaffected either way. `reveal_for` announces the
+        cell on every placement, agreement or not, because M#15 is a duty owed
+        to the opponent and not a term of the negotiation.
+        """
+        if decision.barrier is None:
+            return None
+        if not self.orchestrator.config.get("movement_and_barriers.seal_barrier_cell", False):
+            return None
+        return decision.barrier
+
     def reveal_for(self, decision: Decision, role: Role, step: int | None = None) -> Reveal:
         """Turn a brain's decision into the message that carries it (4.5.1).
 

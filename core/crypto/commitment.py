@@ -41,7 +41,12 @@ def new_nonce() -> str:
 
 
 def commitment_payload(
-    state: Any, move: str, intent: str, nonce: str, scent_digest: str | None = None
+    state: Any,
+    move: str,
+    intent: str,
+    nonce: str,
+    scent_digest: str | None = None,
+    barrier_cell: Any = None,
 ) -> dict[str, Any]:
     """Return the exact structure both peers hash.
 
@@ -51,21 +56,33 @@ def commitment_payload(
 
     Args:
         scent_digest: Hash of the field we emitted this turn (C-008), or None.
+        barrier_cell: The cell this turn walls (C-018, M#15/M#16), or None. A
+            placement moves as ``STAY``, so without this the *only* thing
+            distinguishing "the cop stood still" from "the cop walled (2,3)" is
+            an unsealed declaration — which is precisely the after-the-fact
+            revision commit-reveal exists to prevent.
 
-    **When *scent_digest* is None the key is omitted entirely, not set to null,
-    and this is a correctness requirement rather than tidiness.** The opponent
-    recomputes our digests during the end-of-match audit using *their* payload
-    builder. If we added a ``"scent_digest": null`` key that they do not, every
-    digest we ever sent would fail their verification and we would look like
-    forgers — the sanction for which is a total technical loss.
+    **When either optional field is None the key is omitted entirely, not set to
+    null, and this is a correctness requirement rather than tidiness.** The
+    opponent recomputes our digests during the end-of-match audit using *their*
+    payload builder. If we added a ``"scent_digest": null`` key that they do not,
+    every digest we ever sent would fail their verification and we would look
+    like forgers — the sanction for which is a total technical loss.
 
-    So the sealed field is opt-in and only ever included once both peers have
-    agreed to it at negotiation (N13c). Sealing unilaterally would be worse than
-    not sealing at all.
+    So both sealed fields are opt-in and only ever included once both peers have
+    agreed to them at negotiation (N13c, N20). Sealing unilaterally would be
+    worse than not sealing at all.
+
+    *barrier_cell* is normalised to a list because JSON has no tuple: a peer that
+    read our log back would hash ``[2, 3]`` where we hashed ``(2, 3)``. Canonical
+    serialisation renders both identically today, and relying on that would make
+    every digest in the match depend on an implementation detail of `json`.
     """
     payload: dict[str, Any] = {"state": state, "move": move, "intent": intent, "nonce": nonce}
     if scent_digest is not None:
         payload["scent_digest"] = scent_digest
+    if barrier_cell is not None:
+        payload["barrier_cell"] = list(barrier_cell)
     return payload
 
 
@@ -92,6 +109,7 @@ def seal(
     intent: str,
     nonce: str | None = None,
     scent_digest: str | None = None,
+    barrier_cell: Any = None,
 ) -> Sealed:
     """Commit to *move* against *state*, generating a nonce unless one is given.
 
@@ -106,13 +124,16 @@ def seal(
             it **outside** the hash, so a peer can fabricate a field and pass
             the audit. Passing it here closes that hole — but only when the
             opponent has agreed to the same payload shape.
+        barrier_cell: C-018. The cell walled this turn, when one was, and only
+            when the opponent agreed to seal it. `LocalTruth.sealed_barrier`
+            applies both conditions; callers should not decide it themselves.
 
     Returns:
         A ``Sealed`` holding the digest to send and the secrets to keep.
     """
     nonce = nonce or new_nonce()
     return Sealed(
-        digest=digest(commitment_payload(state, move, intent, nonce, scent_digest)),
+        digest=digest(commitment_payload(state, move, intent, nonce, scent_digest, barrier_cell)),
         nonce=nonce,
         move=move,
         intent=intent,
@@ -126,6 +147,7 @@ def verify(
     intent: str,
     nonce: str,
     scent_digest: str | None = None,
+    barrier_cell: Any = None,
 ) -> bool:
     """Return True when the revealed values actually produce *claimed*.
 
@@ -141,5 +163,7 @@ def verify(
     and reaching for ``==`` on a hash is the habit that eventually gets used
     somewhere it does matter.
     """
-    computed = digest(commitment_payload(state, move, intent, nonce, scent_digest))
+    computed = digest(
+        commitment_payload(state, move, intent, nonce, scent_digest, barrier_cell)
+    )
     return secrets.compare_digest(computed, claimed)

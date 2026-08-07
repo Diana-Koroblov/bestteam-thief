@@ -103,6 +103,10 @@ class PeerRuntime:
         """Return the digest of the field we transmit, or None (C-008)."""
         return self.truth.scent_digest()
 
+    def sealed_barrier(self, decision: Decision) -> Position | None:
+        """Return the barrier cell to seal into this commitment, or None (C-018)."""
+        return self.truth.sealed_barrier(decision)
+
     def start_sub_game(self) -> None:
         """Clear everything belonging to the sub-game just finished."""
         self.truth.reset()

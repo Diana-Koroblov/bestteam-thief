@@ -37,6 +37,7 @@ READINGS: tuple[tuple[str, str], ...] = (
     ("pheromones.decay_model", "N13b / C-007"),
     ("pheromones.field_includes_current_turn", "N13 / C-005"),
     ("pheromones.seal_scent_digest", "N13c / C-008"),
+    ("movement_and_barriers.seal_barrier_cell", "N20 / C-018"),
     ("board_and_agents.axis_origin_corner", "N18 / C-010"),
     ("board_and_agents.axis_start_index", "N18 / C-010"),
 )
@@ -116,6 +117,11 @@ def clause(config) -> str:
     swap = "counts as a capture" if read["capture.swap_is_capture"] == "true" else "does not capture"
     sealed = "seals" if read["pheromones.seal_scent_digest"] == "true" else "does not seal"
     includes = "including" if read["pheromones.field_includes_current_turn"] == "true" else "excluding"
+    walls = (
+        "inside that step's commitment, as an optional `barrier_cell` key carrying [row, col]"
+        if read["movement_and_barriers.seal_barrier_cell"] == "true"
+        else "outside the commitment, as an open declaration only"
+    )
     return "\n".join(
         (
             "Capture resolution. Actions resolve simultaneously; positions are evaluated "
@@ -130,6 +136,10 @@ def clause(config) -> str:
             "end_of_previous_full_turn), because turn k's own move was committed before that "
             f"reveal could arrive. Each peer {sealed} a digest of its emitted field inside that "
             "step's commitment.",
+            "Barriers. A placement costs the turn's move, which travels as STAY, and the exact "
+            f"cell is declared openly in the same turn's reveal. The cell is also sealed {walls}. "
+            "The key is present only on turns that place one, so a turn without a barrier hashes "
+            "exactly as it would without this clause.",
             f"Coordinates. A position is (row, col), origin {read['board_and_agents.axis_origin_corner']}, "
             f"indexed from {read['board_and_agents.axis_start_index']}. Worked example: we read [0,1] "
             "as row 0, column 1 - one cell East of the cop's start.",

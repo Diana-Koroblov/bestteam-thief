@@ -34,7 +34,7 @@ defects. C-006a is a clarification the rulebook itself supplies. Three entries �
 
 | Category | Entries | What to do about them |
 |---|---|---|
-| **A. Genuine gaps** — the rulebook does not define the behaviour anywhere | C-005, C-006b, C-006c, C-010, C-011, C-013 | **Must be settled in the pre-match agreement.** Every one appears in `PRD_negotiation.md`. |
+| **A. Genuine gaps** — the rulebook does not define the behaviour anywhere | C-005, C-006b, C-006c, C-010, C-011, C-013, C-018 | **Must be settled in the pre-match agreement.** Every one appears in `PRD_negotiation.md`. |
 | **B. Resolved by the rulebook** — looked ambiguous, settled on a closer reading | C-006a | Implemented as read. Flag kept only because an opponent may arrive with the other reading. |
 | **C. Reference-implementation defects** — the book is unambiguous, the reference diverges | C-001, C-007, C-009, C-008 | **Watch items.** Most opponents will build on the reference and inherit these. Detect at the handshake. |
 | **D. Gaps outside the game rules** — engineering and process | C-002, C-004, C-014, C-015 | Our own decisions, recorded for the reviewer. |
@@ -109,6 +109,17 @@ log audit will blame both teams.
 | **Our choice** | The tie bonus is paid only when **at least one** sub-game produced a real result. An all-technical-loss series, and an empty series, return 0-0. |
 | **Why** | It is the reading that cannot be gamed, and the one the Ch. 3.5 rationale plainly intends. Where a literal reading and a stated purpose disagree, implement the purpose. |
 | **Effect** | `core/domain/scoring.aggregate()` filters technical losses before deciding the tie; three tests pin it. **Needs a negotiation item — see N19.** |
+
+## C-018 — A barrier placement is declared but not sealed
+
+| | |
+|---|---|
+| **Where** | Ch. 3.4 and M#15/M#16 (open, truthful declaration of every placement) vs. Ch. 5.3.1 (`H = SHA256(State ‖ Move ‖ Intent ‖ Nonce)`) |
+| **The gap** | Placing costs the cop its move, so a placement travels as `STAY`. The four sealed fields therefore cannot tell "the cop stood still" apart from "the cop walled (2,3)" — the cell exists only in the declaration, which is not inside any hash. Two duties are stated and never joined: the book requires the placement to be declared truthfully, and requires moves to be unforgeable, but the declaration is the one part of a turn no commitment covers. |
+| **Why it matters** | It is the single move in the game a peer can still revise after seeing the opponent's reveal. A cop could commit `STAY`, watch the thief's move arrive, and only then declare which of up to five adjacent cells it walled — recovering exactly the after-the-fact advantage commit-reveal exists to remove, while every step in its log still audits clean. It is also the *asymmetric* hole: the thief has no equivalent, so leaving it open favours whichever side plays cop. |
+| **Our choice** | Seal the cell as an optional `barrier_cell` key inside the step payload, present **only** on turns that place one. Proposed at negotiation, never assumed. |
+| **Why** | Presence-not-value mirrors `scent_digest` (C-008), and that is what keeps an opponent who declines auditable by the same code: an ordinary turn hashes byte-identically whether or not either peer implements this, so the extension can only ever affect turns that actually wall a cell. Sealing unilaterally would be worse than not sealing — the opponent recomputes our digests with their own payload builder, and one key they do not add fails every barrier turn we ever sent, making an honest peer look like a forger. |
+| **Effect** | `movement_and_barriers.seal_barrier_cell = true`. `commitment_payload` takes the cell; `LocalTruth.sealed_barrier` is the only thing that decides whether it is passed, applying both conditions (a barrier was placed *and* it was agreed). The log carries `barrier_cell` for the reader always and `sealed_barrier_cell` only when it was hashed, so a peer that declares without sealing still passes its own audit. Negotiation item **N20**; closes TODO 1.3.2.b. |
 
 ---
 

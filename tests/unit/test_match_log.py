@@ -48,6 +48,74 @@ def sealed_steps(count: int = 4, scent: bool = False):
     return steps, nonces
 
 
+def test_a_sealed_barrier_survives_the_round_trip(tmp_path: Path) -> None:
+    """**C-018.** A walled turn must re-hash off disk, where the cell is a list.
+
+    The barrier is the one field that is both declared for the reader and folded
+    into the digest, so it is the one most able to pass in memory and fail on
+    disk.
+    """
+    state = {"cop": [1, 1], "thief": [3, 3], "step": 0}
+    locked = seal(state, "STAY", "truth", barrier_cell=(1, 2))
+    step = build_step(
+        step=0,
+        claimed_digest=locked.digest,
+        state=state,
+        move="STAY",
+        intent="truth",
+        barrier_cell=(1, 2),
+        sealed_barrier=True,
+    )
+    payload = build_log("gid", 1, ROLE, [step], {"0": locked.nonce})
+    target = write(payload, tmp_path, "log.json")
+
+    reloaded = json.loads(target.read_text(encoding="utf-8"))
+    assert reloaded["steps"][0]["barrier_cell"] == [1, 2]
+    assert verify_log(reloaded).passed
+
+
+def test_a_declared_but_unsealed_barrier_still_audits_clean() -> None:
+    """The case that would accuse an honest peer of forgery.
+
+    A peer that declares placements without sealing them — legal, and what an
+    opponent running the plain book does — must not fail its own audit. So the
+    re-hash reads `sealed_barrier_cell`, which such a log does not have, and
+    never the declaration.
+    """
+    state = {"cop": [1, 1], "thief": [3, 3], "step": 0}
+    locked = seal(state, "STAY", "truth")
+    step = build_step(
+        step=0,
+        claimed_digest=locked.digest,
+        state=state,
+        move="STAY",
+        intent="truth",
+        barrier_cell=(1, 2),
+        sealed_barrier=False,
+    )
+    assert "sealed_barrier_cell" not in step
+    payload = build_log("gid", 1, ROLE, [step], {"0": locked.nonce})
+    assert verify_log(payload).passed
+
+
+def test_a_forged_barrier_cell_is_caught() -> None:
+    """Changing which cell was walled, after the fact, is what C-018 stops."""
+    state = {"cop": [1, 1], "thief": [3, 3], "step": 0}
+    locked = seal(state, "STAY", "truth", barrier_cell=(1, 2))
+    step = build_step(
+        step=0,
+        claimed_digest=locked.digest,
+        state=state,
+        move="STAY",
+        intent="truth",
+        barrier_cell=(1, 2),
+        sealed_barrier=True,
+    )
+    step["sealed_barrier_cell"] = [2, 2]
+    payload = build_log("gid", 1, ROLE, [step], {"0": locked.nonce})
+    assert not verify_log(payload).passed
+
+
 def test_a_clean_log_verifies_off_disk(tmp_path: Path) -> None:
     """**T7.11.** The whole claim, end to end: seal, write, read, re-hash.
 

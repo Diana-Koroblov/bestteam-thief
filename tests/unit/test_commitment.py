@@ -85,6 +85,46 @@ def test_the_payload_shape_is_defined_in_exactly_one_place() -> None:
     }
 
 
+def test_a_walled_cell_cannot_be_changed_after_the_fact() -> None:
+    """**C-018, M#15/M#16.** The reason this field exists at all.
+
+    A placement costs the cop its move, so it travels as ``STAY``. Without the
+    cell inside the hash, ``STAY`` and "walled (2,3)" seal identically and a cop
+    could pick which wall it built after seeing where the thief went.
+    """
+    sealed = seal(STATE, "STAY", "truth", barrier_cell=(2, 3))
+    assert verify(sealed.digest, STATE, "STAY", "truth", sealed.nonce, barrier_cell=(2, 3))
+    assert not verify(sealed.digest, STATE, "STAY", "truth", sealed.nonce, barrier_cell=(2, 4))
+
+
+def test_a_walled_turn_and_a_still_turn_seal_differently() -> None:
+    """Otherwise a declared placement could simply be denied afterwards."""
+    still = seal(STATE, "STAY", "truth", nonce="0" * 32)
+    walled = seal(STATE, "STAY", "truth", nonce="0" * 32, barrier_cell=(2, 3))
+    assert still.digest != walled.digest
+
+
+def test_a_turn_without_a_barrier_hashes_exactly_as_before() -> None:
+    """The key is omitted, not nulled — an opponent who never walls is unaffected.
+
+    This is what lets a peer that implements C-018 audit one that does not: the
+    payload for an ordinary turn is byte-identical either way.
+    """
+    assert "barrier_cell" not in commitment_payload(STATE, "N", "truth", "abc")
+    assert "barrier_cell" not in commitment_payload(STATE, "N", "truth", "abc", barrier_cell=None)
+
+
+def test_a_tuple_and_a_list_cell_seal_identically() -> None:
+    """A log read back from JSON returns lists; we seal from tuples.
+
+    Canonical JSON already renders the two alike, and this pins it, because a
+    silent divergence here would fail every barrier turn in the audit.
+    """
+    from_tuple = seal(STATE, "STAY", "truth", nonce="0" * 32, barrier_cell=(2, 3))
+    from_list = seal(STATE, "STAY", "truth", nonce="0" * 32, barrier_cell=[2, 3])
+    assert from_tuple.digest == from_list.digest
+
+
 def test_sealed_carries_the_secrets_the_peer_must_withhold() -> None:
     """Move and intent are released at reveal; the nonce only at final reveal."""
     sealed = seal(STATE, "W", "lie")

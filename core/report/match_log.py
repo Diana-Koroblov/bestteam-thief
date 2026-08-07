@@ -47,6 +47,7 @@ def build_step(
     hint: str = "",
     barrier_cell: tuple[int, int] | None = None,
     scent_digest: str | None = None,
+    sealed_barrier: bool = False,
 ) -> dict[str, Any]:
     """Record one turn, without its nonce.
 
@@ -57,13 +58,26 @@ def build_step(
             copy would hash differently and fail every step.
         intent: ``truth`` or ``lie``, the flag the commit covers.
         barrier_cell: The exact cell, when this turn placed one (M#15, M#16).
+            **Always recorded**, sealed or not: the open declaration is a duty
+            in its own right and does not depend on what the peers agreed to
+            hash.
         scent_digest: Only when both peers agreed to seal the field (C-008).
+        sealed_barrier: Whether *barrier_cell* went inside this step's
+            commitment (C-018).
 
     **When *scent_digest* is None the key is omitted, not set to null.** This
     mirrors `commitment_payload` exactly, and for the same reason: the replay
     rebuilds the hashed payload from this file, so a key that the sealing peer
     left out must be left out here too. A `null` that survived into the payload
     would change every digest in the log and make an honest match look forged.
+
+    **`sealed_barrier_cell` is a second key rather than a flag on the first, and
+    the duplication is the point.** `barrier_cell` is the declaration a reader
+    wants; `sealed_barrier_cell` is what the re-hash must feed back in. Deriving
+    the hashed value from the declared one would mean a peer who declared
+    barriers but did not seal them — entirely legal, and what an opponent
+    running the plain book does — fails its own audit and looks like a forger.
+    Presence, not value, is the signal, exactly as with `scent_digest`.
     """
     record: dict[str, Any] = {
         "step": step,
@@ -76,6 +90,8 @@ def build_step(
     }
     if scent_digest is not None:
         record["scent_digest"] = scent_digest
+    if sealed_barrier and barrier_cell is not None:
+        record["sealed_barrier_cell"] = list(barrier_cell)
     return record
 
 
@@ -129,10 +145,14 @@ def records(payload: dict[str, Any]) -> list[StepRecord]:
     """Turn a loaded log back into what the audit consumes.
 
     The inverse of :func:`build_log`, and the reason the DoD can be demonstrated
-    rather than asserted. Unknown keys — `hint`, `barrier_cell`, anything a
-    later phase adds — are dropped rather than passed on: they are for the
-    reader, they were never inside the hash, and forwarding one would change
-    every digest.
+    rather than asserted. Reader-only keys — `hint`, `barrier_cell`, anything a
+    later phase adds — are dropped rather than passed on: they were never inside
+    the hash, and forwarding one would change every digest.
+
+    The two optional sealed fields are read with `.get`, never indexed. An
+    opponent's log is written by their code: one that sealed neither has neither
+    key, and demanding ours would turn a legal implementation into a `KeyError`
+    in the middle of an audit.
 
     Raises:
         KeyError: A step is missing a field the re-hash needs. Loud on purpose.
@@ -143,6 +163,7 @@ def records(payload: dict[str, Any]) -> list[StepRecord]:
         StepRecord(
             **{name: step[name] for name in STEP_FIELDS},
             scent_digest=step.get("scent_digest"),
+            barrier_cell=step.get("sealed_barrier_cell"),
         )
         for step in payload.get("steps", [])
     ]

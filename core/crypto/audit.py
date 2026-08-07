@@ -41,6 +41,11 @@ class StepRecord:
         intent: ``truth`` or ``lie`` — the flag covering the hint.
         nonce: Released only at the final reveal (M#18).
         scent_digest: Present only when both peers agreed to seal it (C-008).
+        barrier_cell: The cell walled on this turn, when both peers agreed to
+            seal it (C-018). ``None`` covers both "no barrier this turn" and
+            "sealing was not agreed", and neither puts a key in the payload —
+            which is what makes an opponent who never implemented it auditable
+            by exactly this code.
     """
 
     step: int
@@ -50,6 +55,7 @@ class StepRecord:
     intent: str
     nonce: str
     scent_digest: str | None = None
+    barrier_cell: Any = None
 
 
 @dataclass
@@ -138,6 +144,7 @@ def audit_log(records: list[StepRecord]) -> AuditResult:
             record.intent,
             record.nonce,
             record.scent_digest,
+            record.barrier_cell,
         ):
             result.failures.append(
                 (record.step, "digest does not match the revealed move, intent and nonce")

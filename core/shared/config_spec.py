@@ -44,7 +44,7 @@ class Parameter:
         path: Dotted location in the shared config, e.g. ``scoring.tie_score``.
         status: ``fixed``, ``minimum`` or ``negotiable``.
         default: The published value. For ``minimum`` this is the floor.
-        ours: True for the six rows **we** added, which are in no Appendix at
+        ours: True for the seven rows **we** added, which are in no Appendix at
             all. It was a comment until an opponent's proposal needed reviewing
             and the distinction turned out to decide fixtures: a peer sending a
             plain Appendix F config is missing our extensions and is entirely
@@ -74,6 +74,8 @@ PARAMETERS: tuple[Parameter, ...] = (
     Parameter("movement_and_barriers.max_barriers", MINIMUM, 14),
     Parameter("movement_and_barriers.max_moves", MINIMUM, 35),
     Parameter("movement_and_barriers.survival_threshold", MINIMUM, 35),
+    # Our addition. See CONTRADICTIONS C-018.
+    Parameter("movement_and_barriers.seal_barrier_cell", NEGOTIABLE, True, ours=True),
     # --- scoring ----------------------------------------------------------
     Parameter("scoring.capture_cop", FIXED, 20),
     Parameter("scoring.capture_thief", FIXED, 5),
@@ -133,7 +135,7 @@ def classify(config: dict) -> tuple[list[str], list[str]]:
     * **illegal** — a *fixed* value changed or a *minimum* lowered. Agreeing to
       one disqualifies **both** teams, so "the opponent asked for it" is not a
       defence (M#12). Never negotiable, by us or by them.
-    * **absent** — a key their proposal does not carry. Six of the rows above
+    * **absent** — a key their proposal does not carry. Seven of the rows above
       are **our own** additions and appear in no Appendix, so a peer sending a
       plain Appendix F config is missing them and is entirely legal; refusing
       would forfeit a fixture over a rule the book does not state. Each line

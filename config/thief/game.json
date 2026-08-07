@@ -16,7 +16,8 @@
     "move_set": ["N", "S", "E", "W", "STAY"],
     "max_barriers": 14,
     "max_moves": 35,
-    "survival_threshold": 35
+    "survival_threshold": 35,
+    "seal_barrier_cell": true
   },
   "scoring": {
     "capture_cop": 20,
