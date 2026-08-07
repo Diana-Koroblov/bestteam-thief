@@ -38,14 +38,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from core.domain.barriers import BarrierManager, PlacementOutcome
+from core.domain.barriers import BarrierManager
 from core.domain.board import Board, Position
 from core.domain.brain_base import BrainBase, Decision, Observation
-from core.domain.connectivity import are_connected, exit_count
+from core.domain.connectivity import are_connected
 from core.domain.filter import BeliefFilter
 from core.domain.game_state import GameState
-from core.domain.movement import resolve_move
 from core.domain.rules import Outcome, Rules, Verdict
+from core.domain.turn import resolve_turn
 from core.infra.llm.writer import HintWriter, compass_word
 
 __all__ = ["SubGameResult", "play_sub_game"]
@@ -129,19 +129,6 @@ def _said(decision: Decision, step: int) -> str:
     return _WRITER.write(compass_word(decision.claim), decision.intent, step).text
 
 
-def _apply(decision: Decision, position: Position, state: GameState, board: Board) -> Position:
-    """Return where an agent ends up, holding position on an illegal move.
-
-    A brain that proposes an illegal move would forfeit in a real match. Here
-    it holds instead, so one bad decision does not abort a hundred-game batch —
-    and the reason string still records what it tried.
-    """
-    try:
-        return resolve_move(position, decision.move, state.barriers, board)
-    except ValueError:
-        return position
-
-
 def play_sub_game(
     cop: BrainBase,
     thief: BrainBase,
@@ -219,61 +206,18 @@ def play_sub_game(
             "thief": heard["thief"] + (_said(cop_move, state.step),),
         }
 
-        before = state
-        # The Thief's destination is resolved **first**, against the barriers as
-        # they stood when both sides committed, and then handed to the placement
-        # so capture is judged on where the Thief actually ends up (C-006b).
-        # Doing it the other way round let a Thief walk into the wall being
-        # built and stand inside it — see `tests/unit/test_simultaneous_barrier.py`.
-        thief_to = _apply(thief_move, state.thief, state, board)
-        placed = _place(cop_move, barriers, state, thief_to)
-        state = _advance(state, cop_move, board, placed, thief_to)
+        # The physics live in `domain/turn.py`, shared with the live driver.
+        # `strict=False` is the harness's one deviation: an illegal proposal
+        # holds position rather than aborting a hundred-game batch, where a real
+        # match claims the technical loss the rules already award us.
+        turn = resolve_turn(state, cop_move, thief_move, barriers, rules, strict=False)
+        state = turn.state
         result.history.append(state)
 
-        outcome = _resolve(before, state, rules, placed, barriers)
-        if outcome is not None:
-            result.outcome = outcome
+        if turn.outcome is not None:
+            result.outcome = turn.outcome
             break
 
     result.steps = state.step
     result.barriers_placed = barriers.placed_count
     return result
-
-
-def _place(decision: Decision, barriers: BarrierManager, state: GameState, thief_to: Position):
-    """Apply a barrier placement if the Cop asked for one.
-
-    Args:
-        thief_to: Where the Thief ends this turn, **not** where it started.
-            `capture.resolution = "after_moves"` evaluates positions once both
-            actions apply, so this is the cell M#46 is judged against — a wall on
-            a vacated cell misses, and a wall on the cell the Thief steps onto
-            captures. Both halves follow from the same value.
-    """
-    if decision.barrier is None:
-        return None
-    return barriers.place(decision.barrier, state.cop, thief_pos=thief_to)
-
-
-def _advance(state, cop_move, board, placed, thief_to: Position) -> GameState:
-    """Return the next state with both moves applied simultaneously.
-
-    *thief_to* is passed in rather than recomputed so the cell the capture was
-    judged against and the cell the Thief is recorded on cannot drift apart.
-    """
-    cop_to = state.cop if placed else _apply(cop_move, state.cop, state, board)
-    return state.advanced(
-        cop=cop_to,
-        thief=thief_to,
-        barriers=state.barriers | ({placed.cell} if placed and placed.succeeded else set()),
-        barriers_placed=state.barriers_placed + (1 if placed and placed.succeeded else 0),
-    )
-
-
-def _resolve(before, after, rules, placed, barriers) -> Outcome | None:
-    """Return the verdict for this turn, if any."""
-    if placed is not None and placed.outcome is PlacementOutcome.CAPTURE:
-        return Outcome(Verdict.CAPTURE, f"barrier at {placed.cell} captured the thief")
-    if exit_count(after.thief, after.barriers, rules.board) == 0 and not rules.stay_counts_as_move:
-        return Outcome(Verdict.CAPTURE, f"thief sealed in at {after.thief} (M#47)")
-    return rules.turn_verdict(before, after)
