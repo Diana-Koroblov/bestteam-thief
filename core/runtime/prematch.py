@@ -180,6 +180,26 @@ class PreMatch:
         """
         found = list(league_log.read(self.league_log_path).warnings())
         found.extend(self.step_zero().warnings())
+        found.extend(self._contract_warnings())
         if self.agreement is not None:
             found.extend(self.agreement.warnings)
         return found
+
+    def _contract_warnings(self) -> list[str]:
+        """Warn when the shared contract does not yet name both parties.
+
+        Appendix B.3 opens the file with `agreed_between`, and ours ships naming
+        only us because a committed default cannot know who we will play. That
+        is correct for a proposal and wrong for a signed contract — and the
+        difference is invisible at match time, since nothing in the code reads
+        the field. It is read here instead, once, by a human, before agreeing.
+        """
+        named = self.config.agreed_between
+        if len(named) >= 2:
+            return []
+        ours = ", ".join(named) or "nobody"
+        return [
+            f"agreed_between names {ours}; add the opponent's team id before signing, "
+            "so the config snapshot filed after the match records who agreed to it "
+            "(Appendix B.3)"
+        ]

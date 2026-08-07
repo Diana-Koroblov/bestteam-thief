@@ -29,7 +29,29 @@ if sys.version_info >= (3, 11):  # pragma: no cover - depends on the interpreter
 else:  # pragma: no cover - depends on the interpreter
     import tomli as tomllib
 
-__all__ = ["ConfigError", "ConfigVersionError", "ConfigRuleError", "Config", "load_config"]
+__all__ = [
+    "ConfigError",
+    "ConfigVersionError",
+    "ConfigRuleError",
+    "Config",
+    "load_config",
+    "SCHEMA_VERSION",
+]
+
+# The **file format** published in Appendix B.3, which is a different thing from
+# `version` below and has to be, because they answer different questions:
+#
+#   schema_version — "which layout is this file written in?" The opponent's
+#       question. It is the book's field, with the book's value, and it is why
+#       both are carried: a peer that builds to Appendix B.3 looks for this key
+#       by name and would not recognise ours.
+#   version        — "which code wrote it?" Ours. It gates `is_compatible` and
+#       has nothing to do with the opponent, who is entirely free to run code at
+#       any version of their own.
+#
+# Compatibility is by major version here too: a 2.x schema has moved a key we
+# read, and guessing which one during a graded match is not a risk worth taking.
+SCHEMA_VERSION = "1.2"
 
 
 class ConfigError(Exception):
@@ -86,6 +108,19 @@ class Config:
             raise ConfigError(f"required configuration key is missing: {path}")
         return value
 
+    @property
+    def agreed_between(self) -> list[str]:
+        """Return the parties named in the shared contract (Appendix B.3).
+
+        A list of one is our unsigned **proposal**; a signed contract names both
+        teams. `PreMatch.warnings` says so out loud before a match, because the
+        failure mode is filing a config snapshot that never records who agreed
+        to it — and a contract with one signature is the thing a dispute is
+        least able to survive.
+        """
+        found = self.shared.get("agreed_between", [])
+        return [str(name) for name in found] if isinstance(found, list) else []
+
     def shared_digest(self) -> str:
         """Return the SHA-256 of the shared contract, for the M#11 exchange.
 
@@ -136,6 +171,18 @@ def load_config(role_dir: Path, *, enforce_rules: bool = True) -> Config:
         raise ConfigVersionError(
             f"{role_dir / 'game.json'} declares version {declared or '<none>'}, "
             f"which this code (version {version.VERSION}) cannot read"
+        )
+
+    # Absent is accepted: an opponent's file may predate Appendix B.3's field or
+    # simply omit it, and refusing over a missing label would forfeit a fixture
+    # while proving nothing. A *stated* incompatible layout is a different claim
+    # and is refused.
+    schema = str(shared.get("schema_version", SCHEMA_VERSION))
+    if schema.split(".")[0] != SCHEMA_VERSION.split(".")[0]:
+        raise ConfigVersionError(
+            f"{role_dir / 'game.json'} declares schema_version {schema}, but this code "
+            f"reads the Appendix B.3 layout {SCHEMA_VERSION}; a different major schema "
+            "has moved a key we depend on"
         )
 
     merged = _deep_merge(private, shared)

@@ -133,6 +133,47 @@ def test_same_major_version_is_accepted(tmp_path: Path) -> None:
     assert load_config(role).get("scoring.tie_score") == 2
 
 
+def test_the_shipped_contract_declares_the_book_s_schema(tmp_path: Path) -> None:
+    """Appendix B.3 fixes the field **names**, and this is one of them.
+
+    An opponent building to the book looks for `schema_version` by name; a file
+    that only carries our own `version` tells them nothing about its layout.
+    """
+    from core.shared.config_manager import SCHEMA_VERSION
+
+    assert SHIPPED["schema_version"] == SCHEMA_VERSION
+    assert load_config(_write(tmp_path / "role", SHIPPED)).shared["schema_version"] == "1.2"
+
+
+def test_a_different_major_schema_is_refused(tmp_path: Path) -> None:
+    """A 2.x layout has moved a key we read; guessing which one loses a match."""
+    role = _write(tmp_path / "role", dict(SHIPPED, schema_version="2.0"))
+    with pytest.raises(ConfigVersionError, match="schema_version"):
+        load_config(role)
+
+
+def test_an_absent_schema_version_is_accepted(tmp_path: Path) -> None:
+    """Refusing an unlabelled file would forfeit a fixture and prove nothing.
+
+    A *stated* incompatible schema is a claim about the layout; silence is not.
+    """
+    shared = {key: value for key, value in SHIPPED.items() if key != "schema_version"}
+    assert load_config(_write(tmp_path / "role", shared)).get("scoring.tie_score") == 2
+
+
+def test_agreed_between_reads_the_parties_named_in_the_contract(tmp_path: Path) -> None:
+    """Ours ships as a one-name proposal; a signed contract names both."""
+    assert load_config(_write(tmp_path / "role", SHIPPED)).agreed_between == ["bestteam"]
+    signed = load_config(_write(tmp_path / "b", dict(SHIPPED, agreed_between=["us", "them"])))
+    assert signed.agreed_between == ["us", "them"]
+
+
+def test_agreed_between_survives_a_malformed_value(tmp_path: Path) -> None:
+    """It is a label, not physics: a wrong shape must not stop a match starting."""
+    role = _write(tmp_path / "role", dict(SHIPPED, agreed_between="bestteam"))
+    assert load_config(role).agreed_between == []
+
+
 def test_illegal_config_raises(tmp_path: Path) -> None:
     shared = json.loads(json.dumps(SHIPPED))
     shared["scoring"]["capture_cop"] = 25

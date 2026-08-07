@@ -350,7 +350,7 @@ Groq never appears in a scored game and never appears in the committed config.
 
 ## 6. Keys we ship that Appendix F does **not** define
 
-Seven, all deliberate. Each is negotiable by construction, and each exists because leaving
+Eight, all deliberate. Each is negotiable by construction, and each exists because leaving
 it undefined caused a documented contradiction.
 
 | Key | Default | Why | Contradiction |
@@ -362,10 +362,26 @@ it undefined caused a documented contradiction.
 | `pheromones.decay_model` | `multiplicative` | The book's worked example gives 0.81; the reference implementation's subtractive decay gives 0.80. Whoever is silent about this loses the audit. | C-007 |
 | `pheromones.field_includes_current_turn` | `true` | Whether the emitted field includes the turn being committed. | C-005 |
 | `pheromones.seal_scent_digest` | `true` | The scent grid is transmitted but not sealed, so a fabricated field passes audit unless we seal it. | C-008 |
+| `movement_and_barriers.seal_barrier_cell` | `true` | A placement travels as `STAY`, so the four sealed fields cannot tell it from standing still and the walled cell stays revisable after the opponent's reveal. | C-018 |
 
 Adding keys to the shared file raises the bar for a byte-identical match, so each one costs
-us something at negotiation. All seven are worth it: every one of them is a case where two
+us something at negotiation. All eight are worth it: every one of them is a case where two
 honest implementations would otherwise diverge mid-match and the audit would blame both.
+
+### 6.1 The two header fields from Appendix B.3
+
+Separate from the table above, because these are the book's own fields rather than ours, and
+because they carry no physics at all:
+
+| Key | Ours | Why it is there |
+|---|---|---|
+| `schema_version` | `"1.2"` | Appendix B.3 opens its example with it, and §B.3 states that field **names** are fixed and binding. A peer building to the book looks for this key; a file carrying only our `version` says nothing about its layout. Refused on a different major version, accepted when absent — silence is not a claim about the layout, and forfeiting a fixture over a missing label proves nothing. |
+| `agreed_between` | `["bestteam"]` | The parties to the contract. Ships naming only us because a committed default cannot know the opponent; a *signed* contract names both. Nothing in the code reads it, which is exactly why `PreMatch.warnings()` says so before a match — the failure mode is filing a config snapshot that records an agreement without recording who agreed to it. |
+
+We keep our own `version` alongside `schema_version`. They answer different questions —
+"which code wrote this?" is ours and gates `is_compatible`, "which layout is this?" is the
+opponent's — and collapsing them into one field would make our code version look like a term
+of the negotiation, which it is not.
 
 ---
 

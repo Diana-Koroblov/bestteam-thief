@@ -131,7 +131,14 @@ def review(theirs: dict, ours: dict) -> Review:
             f"version {declared or '<none>'} cannot be read by this code (version "
             f"{version.VERSION}); a config we cannot load is one we cannot audit"
         )
-    known = {parameter.path for parameter in config_spec.PARAMETERS} | {"version"}
+    # The three labels no Appendix F row covers: two from Appendix B.3's file
+    # header and one of our own. They carry no physics, so they are recognised
+    # here rather than reported as keys nothing reads.
+    known = {parameter.path for parameter in config_spec.PARAMETERS} | {
+        "version",
+        "schema_version",
+        "agreed_between",
+    }
     return Review(
         proposed=theirs,
         illegal=tuple(illegal),
