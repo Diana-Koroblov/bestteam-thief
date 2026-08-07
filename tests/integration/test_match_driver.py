@@ -30,6 +30,7 @@ from core.protocol.schemas import Role
 from core.protocol.tools import build_guarded_tools
 from core.report.match_log import build_log, verify_log
 from core.runtime.brain_loader import load_brain
+from core.runtime.match_closing import exchange_and_audit
 from core.runtime.match_driver import MatchDriver
 from core.runtime.orchestrator import Orchestrator
 from core.runtime.peer_runtime import PeerRuntime
@@ -143,6 +144,52 @@ def test_every_turn_passed_through_the_state_machine(minimal_config) -> None:
     assert Phase.AWAITING_REVEAL in cop.phases.history
     assert cop.phases.history.count(Phase.VERIFYING) == len(cop.records)
     assert cop.phases.phase is Phase.COMPLETE
+
+
+@BOTH_ROLES
+def test_each_peer_audits_the_other_and_both_pass(minimal_config) -> None:
+    """**M#36, Ch. 5.4.** The mutual audit, run for real, in both directions.
+
+    Nothing before this point could prove the two peers' seals were mutually
+    verifiable: our own log verifying proves only that we are consistent with
+    ourselves. This re-hashes each side's commitments from the *other* side's
+    independently held state, which is the check the rulebook actually
+    specifies.
+    """
+
+    async def play_and_audit():
+        cop, thief = _drivers(minimal_config)
+        await asyncio.gather(cop.play_sub_game(), thief.play_sub_game())
+        return await asyncio.gather(exchange_and_audit(cop), exchange_and_audit(thief))
+
+    by_cop, by_thief = asyncio.run(play_and_audit())
+    assert by_cop.passed, by_cop.describe()
+    assert by_thief.passed, by_thief.describe()
+    assert by_cop.checked == by_thief.checked
+
+
+@BOTH_ROLES
+def test_a_forged_reveal_is_caught_by_the_opponent(minimal_config) -> None:
+    """The audit has to *fail* on tampering, or passing means nothing.
+
+    One revealed move is rewritten after the fact — the cheapest forgery there
+    is — and the opponent's re-hash must refuse it. Without this the previous
+    test only shows that two honest peers agree, which any two implementations
+    of anything would.
+    """
+    from dataclasses import replace
+
+    async def play_and_forge():
+        cop, thief = _drivers(minimal_config)
+        await asyncio.gather(cop.play_sub_game(), thief.play_sub_game())
+        # The cop's record of what the thief revealed at step 0, altered.
+        stored = cop.runtime.reveals[0]
+        cop.runtime.reveals[0] = replace(stored, move="STAY" if stored.move != "STAY" else "N")
+        return await asyncio.gather(exchange_and_audit(cop), exchange_and_audit(thief))
+
+    by_cop, _ = asyncio.run(play_and_forge())
+    assert not by_cop.passed
+    assert by_cop.failures[0][0] == 0
 
 
 @BOTH_ROLES
