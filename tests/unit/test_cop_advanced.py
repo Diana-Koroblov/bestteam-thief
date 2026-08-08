@@ -130,6 +130,25 @@ def test_a_new_sub_game_restarts_the_trajectory() -> None:
     assert cop.verbal.profile.transitions == 0
 
 
+def test_the_series_boundary_banks_the_profile_and_drops_the_trail() -> None:
+    """`BrainBase.restart_sub_game`, called by the runner between sub-games.
+
+    The two halves of what a brain remembers cross the line differently: what
+    this opponent is *like* is the reason for playing them six times, and where
+    everyone *was* is a scent trail from a game that is over. Rebuilding the
+    brain would throw away both.
+    """
+    cop = AdvancedCop()
+    for step in range(3):
+        cop.decide(observe((3, 3), {(0, step): 1.0}, step=step))
+    banked = cop.verbal.profile.visits
+
+    cop.restart_sub_game(2)
+    assert cop.verbal.profile.visits == banked, "the reputation must survive the boundary"
+    assert cop.verbal.trail.emitted == {}, "the trail must not"
+    assert cop.verbal.peak is None
+
+
 # --- A1.3 configuration -----------------------------------------------------
 
 

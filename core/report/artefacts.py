@@ -149,6 +149,7 @@ def build_result(
     github_commit: str,
     total_llm_tokens: int,
     repos: dict[str, str],
+    series: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble ``result_<game_id>.json`` (7.2.4, M#49, M#53, M#54).
 
@@ -161,6 +162,12 @@ def build_result(
             of token it counts, per the 7.1.4 discipline: rate-limiter tokens
             and OAuth tokens are different things and a bare `total_tokens`
             does not say which one a reader is looking at.
+        series: What the meeting is worth once the tie rule has been applied.
+            Filed **beside** `totals` rather than replacing it, because the two
+            answer different questions: `totals` is the arithmetic of the
+            sub-games and this is the league credit. A series level at 45-45
+            pays 2-2 (Ch. 9.2 tie rule), and a report showing only one of those
+            numbers reads like the other was a mistake.
 
     Cumulative scores are **summed here, not passed in**. A caller supplying its
     own total could disagree with the per-sub-game rows in the same file, and a
@@ -175,6 +182,7 @@ def build_result(
         "code_version": VERSION,
         "sub_games": sub_games,
         "totals": {"ours": ours, "theirs": theirs, "sub_games_played": len(sub_games)},
+        "series": dict(series or {}),
         "total_llm_tokens": total_llm_tokens,
         "repositories": {key: repos.get(key, "") for key in REPO_LINKS},
     }

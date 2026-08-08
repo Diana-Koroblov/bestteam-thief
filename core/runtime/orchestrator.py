@@ -30,6 +30,21 @@ from core.shared.config_manager import Config
 __all__ = ["Orchestrator"]
 
 
+def _opening(config: Config, sub_game: int) -> GameState:
+    """Return the agreed starting position for a sub-game.
+
+    One definition, used by both the first sub-game and every restart after it.
+    Two would let a series open its second sub-game from a position neither peer
+    agreed to — and both peers would still be enforcing the physics correctly,
+    from different boards.
+    """
+    return GameState(
+        cop=tuple(config.require("board_and_agents.cop_start")),
+        thief=tuple(config.require("board_and_agents.thief_start")),
+        sub_game=sub_game,
+    )
+
+
 @dataclass
 class Orchestrator:
     """Owns the game state and is the only thing permitted to change it.
@@ -72,10 +87,7 @@ class Orchestrator:
             board=board,
             rules=Rules.from_config(config, board),
             scoring=ScoreTable.from_config(config),
-            state=GameState(
-                cop=tuple(config.require("board_and_agents.cop_start")),
-                thief=tuple(config.require("board_and_agents.thief_start")),
-            ),
+            state=_opening(config, sub_game=1),
         )
 
     @property
@@ -106,6 +118,18 @@ class Orchestrator:
             timeout_sec=self.config.require("network_and_league.response_timeout_sec"),
             team=self.config.get("identity.team_name", ""),
         )
+
+    def restart(self, sub_game: int) -> None:
+        """Reopen the board for the next sub-game of the series (TODO 9.5).
+
+        The history goes with it. It is the log's record of *one* sub-game, and
+        `match_closing.their_records` indexes into it by step to re-hash the
+        opponent's commitments — so a history carrying the previous sub-game's
+        states would audit their step 0 against a board from a game that ended,
+        and report forgery against an honest opponent.
+        """
+        self.history.clear()
+        self.state = _opening(self.config, sub_game)
 
     def advance(self, state: GameState) -> None:
         """Replace the current state, keeping the previous one for the log.

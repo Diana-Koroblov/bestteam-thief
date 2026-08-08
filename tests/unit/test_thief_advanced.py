@@ -105,6 +105,27 @@ def test_a_new_sub_game_clears_the_trail_and_the_bluff() -> None:
     assert thief.anchor.phase is AnchorPhase.OFF
 
 
+def test_the_series_boundary_banks_the_profile_and_un_anchors() -> None:
+    """`BrainBase.restart_sub_game`, called by the runner between sub-games.
+
+    The anchor is the Thief's own addition to the reset. It is a multi-turn
+    commitment to a direction, so a Thief that opened a new sub-game still
+    holding the last one's would spend its first turns honouring a deception the
+    opponent never heard.
+    """
+    thief = AdvancedThief()
+    thief.configure(Stub(**{"strategy.false_anchor": True}))
+    for step in range(3):
+        thief.decide(observe((3, 3), {(0, step): 1.0}, step=step))
+    banked = thief.verbal.profile.visits
+    thief.anchor.phase, thief.anchor.remaining = AnchorPhase.ANCHORING, 3
+
+    thief.restart_sub_game(2)
+    assert thief.verbal.profile.visits == banked, "the reputation must survive the boundary"
+    assert thief.verbal.trail.emitted == {}, "the trail must not"
+    assert thief.anchor.phase is AnchorPhase.OFF and thief.anchor.remaining == 0
+
+
 # --- A1.3 configuration -----------------------------------------------------
 
 

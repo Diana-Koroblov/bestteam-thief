@@ -74,7 +74,8 @@ def test_the_payload_carries_the_warnings_and_not_only_the_verdict(ours) -> None
     """A match played with three unsigned readings is a match whose result can
     be disputed, and the artefact committed with it should say so. Printing them
     to a terminal nobody kept is not a record."""
-    payload = settle(ours, replace(ours, readings={}, step_zero=THEIRS)).payload()
+    theirs = replace(ours, role=Role.THIEF, readings={}, step_zero=THEIRS)
+    payload = settle(ours, theirs).payload()
     assert payload["result"] == AGREED
     assert any("stated no reading" in item for item in payload["warnings"])
 
@@ -186,6 +187,24 @@ def test_our_own_split_is_what_the_agreement_records(ours, mirror) -> None:
     """Recording theirs would make the artefact agree with whatever arrived,
     which is the shape of bug that made the old handshake unable to fail."""
     assert settle(ours, replace(mirror, role_split="")).role_split == "3-3"
+
+
+def test_two_peers_claiming_the_same_role_are_refused(ours, mirror) -> None:
+    """**A matching split is not a settled plan** (C-011).
+
+    `"3-3"` is symmetric: both peers send the identical string and agree, and it
+    says nothing about who starts as Cop. Each builds its plan from the role it
+    holds, so two peers holding the same one build mirror images and play a
+    sub-game with two Cops in it.
+
+    Caught here rather than on the wire. Without this the disagreement first
+    surfaced as `PeerRuntime._require_opponent` rejecting their opening commit —
+    a technical loss for both teams, worth 0 each, over something the handshake
+    settles for free.
+    """
+    locked = settle(ours, replace(mirror, role=ours.role))
+    assert locked.result == REFUSED_ROLE_SPLIT and not locked.agreed
+    assert any("we both propose to play cop" in reason for reason in locked.reasons)
 
 
 # --- TN.10: Step-0 and the commit ---------------------------------------------

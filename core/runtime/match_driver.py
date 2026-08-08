@@ -37,6 +37,7 @@ from typing import Any
 
 from core.domain.barriers import BarrierManager
 from core.domain.game_state import GameState
+from core.domain.rules import Outcome, Rules
 from core.domain.turn import IllegalMoveError, resolve_turn
 from core.infra.errors import PeerError
 from core.protocol.schemas import BarrierDeclaration, CaptureClaim, Commit, Reveal, Role
@@ -80,6 +81,11 @@ class MatchDriver:
         deadlines: Bounds every wait (M#6).
         records: One `TurnRecord` per completed turn.
         reason: Why the sub-game ended, in words, for the log and the report.
+        outcome: The same ending as a verdict the scoring table can price.
+            ``None`` until the sub-game ends. Kept beside `reason` rather than
+            parsed back out of it: a series is scored from these, and deriving a
+            verdict by matching words in a sentence is how a capture becomes a
+            survival the day someone rewords a message.
     """
 
     runtime: Any
@@ -89,6 +95,7 @@ class MatchDriver:
     deadlines: DeadlineTracker = field(default_factory=DeadlineTracker)
     records: list[TurnRecord] = field(default_factory=list)
     reason: str = ""
+    outcome: Outcome | None = None
     clock: Any = time.monotonic
 
     @property
@@ -187,6 +194,7 @@ class MatchDriver:
             self.phases.to(Phase.WAITING_FOR_OPPONENT)
             return False
         await self._claim_capture(turn, step)
+        self.outcome = turn.outcome
         self.reason = turn.outcome.reason
         self.phases.to(Phase.COMPLETE)
         return True
@@ -230,7 +238,16 @@ class MatchDriver:
         return True
 
     def _fail(self, reason: str) -> str:
-        """End the sub-game in a recorded technical loss (M#4)."""
-        self.reason = reason
+        """End the sub-game in a recorded technical loss (M#4).
+
+        The **first** failure is the one kept. A sub-game that timed out and
+        then failed its closing exchange failed once, for the first reason;
+        overwriting it would leave the report naming the consequence instead of
+        the cause. `PhaseMachine.fail` is already a no-op once terminal, for the
+        same reason.
+        """
+        if self.outcome is None:
+            self.reason = reason
+            self.outcome = Rules.technical_loss(reason)
         self.phases.fail(reason)
-        return reason
+        return self.reason

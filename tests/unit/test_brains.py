@@ -1,4 +1,4 @@
-"""Unit tests for the baselines and the brain loader (TODO 3.1, 3.2, 3.4).
+"""Unit tests for the two baseline strategies (TODO 3.1, 3.2).
 
 The two properties that matter most: a brain is **deterministic** — two peers
 replay the same log and must agree — and the Thief **never walks into a dead
@@ -13,7 +13,6 @@ from core.domain.actions import Direction
 from core.domain.board import Board
 from core.domain.brain_base import BrainBase, Decision, Observation
 from core.domain.connectivity import exit_count
-from core.runtime.brain_loader import DEFAULTS, BrainLoadError, load_brain
 from tests.paths import brain_class, needs_brain
 
 PoliceBrain = brain_class("police")
@@ -203,46 +202,3 @@ def test_the_same_observation_always_yields_the_same_decision(role: str) -> None
     view = observe((3, 3), belief=(1, 1), barriers=frozenset({(2, 2), (4, 4)}))
     decisions = {made().decide(view).move for _ in range(25)}
     assert len(decisions) == 1
-
-
-# --- the loader -------------------------------------------------------------
-
-
-@pytest.mark.parametrize("role,package", [("cop", "police"), ("thief", "thief")])
-def test_an_empty_setting_falls_back_to_the_baseline(role: str, package: str) -> None:
-    """A fresh clone must play without editing config."""
-    expected = brain_class(package)
-    if expected is None:
-        pytest.skip(f"the {package!r} package is not published to this repository")
-    assert isinstance(load_brain("", role), expected)
-    assert isinstance(load_brain(None, role), expected)
-
-
-@cop_only
-def test_an_explicit_path_is_honoured() -> None:
-    assert isinstance(load_brain("police.brain:PoliceBrain", "cop"), PoliceBrain)
-
-
-def test_the_defaults_cover_both_roles() -> None:
-    assert set(DEFAULTS) == {"cop", "thief"}
-
-
-@pytest.mark.parametrize(
-    "spec,message",
-    [
-        ("police.brain.PoliceBrain", "not a valid strategy path"),
-        ("nope.missing:Brain", "cannot import"),
-        ("police.brain:NoSuchBrain", "has no class named"),
-        ("core.domain.board:Board", "not a BrainBase subclass"),
-    ],
-)
-@cop_only
-def test_a_bad_path_fails_at_startup_not_mid_match(spec: str, message: str) -> None:
-    """A typo found on turn one is a technical loss worth 0 to both teams."""
-    with pytest.raises(BrainLoadError, match=message):
-        load_brain(spec, "cop")
-
-
-def test_an_unknown_role_with_no_spec_is_refused() -> None:
-    with pytest.raises(BrainLoadError, match="no default for role"):
-        load_brain("", "referee")

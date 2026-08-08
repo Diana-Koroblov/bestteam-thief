@@ -121,6 +121,13 @@ def settle(ours: Negotiation, theirs: Negotiation) -> LockedAgreement:
     mismatch there means every later comparison is between peers reading
     different rulebooks, and reporting four disagreements when there is really
     one would send an opponent hunting in the wrong place.
+
+    **Two peers claiming the same role are refused here**, before a move is
+    made. `"3-3"` is symmetric and settles only how many sub-games each side
+    takes, so the roles themselves are settled by this field — and without the
+    check the disagreement surfaced as `PeerRuntime._require_opponent` rejecting
+    the opponent's first commit, which is a technical loss for both teams over
+    something a handshake can catch for free.
     """
     reasons: list[str] = []
     warnings: list[str] = []
@@ -153,6 +160,14 @@ def settle(ours: Negotiation, theirs: Negotiation) -> LockedAgreement:
             reasons.extend(conflicts)
         elif missing := readings_module.unsigned(ours.readings, theirs.readings):
             warnings.append(f"the opponent stated no reading for: {', '.join(missing)}")
+
+    if result == AGREED and ours.role is theirs.role:
+        result = REFUSED_ROLE_SPLIT
+        reasons.append(
+            f"we both propose to play {ours.role.value}: the split says how many sub-games "
+            "each side takes and never who starts as which, so two peers reading '"
+            f"{ours.role_split}' from opposite ends can build mirror-image plans (C-011)"
+        )
 
     if result == AGREED:
         if not theirs.role_split:

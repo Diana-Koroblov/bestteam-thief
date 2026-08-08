@@ -107,12 +107,30 @@ class PeerRuntime:
         """Return the barrier cell to seal into this commitment, or None (C-018)."""
         return self.truth.sealed_barrier(decision)
 
-    def start_sub_game(self) -> None:
-        """Clear everything belonging to the sub-game just finished."""
+    def start_sub_game(self, sub_game: int = 1) -> None:
+        """Clear everything belonging to the sub-game just finished (TODO 9.5).
+
+        **Everything keyed by step number, without exception.** A commit, a
+        reveal or a nonce surviving the boundary is indexed by a step the next
+        sub-game will reach again, so `on_commit` would refuse step 0 as already
+        committed — and the peer would take a technical loss on the opening move
+        of a sub-game it had not yet played.
+
+        The brain is told rather than replaced: what the opponent is like banks
+        across the six sub-games and where everyone was does not. See
+        `BrainBase.restart_sub_game`.
+
+        The Step-0 declaration is **not** rebuilt here. It is signed per
+        sub-game (M#24) and re-signing it means re-handshaking, which is the
+        caller's business and not a side effect of clearing a board.
+        """
+        self.orchestrator.restart(sub_game)
         self.truth.reset()
         self.commits.clear()
         self.barriers.clear()
         self.opponent_nonces.clear()
+        if self.brain is not None:
+            self.brain.restart_sub_game(sub_game)
 
     def decide(self) -> Decision:
         """Ask the brain for this turn's decision.

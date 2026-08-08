@@ -132,6 +132,22 @@ class BrainBase(ABC):
         two peers would audit different games.
         """
 
+    def restart_sub_game(self, sub_game: int) -> None:  # noqa: B027 - optional by design
+        """Cross a sub-game boundary. Does nothing by default.
+
+        A series is six sub-games against one opponent, and the two halves of
+        what a brain remembers cross that line differently: what the *opponent*
+        is like banks, and where everyone *was* does not. Carrying a scent trail
+        or a last-seen peak into the next sub-game has us chasing the ghost of a
+        game that is over.
+
+        A hook rather than a fresh brain per sub-game, because building a new
+        one would throw away the banked half as well — and that half is the
+        whole point of playing the same team six times. Stateless baselines
+        need none of it, so the default is empty (see `configure` for why that
+        is not abstract).
+        """
+
     def decide(self, observation: Observation) -> Decision:
         """Return this turn's decision.
 

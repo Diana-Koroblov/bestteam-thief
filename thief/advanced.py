@@ -127,6 +127,17 @@ class AdvancedThief(BrainBase):
         """
         self.verbal.profile.for_opponent(team)
 
+    def restart_sub_game(self, sub_game: int) -> None:
+        """Bank the profile, drop the board state, and un-anchor (TODO 9.5).
+
+        The false anchor is reset here as well as in `VerbalLayer.restart`: it
+        is a multi-turn commitment to a direction, and a Thief that began a new
+        sub-game still holding the previous one's anchor would spend its opening
+        turns honouring a deception the opponent never heard.
+        """
+        self.verbal.restart(sub_game)
+        self.anchor.reset()
+
     def _pick_move(self, observation: Observation) -> Decision:
         """Choose this turn's step and this turn's claim, and say why."""
         self._track(observation)

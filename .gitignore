@@ -33,6 +33,14 @@ results/tmp/
 *.log
 !results/**/log_*.json
 
+# Locally generated series artefacts. They are produced by our own two brains
+# playing each other, so they are **not match records** — and a synthetic
+# `log_<game_id>_gNN.json` sitting where a grader looks for real ones is exactly
+# the plausible-looking placeholder `core/report/artefacts.py` refuses to write.
+# Regenerate any time from tests/integration/series_harness.py; the Replay
+# Viewer screenshot is taken from these, and they are not evidence of a match.
+logs/
+
 # ---------------------------------------------------------------------------
 # Generated Obsidian vaults (regenerate with scripts/make_graph_vault.py).
 # The screenshot goes in assets/; the vault itself is a build artefact.

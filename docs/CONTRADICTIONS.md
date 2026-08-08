@@ -98,6 +98,8 @@ log audit will blame both teams.
 | **Our choice** | **3–3**, stated explicitly in the handshake. |
 | **Why** | It is the symmetric default and trivially defensible. Conceding an uneven split gives away an edge for nothing. |
 | **Effect** | Explicit field in the negotiation payload. Negotiation item **N17**. |
+| **Second gap, found building the series runner** | `"3-3"` is **symmetric**, so two peers can agree on it completely and still disagree about who plays cop first. The split says how many sub-games each side takes and never which side starts. |
+| **Our choice** | The plan is built from the role *this process* holds (`roles_for(split, first, count)` in `core/runtime/series.py`), and `negotiation.settle` **refuses** two peers claiming the same role. Without the refusal the disagreement first surfaced as `PeerRuntime._require_opponent` rejecting the opponent's opening commit — a technical loss for both teams, worth 0 each, over something the handshake settles for free. |
 
 ## C-013 — A series of technical losses is arithmetically a tie
 

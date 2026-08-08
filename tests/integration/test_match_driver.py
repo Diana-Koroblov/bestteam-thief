@@ -29,7 +29,7 @@ from core.infra.mcp_server import build_server_spec, create_server
 from core.protocol.schemas import Role
 from core.protocol.tools import build_guarded_tools
 from core.report.match_log import build_log, verify_log
-from core.runtime.brain_loader import load_brain
+from core.runtime.brain_loader import brain_for
 from core.runtime.match_closing import exchange_and_audit
 from core.runtime.match_driver import MatchDriver
 from core.runtime.orchestrator import Orchestrator
@@ -51,7 +51,7 @@ BOTH_ROLES = pytest.mark.skipif(
 def _peer(config, role: Role) -> PeerRuntime:
     """Build one peer, agreed and ready to play, with its shipped brain."""
     runtime = PeerRuntime(orchestrator=Orchestrator.from_config(config, role))
-    runtime.brain = load_brain(config.get(f"strategy.{role.value}_class"), role.value, config)
+    runtime.brain = brain_for(role.value, config)
     runtime.agreed = True
     return runtime
 

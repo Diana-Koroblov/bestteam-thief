@@ -21,7 +21,7 @@ from dataclasses import dataclass
 
 from core.domain.rules import Outcome, Verdict
 
-__all__ = ["ScoreTable", "SeriesResult", "score", "aggregate"]
+__all__ = ["ScoreTable", "SeriesResult", "score", "aggregate", "level_series"]
 
 
 @dataclass(frozen=True)
@@ -107,12 +107,31 @@ def aggregate(outcomes: list[Outcome], table: ScoreTable) -> SeriesResult:
     """
     cop = sum(score(outcome, table)[0] for outcome in outcomes)
     thief = sum(score(outcome, table)[1] for outcome in outcomes)
-    played = [o for o in outcomes if o.verdict is not Verdict.TECHNICAL_LOSS]
 
     if cop != thief:
         ahead = Verdict.CAPTURE if cop > thief else Verdict.SURVIVAL
         return SeriesResult(cop, thief, ahead, len(outcomes))
-    if not played:
-        loss = table.technical_loss
-        return SeriesResult(loss, loss, Verdict.TECHNICAL_LOSS, len(outcomes))
-    return SeriesResult(table.tie_score, table.tie_score, Verdict.TIE, len(outcomes))
+    points, verdict = level_series(outcomes, table)
+    return SeriesResult(points, points, verdict, len(outcomes))
+
+
+def level_series(outcomes: list[Outcome], table: ScoreTable) -> tuple[int, Verdict]:
+    """Return what **each** side scores when a series ends level, and why.
+
+    One number rather than two, because a level series pays both sides the same
+    thing by definition.
+
+    Split out of :func:`aggregate` because that function attributes points by
+    **role**, and a role-swapping series has to attribute them by **team**. Under
+    the negotiated 3-3 split (C-011) our total is the Cop's score in three
+    sub-games and the Thief's in the other three, so summing `score()[0]` across
+    the series would credit us with half our own points and half the opponent's.
+    The attribution therefore happens per sub-game, where the role is known, and
+    only the tie rule — which is identical either way — lives here.
+
+    See :func:`aggregate` for why an all-technical-loss series pays nothing
+    (C-013).
+    """
+    if any(outcome.verdict is not Verdict.TECHNICAL_LOSS for outcome in outcomes):
+        return table.tie_score, Verdict.TIE
+    return table.technical_loss, Verdict.TECHNICAL_LOSS

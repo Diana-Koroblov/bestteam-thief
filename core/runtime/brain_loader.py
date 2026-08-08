@@ -19,7 +19,7 @@ from importlib import import_module
 
 from core.domain.brain_base import BrainBase
 
-__all__ = ["BrainLoadError", "DEFAULTS", "load_brain"]
+__all__ = ["BrainLoadError", "DEFAULTS", "CONFIG_KEYS", "load_brain", "brain_for"]
 
 
 class BrainLoadError(Exception):
@@ -30,6 +30,22 @@ class BrainLoadError(Exception):
 DEFAULTS: dict[str, str] = {
     "cop": "police.brain:PoliceBrain",
     "thief": "thief.brain:ThiefBrain",
+}
+
+# Where each role's strategy is named in `game.toml`. **One definition**, because
+# until this existed the key had none: Appendix B.4 and `[strategy]` in our own
+# config both call it `police_class`, and every caller asked for
+# `strategy.cop_class` — a key no file contains. The lookup missed silently, the
+# fallback returned the baseline, and a config that named a strategy was
+# obeyed by nobody.
+#
+# Note the asymmetry, which is where the drift came from: the *role* is `cop`
+# (`Role.COP.value`, and the key into DEFAULTS) while the *config key* says
+# `police`, because Appendix B.4 spells it that way and the shared vocabulary
+# wins over our own.
+CONFIG_KEYS: dict[str, str] = {
+    "cop": "strategy.police_class",
+    "thief": "strategy.thief_class",
 }
 
 
@@ -82,3 +98,17 @@ def load_brain(spec: str | None, role: str, config: object = None) -> BrainBase:
     except Exception as error:  # noqa: BLE001 - re-raised as a startup failure
         raise BrainLoadError(f"{target!r} could not be constructed: {error}") from error
     return brain
+
+
+def brain_for(role: str, config) -> BrainBase:
+    """Return the brain *config* names for *role*, or the shipped baseline.
+
+    Args:
+        role: ``cop`` or ``thief`` — the role, not the configuration directory.
+
+    The one place the `[strategy]` key is read. A caller that spelled it inline
+    got no error for spelling it wrong: `Config.get` returns None for an absent
+    path, `load_brain` reads None as "use the default", and the result is a peer
+    playing a strategy nobody chose. See `CONFIG_KEYS`.
+    """
+    return load_brain(config.get(CONFIG_KEYS[role]), role, config)
