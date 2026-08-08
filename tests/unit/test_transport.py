@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
+import time
 from pathlib import Path
 
 import httpx
@@ -218,3 +219,36 @@ def test_every_failure_shares_one_base_so_the_runtime_can_catch_narrowly() -> No
     for error in (AuthError, TransportError, DeadlineError, RemoteToolError):
         assert issubclass(error, PeerError)
     assert not issubclass(PeerError, ValueError)
+
+
+# --- the tunnel budget ------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_outbound_messages_are_paced_to_what_the_tunnel_carries() -> None:
+    """A free tunnel endpoint refuses at ~120 requests a minute (08/08, live).
+
+    Two of our own peers answer each other instantly and spend that budget in
+    forty seconds, which is how the first live rehearsal died mid-sub-game with
+    a bare ConnectError and scored 0 for both sides. The pace is enforced at the
+    transport because the limit belongs to the transport.
+    """
+    client = OpponentClient(base_url="https://them.example/mcp", timeout_sec=30,
+                            calls_per_minute=120)
+    started = time.monotonic()
+    await client._pace()
+    await client._pace()
+    # Two messages at 120 a minute is one interval of waiting, not two: the
+    # first is free, because nothing has been sent yet.
+    assert 0.4 <= time.monotonic() - started < 1.2
+
+
+@pytest.mark.asyncio
+async def test_the_in_process_transport_is_not_paced() -> None:
+    """It opens no connections, and a suite must not spend real seconds."""
+    client = OpponentClient(base_url="in-process", timeout_sec=30, transport=object(),
+                            calls_per_minute=1)
+    started = time.monotonic()
+    await client._pace()
+    await client._pace()
+    assert time.monotonic() - started < 0.1

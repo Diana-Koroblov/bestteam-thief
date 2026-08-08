@@ -209,6 +209,7 @@ class SeriesRunner:
     plan: list[tuple[int, Role]]
     table: ScoreTable
     filing: Any = None
+    reopen: Callable[[int], None] | None = None
     reports: list[SubGameReport] = field(default_factory=list)
 
     async def run(self) -> SeriesReport:
@@ -227,6 +228,17 @@ class SeriesRunner:
         """
         driver = self.build(sub_game, role)
         await driver.play_sub_game()
+        audit = await self._close(driver)
+        # Reopen the board for the next sub-game **now**, before the artefacts
+        # are written. Filing reads the driver and never the runtime, so this is
+        # safe here — and it is not safe later: an opponent whose own closing
+        # exchange finished a moment before ours sends its first commit of the
+        # next sub-game while we are still writing two files to disk, and a
+        # reset that happens afterwards clears the commit we just received. The
+        # peer then rejects their reveal as unsealed and takes a technical loss
+        # on a sub-game neither side played wrong.
+        if self.reopen is not None:
+            self.reopen(sub_game + 1)
         report = SubGameReport(
             sub_game=sub_game,
             role=role,
@@ -235,7 +247,7 @@ class SeriesRunner:
             # after the sub-game was played and before its log was written.
             outcome=driver.outcome or Rules.technical_loss("the sub-game reached no verdict"),
             steps=len(driver.records),
-            audit=await self._close(driver),
+            audit=audit,
         )
         if self.filing is not None:
             self.filing.sub_game(report, driver)

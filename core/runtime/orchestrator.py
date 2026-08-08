@@ -23,7 +23,7 @@ from core.domain.board import Board
 from core.domain.game_state import GameState
 from core.domain.rules import Rules
 from core.domain.scoring import ScoreTable
-from core.infra.mcp_client import OpponentClient
+from core.infra.mcp_client import DEFAULT_CALLS_PER_MINUTE, OpponentClient
 from core.protocol.schemas import Role
 from core.shared.config_manager import Config
 
@@ -117,6 +117,12 @@ class Orchestrator:
             base_url=base_url,
             timeout_sec=self.config.require("network_and_league.response_timeout_sec"),
             team=self.config.get("identity.team_name", ""),
+            # Private and per-machine, like the port and the domain beside it:
+            # it describes what our tunnel plan can carry, and the opponent
+            # neither sees it nor agrees to it (PRD 5 §3.3 requirement 5.10).
+            calls_per_minute=float(
+                self.config.get("network.max_calls_per_minute", DEFAULT_CALLS_PER_MINUTE)
+            ),
         )
 
     def restart(self, sub_game: int) -> None:

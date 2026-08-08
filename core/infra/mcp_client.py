@@ -13,11 +13,27 @@ Every call carries a deadline (Ch. 8.4.1). A request without one is the direct
 route to a frozen game loop: the process waits, the watchdog fires, and the
 match is a technical loss worth 0 to *both* teams. So the deadline is a
 constructor field, not an optional argument someone can forget.
+
+**The session is opened once and held for the whole match.** Until 08/08 every
+call ran `async with Client(...)`, which is one MCP session per message: an
+initialize POST, a notification POST, a GET for the event stream, the tool POST
+and a DELETE — six connections to send one move, and the stream occupies one of
+them so the rest cannot reuse it. Both halves of a turn are then ~12 connections,
+and a free ngrok tunnel allows about 120 a minute: measured, the edge stops
+completing the TLS handshake at connection 123. Two full self-matches over the
+real tunnel died at step 9 of sub-game 1 with `ConnectError` and nothing in the
+agent's request log, because the connection never got far enough to become a
+request. Both peers scored 0 for a network budget, not for anything either
+strategy did. One held session sends one POST per message instead, which is the
+protocol used as designed and roughly a tenfold cut in connections.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import asyncio
+import time
+from contextlib import suppress
+from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
@@ -30,7 +46,32 @@ from core.infra.errors import (
     TransportError,
 )
 
-__all__ = ["OpponentClient"]
+__all__ = ["OpponentClient", "DEFAULT_CALLS_PER_MINUTE"]
+
+# Outbound messages per minute, when the config names no figure. A free ngrok
+# endpoint stops completing the TLS handshake at about 120 requests a minute —
+# measured twice, at connection 123 both times, and the client sees a bare
+# `ConnectError` with nothing in the agent's request log because the connection
+# never became a request. Two peers on one LAN play about 1.4 steps a second at
+# two messages a step, which is 168 a minute: over budget, and the sub-game dies
+# around step 20 with a technical loss for both sides. 100 leaves headroom and
+# costs 0.6 s a message against a 30 s response window.
+DEFAULT_CALLS_PER_MINUTE = 100.0
+
+
+@dataclass
+class _Session:
+    """The open MCP session, mutable so a frozen client can still hold one.
+
+    `OpponentClient` is frozen because M#4 makes the target un-rebindable, not
+    because a match should reconnect on every message. The connection is state,
+    it belongs to the client that owns the target, and it lives here so that
+    freezing the one keeps meaning what it says while the other can change.
+    """
+
+    client: Any = None
+    session: Any = None
+    last_call: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -52,6 +93,10 @@ class OpponentClient:
     timeout_sec: float
     team: str = ""
     transport: Any = None
+    calls_per_minute: float = DEFAULT_CALLS_PER_MINUTE
+    # Not part of the client's identity: two clients aimed at the same opponent
+    # are the same client whether or not either has connected yet.
+    live: _Session = field(default_factory=_Session, compare=False, repr=False)
 
     @property
     def target(self) -> Any:
@@ -84,17 +129,80 @@ class OpponentClient:
             RemoteToolError: The opponent answered with a structured error. The
                 network worked; our payload did not.
         """
-        from fastmcp import Client
-
+        await self._pace()
+        session = await self._connect()
         try:
-            async with Client(self.target) as session:
-                result = await session.call_tool(
-                    tool, {"payload": payload}, timeout=self.timeout_sec
-                )
+            result = await session.call_tool(
+                tool, {"payload": payload}, timeout=self.timeout_sec
+            )
         except Exception as error:  # noqa: BLE001 - every path re-raises as a typed failure
+            # A session that failed is not a session to send the next move on,
+            # so it is dropped and the next call opens a fresh one.
+            #
+            # **Dropped, never retried.** A held session that fails at the
+            # connection looks like "the socket was dead before we wrote", and
+            # a retry looks free. It is not: the connection can equally break
+            # after the opponent accepted the message and before its answer got
+            # back, and then the retry sends a commit they already hold. Tried
+            # on 08/08 and it cost a sub-game inside two minutes — the opponent
+            # correctly refused with `step 0 was already committed; no second
+            # attempt`, and a sub-game neither side played wrong was a technical
+            # loss. Ch. 5.3 makes a commitment single-shot on purpose; nothing
+            # at this layer may send one twice.
+            await self.aclose()
             raise self.classify(tool, error, self.timeout_sec) from error
 
         return self._decode(tool, result.data)
+
+    async def _pace(self) -> None:
+        """Hold the message back until the tunnel can afford it.
+
+        The budget belongs to the *endpoint*, not to either peer's opinion of a
+        reasonable pace, and it is spent by whoever is fastest. Two of our own
+        peers on one machine answer instantly and empty a free ngrok minute in
+        forty seconds; against a real opponent the same loop runs at whatever
+        the slower side allows, which may be just as fast.
+
+        Deliberately paced *here* and not in the turn loop. The limit is a fact
+        about the transport, so a driver, a rehearsal script or the closing
+        exchange should not each have to remember it. The wait is bounded by
+        one interval — 0.6 s at the default — against an agreed 30 s response
+        window, so nothing here can talk us into a deadline (M#5). The
+        in-process transport is exempt: it opens no connections and a test suite
+        should not spend real seconds pretending it does.
+        """
+        if self.transport is not None or self.calls_per_minute <= 0:
+            return
+        interval = 60.0 / self.calls_per_minute
+        waiting = interval - (time.monotonic() - self.live.last_call)
+        if waiting > 0:
+            await asyncio.sleep(waiting)
+        self.live.last_call = time.monotonic()
+
+    async def _connect(self) -> Any:
+        """Return the open session, opening one if this is the first call."""
+        from fastmcp import Client
+
+        if self.live.session is None:
+            client = Client(self.target)
+            try:
+                self.live.session = await client.__aenter__()
+            except Exception as error:  # noqa: BLE001 - classified like any call failure
+                raise self.classify("connect", error, self.timeout_sec) from error
+            self.live.client = client
+        return self.live.session
+
+    async def aclose(self) -> None:
+        """Close the session, if one is open. Safe to call more than once.
+
+        Failures are swallowed: this runs on the error path and at the end of a
+        match, and a peer that has already gone away must not turn tidying up
+        into the exception that loses the sub-game it is tidying up after.
+        """
+        client, self.live.client, self.live.session = self.live.client, None, None
+        if client is not None:
+            with suppress(Exception):
+                await client.__aexit__(None, None, None)
 
     @staticmethod
     def classify(tool: str, error: Exception, timeout_sec: float) -> PeerError:

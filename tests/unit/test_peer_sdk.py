@@ -14,7 +14,9 @@ import pytest
 
 from core import __main__ as cli
 from core.protocol.schemas import Role
+from core.runtime.brain_loader import CONFIG_KEYS
 from core.sdk.peer_sdk import BoardView, PeerSDK
+from core.shared.config_manager import load_config
 from tests.paths import PRESENT_ROLES, role_dir
 
 _ROLE = {"police": Role.COP, "thief": Role.THIEF}
@@ -47,6 +49,33 @@ def test_the_view_reports_the_negotiated_board_and_quota(sdk: PeerSDK) -> None:
 
 def test_the_digest_is_the_one_the_handshake_compares(sdk: PeerSDK) -> None:
     assert len(sdk.config_digest) == 64
+
+
+@pytest.mark.parametrize("role", PRESENT_ROLES)
+def test_the_sdk_fields_the_strategy_the_config_names(role: str) -> None:
+    """The live CLI must play the brain `[strategy]` selects, not the baseline.
+
+    Regression, found by a real match rather than by a test. `PeerSDK` derived
+    the key from the role — `strategy.cop_class` — and Appendix B.4 spells it
+    `police_class`, so the lookup missed, `load_brain` read the resulting None
+    as "use the default", and the cop went into a graded match as the baseline
+    `PoliceBrain` while its own config named `AdvancedCop`. Silent on the cop
+    only: `thief_class` happens to match the derived spelling, and the healthy
+    half hid the broken one.
+
+    `brain_loader.brain_for` was written to be the single place that key is
+    read, and `tests/integration/series_harness.py` already went through it —
+    which is exactly why no test caught this. The harness took the fixed path
+    and the CLI took its own. So this test asserts against the *facade the CLI
+    builds*, and reads the expected class out of the config file rather than
+    naming it, so it keeps holding when a better strategy is shipped.
+    """
+    config = load_config(role_dir(role))
+    spec = config.get(CONFIG_KEYS[_ROLE[role].value])
+    assert spec, f"config/{role} names no strategy to check against"
+
+    sdk = PeerSDK(role_dir(role), _ROLE[role])
+    assert sdk.brain_name == spec.partition(":")[2]
 
 
 def test_legal_moves_are_from_our_own_position(sdk: PeerSDK) -> None:

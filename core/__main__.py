@@ -62,6 +62,27 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--gui", action="store_true", help="Open the Live GUI. Shows local truth only (M#8)."
     )
 
+    match = sub.add_parser("play", help="Play a full series against a live opponent (TODO 9.2).")
+    match.add_argument("--role", required=True, choices=sorted(CONFIG_DIRS))
+    match.add_argument("--opponent", required=True, help="Their public MCP URL.")
+    match.add_argument("--port", type=int, help="Override the listen port from config.")
+    match.add_argument("--tunnel", action="store_true", help="Expose us publicly (M#10).")
+    match.add_argument("--out", type=Path, help="Where the four artefacts go. Omit to file none.")
+    match.add_argument("--role-split", default="3-3", help="The negotiated block plan (N17).")
+    match.add_argument(
+        "--wait", type=float, default=120.0, help="Seconds to keep retrying the handshake."
+    )
+    match.add_argument(
+        "--linger", type=float, default=20.0, help="Seconds to serve on, so they can audit us."
+    )
+    match.add_argument(
+        "--first",
+        default="cop",
+        choices=["cop", "thief"],
+        help="The role OUR TEAM holds in the first block. Negotiated with the "
+        "opponent, never assumed, and identical for both of our processes (C-011).",
+    )
+
     settle = sub.add_parser("negotiate", help="Run the pre-match protocol (TODO 9.1).")
     settle.add_argument("--role", required=True, choices=sorted(CONFIG_DIRS))
     settle.add_argument("--opponent", help="Their public MCP URL. Omit to print our side only.")
@@ -136,6 +157,10 @@ def main(argv: list[str] | None = None) -> int:
         from core import cli_negotiate
 
         return cli_negotiate.negotiate(sdk, args)
+    if args.command == "play":
+        from core import cli_play
+
+        return cli_play.play(sdk, args)
 
     view = sdk.board_view()
     print(f"role            : {sdk.role.value}")

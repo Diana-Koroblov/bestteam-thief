@@ -23,7 +23,7 @@ from core.infra.mcp_server import ServerSpec, build_server_spec
 from core.infra.tunnel import TunnelManager
 from core.protocol.schemas import Role
 from core.protocol.tools import build_guarded_tools
-from core.runtime.brain_loader import load_brain
+from core.runtime.brain_loader import brain_for
 from core.runtime.orchestrator import Orchestrator
 from core.runtime.peer_runtime import PeerRuntime
 from core.runtime.prematch import PreMatch
@@ -71,7 +71,18 @@ class PeerSDK:
         self._orchestrator = Orchestrator.from_config(self._config, role)
         # Loaded eagerly: a bad strategy path must fail here, where the only
         # cost is an error message, not on turn one of a real match.
-        brain = load_brain(self._config.get(f"strategy.{role.value}_class"), role.value, self._config)
+        #
+        # Through `brain_for`, never by spelling the key here. The role is `cop`
+        # and the config key is `police_class` (Appendix B.4), so the derived
+        # `strategy.cop_class` this line used to ask for is a path no file
+        # contains: `Config.get` returned None, `load_brain` read None as "use
+        # the default", and the live CLI fielded the baseline PoliceBrain while
+        # `config/police/game.toml` named AdvancedCop. Silent, and only on the
+        # cop — `thief_class` happens to match the derived spelling, so the
+        # thief looked right and the asymmetry hid the fault. Caught by a real
+        # match: the test harness already went through `brain_for`, so no test
+        # ever exercised the path a match actually takes (M#1).
+        brain = brain_for(role.value, self._config)
         self._runtime = PeerRuntime(orchestrator=self._orchestrator, brain=brain)
 
     @property
@@ -88,6 +99,16 @@ class PeerSDK:
     def runtime(self) -> PeerRuntime:
         """Return the handler an MCP server registers its tools against."""
         return self._runtime
+
+    @property
+    def scoring(self):
+        """Return the Appendix F score table this match is priced with."""
+        return self._orchestrator.scoring
+
+    @property
+    def num_games(self) -> int:
+        """Return `[number of sub-games]` in a series — 6 under Appendix F Table 18."""
+        return int(self._config.require("network_and_league.num_games"))
 
     @property
     def shared_config(self) -> dict:
@@ -147,6 +168,13 @@ class PeerSDK:
         """
         manager = TunnelManager.from_config(self._config, "", **overrides)
         manager.authtoken = env.optional(manager.spec.token_env) or ""
+        # The reserved domain belongs to one account, so the committed value can
+        # only ever be one team-mate's — and on the other machine `--tunnel`
+        # fails binding a domain that account does not own. `P2P_PUBLIC_DOMAIN`
+        # overrides it per machine, exactly as `P2P_LLM_PROVIDER` overrides the
+        # provider, and for the same reason: it is a fact about this computer,
+        # not about the match.
+        manager.domain = env.optional("P2P_PUBLIC_DOMAIN") or manager.domain
         return manager
 
     @property

@@ -95,18 +95,78 @@ GMAIL_TOKEN_PATH=C:\Users\diana\.p2p-secrets\token.json
 
 ### 0.2.1.g ⚠️ Publish the app — removes the 7-day token expiry
 
+**Do this BEFORE the consent flow in 0.2.1.h.** Publishing does not repair
+tokens that already exist: a grant minted in Testing keeps its 7-day life, so
+publishing afterwards means re-consenting anyway. Order matters.
+
 1. Go to <https://console.cloud.google.com/auth/audience>
-2. Under **Publishing status: Testing**, click **Publish App** → confirm
+2. Find the **Publishing status** panel at the top. It reads **Testing**.
+3. Click **Publish app**.
+4. A dialog appears — *"Your app will be available to any user with a Google
+   Account"* — and may list your scopes with a note that `gmail.send` is a
+   **restricted** scope. Click **Confirm**.
+5. The panel should now read **Publishing status: In production**.
 
-You will now see an *unverified app* warning at the consent screen. That is
-expected and fine — the app is only ever used by you. Click **Advanced** →
-**Go to p2p-cop-chase (unsafe)**.
+**What "restricted scope" changes, and what it does not.** Every Gmail scope is
+restricted in Google's classification, so the dialog may warn that verification
+is required. Verification is required to *distribute* the app — to show it
+without a warning screen and to exceed 100 users. It is not required for the app
+to work. Your own account is one user of an app you wrote, and clicking through
+your own warning screen is the whole interaction.
 
-Verification is only required for public distribution. Publishing without it
-caps you at 100 users, which is 99 more than you need, and it removes the 7-day
-refresh-token expiry that would otherwise break reporting mid-league.
+At the consent screen you will now see **"Google hasn't verified this app"**.
+That is expected: click **Advanced** → **Go to p2p-cop-chase (unsafe)**. The
+word "unsafe" refers to Google not having reviewed the app, not to anything
+about the grant — which is still `gmail.send` and still cannot read your
+mailbox.
+
+**If Google refuses to publish** — some projects are pushed into a verification
+queue instead — leave it in Testing and re-run 0.2.1.h **every 7 days**, marking
+it in your calendar. A token that dies mid-league costs 0 to *both* teams
+(M#35), so an unglamorous recurring reminder beats a silent failure.
 
 ✅ **Done when:** publishing status reads **In production**.
+
+### 0.2.1.h Run the consent flow — this is what creates the token
+
+Steps a–g produce `credentials.json`, which identifies the **application**. It
+is not an email and password: your Google password is typed only into Google's
+own page, and what comes back is a token. This step is that exchange, and until
+it runs there is no token and nothing can send.
+
+```powershell
+uv run python scripts/gmail_consent.py
+```
+
+A browser opens. Sign in with the account that will send the reports, click
+through the unverified-app warning, and grant **Send email on your behalf** —
+the only permission it should ask for. If it asks for anything more, stop: the
+scope in 0.2.1.d is wrong.
+
+Then prove the whole path works, end to end, before a match depends on it:
+
+```powershell
+uv run python scripts/gmail_consent.py --test-to your.own@gmail.com
+```
+
+This sends one real message through the Gatekeeper, the message builder and the
+Gmail API, with a throwaway attachment. `--test-to` has no default on purpose:
+the configured recipient is the lecturer (M#51), and a self-test that defaulted
+to it would mail him a fake report the first time anyone ran it.
+
+**The sending account must match `[email] sender` in `config/<role>/game.toml`.**
+Gmail sends as whoever authenticated, and `build_message` puts the config value
+in the `From:` header — two different addresses make the header contradict the
+sender.
+
+✅ **Done when:** the test message is in your inbox **and** your Sent folder, and
+`scripts/check_setup.py` reports the token `[ OK ]`.
+
+**Re-consenting later.** `gmail_consent.py` will not overwrite an existing
+token; pass `--force`. You need this if the grant is revoked, if the account
+changes, or if a `RefreshError: invalid_grant` appears — which means the grant
+is gone rather than merely expired, and is what a Testing-status project looks
+like on day 8.
 
 ---
 

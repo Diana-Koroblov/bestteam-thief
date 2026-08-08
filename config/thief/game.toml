@@ -36,6 +36,17 @@ listen_host = "127.0.0.1"
 # Different port from the cop so both roles can run on one machine for
 # self-play. The public domain still maps to exactly one of them at a time.
 listen_port = 8082
+# Outbound messages a minute. Private, per-machine, and not negotiated: it
+# describes what our tunnel can carry, not what the match agreed.
+#
+# MEASURED, not chosen. A free ngrok endpoint stops completing the TLS
+# handshake at ~120 requests a minute; the client sees a bare ConnectError and
+# the agent logs nothing, because the connection never becomes a request. Two
+# peers with no human in the loop play ~1.4 steps a second at two messages a
+# step — 168 a minute — and the 08/08 live rehearsal died mid-sub-game twice
+# over, scoring 0 for both sides on a network budget rather than on any move.
+# 100 leaves headroom at 0.6 s a message, against a 30 s response window.
+max_calls_per_minute = 100
 # ngrok | localtonet. See docs/PRD_5_tunnelling.md §6 for why ngrok is primary.
 # Localtonet is the documented fallback for the day ngrok is blocked or down;
 # switching is this line plus LOCALTONET_AUTHTOKEN in .env, no code change.
@@ -49,6 +60,10 @@ tunnel_provider = "ngrok"
 # 2 plies. The cop searches deeper because it is hunting and needs to see a
 # capture coming; what kills an evader is the one-move blunder into a sealable
 # cell, and depth 2 already sees that.
+# Which brain a graded match fields (TODO 9.5.7). Private, so this is not part
+# of the negotiated digest and the opponent never learns it. Left unset the
+# loader falls back to `thief.brain:ThiefBrain`, the baseline.
+thief_class = "thief.advanced:AdvancedThief"
 search_depth = 2
 # Survival is worth 10 to us and only 5 to the cop, so we play for the clock.
 prefer_cycles = true
@@ -202,7 +217,7 @@ timeout_sec = 8
 [email]
 # League reporting via the Gmail API, send-only scope (M#30).
 enabled = true
-sender = "dianakoroblov27@gmail.com"
+sender = "itay.malich2@gmail.com"
 # M#51. From config, never a literal in code: the test suite must not be able
 # to mail the lecturer, and a changed address is a config edit not a release.
 recipient = "rmisegal+uoh26finalgame@gmail.com"

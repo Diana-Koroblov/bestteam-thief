@@ -98,7 +98,7 @@ def check_token(path_value: str | None) -> CheckResult:
         return CheckResult("Gmail token", WARN, "GMAIL_TOKEN_PATH not set", "SETUP 0.2.1.f")
     if not Path(path_value).exists():
         return CheckResult("Gmail token", WARN, "no token yet",
-                           "Normal before the first send; the consent flow creates it.")
+                           "SETUP 0.2.1.h - run `python scripts/gmail_consent.py` once.")
     return CheckResult("Gmail token", OK, str(path_value))
 
 
