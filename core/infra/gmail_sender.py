@@ -159,6 +159,10 @@ class GmailSender:
             happens.
         enabled: `[email] enabled`. False skips the send and says so, rather
             than failing — a development run must not be a failed run.
+        on_series_end: `[email] send_on_series_end`. Whether a finished series
+            files its own report without anyone typing a command. Read here
+            because here is where `[email]` is read; acted on by
+            `core.runtime.reporting`, which is what knows a series has ended.
     """
 
     sender: str
@@ -166,6 +170,7 @@ class GmailSender:
     gatekeeper: Any
     transport: Callable[[dict[str, Any]], Any]
     enabled: bool = True
+    on_series_end: bool = True
 
     @classmethod
     def from_config(cls, config: Any, gatekeeper: Any, transport: Callable[..., Any]) -> GmailSender:
@@ -194,6 +199,7 @@ class GmailSender:
             gatekeeper=gatekeeper,
             transport=transport,
             enabled=bool(config.get("email.enabled", True)),
+            on_series_end=bool(config.get("email.send_on_series_end", True)),
         )
 
     def send_result(self, result_path: Path, subject: str = "") -> Any:

@@ -198,13 +198,22 @@ class PeerSDK:
                 client is built on first use — so importing the SDK never needs
                 a token and a peer with no credentials still starts.
 
-        The **caller** decides when a report goes out. `[email]
-        send_on_series_end` says it should be at the end of a series, and the
-        turn loop that reaches that point does not exist yet (Phase 9).
+        The **caller** decides when a report goes out; `core.runtime.reporting`
+        is the caller, at the end of a series, as `[email] send_on_series_end`
+        has always said it should be.
+
+        **The transport is built on the first send, not here.** `build_transport`
+        raises when there is no stored token, and evaluating it as an argument
+        made merely *asking* whether reporting is switched on require credentials
+        — so a machine with `[email] enabled = false` could not read its own
+        config without an OAuth flow it had deliberately opted out of.
         """
-        return GmailSender.from_config(
-            self._config, self.gatekeeper, transport or build_transport()
-        )
+
+        def lazy(body: dict[str, Any]) -> Any:
+            """Construct the Gmail client only when a message is really sent."""
+            return build_transport()(body)
+
+        return GmailSender.from_config(self._config, self.gatekeeper, transport or lazy)
 
     def verify_budget(self) -> None:
         """Refuse a metered provider paired with too short an interval (TODO 7.1.6).

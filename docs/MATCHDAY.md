@@ -84,10 +84,27 @@ our sub-games   : 1, 2, 3
 totals          : us 15 - them 30
 league points   : us 15 - them 30  (decided_on_points)
 artefacts       : 7 files in results\
+report          : held back - result_....json covers 3 of 6 sub-games
+  the other role process files the rest and sends then (M#35)
 ```
 
 `audit passed` on every row is the one to check. `FAILED` means their log did not
 re-hash — file it, do **not** score it yourself (M#19).
+
+The second terminal ends the same way but with the report actually gone:
+
+```
+report          : sent to rmisegal+uoh26finalgame@gmail.com  (result_....json, 6 sub-games)
+  now confirm THEY sent theirs - a missing report is 0 for BOTH (M#35)
+```
+
+**The two halves share one report file.** Both processes write
+`result_<game_id>.json` and each *merges* into what the other left, keyed by
+sub-game number — so the file always describes all six, whichever order the
+terminals run in and however many times one is retried. Whoever files the sixth
+row sends it. Anything less than six is held back deliberately: two messages
+under one `game_id`, the earlier disagreeing with the later, is the
+contradictory pair M#35 voids matches over.
 
 ## Afterwards
 
@@ -98,10 +115,28 @@ re-hash — file it, do **not** score it yourself (M#19).
    uv run python -m core replay results\log_<game_id>_g01.json --headless
    ```
    Exit code 0 and `Verified OK - 35 steps re-hashed, no mismatch`.
-3. **Send our report, and confirm they sent theirs.** A missing or contradictory
+3. **Confirm they sent theirs.** Ours goes automatically when the sixth sub-game
+   is filed; theirs is a question you have to ask. A missing or contradictory
    report voids the match and scores 0 for *both* teams (M#35).
 4. **Commit the config JSON and the logs**, and add the row to
    `docs/LEAGUE_LOG.md` — date, role, result, reports sent, commit hash (M#37).
+
+### If the report did not go
+
+The match prints `NOT SENT` with the reason, or `held back` when the series
+never reached six sub-games — an opponent who drops at sub-game four leaves a
+four-row report that still has to be filed. Either way:
+
+```powershell
+uv run python scripts\send_report.py --role cop results\ --dry-run   # see what would go
+uv run python scripts\send_report.py --role cop results\             # send it
+```
+
+A directory resolves to its newest `result_*.json`; pass the file itself to be
+certain. It reads the same `[email]` block and the same Gatekeeper the match
+does, so it is not a second send path that could behave differently. Use it too
+when the two teams reconcile their scoreboards after the fact and the result
+file is corrected — send the corrected one and tell them you have.
 
 ## What the tunnel can carry
 

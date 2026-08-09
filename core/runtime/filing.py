@@ -28,6 +28,7 @@ from typing import Any
 from core.report.artefacts import build_config_snapshot, build_declaration, build_result, write
 from core.report.identifiers import artefact_name
 from core.report.match_log import build_log
+from core.report.merge import load_rows, merge_rows, series_block
 
 __all__ = ["MatchFiling"]
 
@@ -122,19 +123,34 @@ class MatchFiling:
         )
         return [snapshot, log]
 
+    @property
+    def result_path(self) -> Path:
+        """Where `result_<game_id>.json` lives.
+
+        The one artefact named for the whole match rather than for a sub-game,
+        and therefore the one both of our role processes have to share.
+        """
+        return self.directory / artefact_name("result", self.game_id)
+
     def result(self, series: Any, table: Any) -> Path:
         """File `result_<game_id>.json` for the whole series (7.2.4, M#49).
 
-        Rewritten every time the series is priced, deliberately. Our two role
-        processes each finish a half and each file this, so the second one to
-        run overwrites a report covering three sub-games with one covering the
-        three it played — which is why `scripts/` must merge, and why the
-        per-sub-game logs beside it are the durable record.
+        **Merged with whatever is already there, never overwritten.** Our two
+        role processes each finish a half of a 3-3 split and each file this, so
+        the second to run used to replace a report covering the first three
+        sub-games with one covering the three it had played itself — a file
+        that was internally consistent and contradicted both the opponent's
+        report and our own logs sitting beside it (M#35).
+
+        Totals and league credit are recomputed over the **merged** rows rather
+        than carried from *series*, which knows only this process's half. See
+        `core/report/merge.py`.
         """
+        rows = merge_rows(load_rows(self.result_path), series.rows(table))
         return self._write(
             build_result(
                 game_identifier=self.game_id,
-                sub_games=series.rows(table),
+                sub_games=rows,
                 github_commit=self.github_commit,
                 # M#54 wants the series total. Zero is the honest number on the
                 # `template` provider, which spends no model tokens at all —
@@ -142,7 +158,7 @@ class MatchFiling:
                 # on, which is what TODO 9.6 wires up.
                 total_llm_tokens=0,
                 repos=self.repos,
-                series=series.summary(),
+                series=series_block(rows, table),
             ),
             "result",
         )

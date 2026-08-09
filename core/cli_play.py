@@ -23,6 +23,12 @@ rest — into the same directory, under the same `game_id`, which is what makes
 six logs from two processes one match rather than two halves nobody can join
 up (7.2.5).
 
+**The process that files the sixth sub-game sends the report.** Both of ours
+merge into one `result_<game_id>.json` (`core/report/merge.py`), and the one
+that completes it mails it without anyone typing a command — because a match
+won on the board and never reported scores 0 for both teams (M#35). See
+`core/runtime/reporting.py`.
+
 **Nothing is played before the handshake settles.** The negotiation runs first
 and a refusal exits non-zero with no move sent. A match played under configs
 differing by one byte is a match whose audit reports forgery against two honest
@@ -232,6 +238,7 @@ async def _series(
     """Play this process's sub-games and report what they were worth."""
     from core.report.identifiers import game_id
     from core.runtime.live import driver_factory, filing_for, reopen
+    from core.runtime.reporting import send_series_report
     from core.runtime.series import SeriesRunner
 
     declared = theirs.step_zero if theirs is not None else {}
@@ -252,6 +259,13 @@ async def _series(
     )
     report = await runner.run()
     print_series(report, sdk.scoring, filing)
+    # Before the linger, not after: the mail is the one remaining thing that can
+    # still lose a match already won, and a human who reads the scoreboard and
+    # closes the window must not be the reason it never left (M#35).
+    if filing is not None:
+        print(
+            send_series_report(sdk.mailer, filing.result_path, sdk.num_games, sdk.role.value)
+        )
     linger = float(getattr(args, "linger", LINGER_SECONDS))
     if linger > 0:
         print(f"\nstaying up {linger:.0f}s so they can finish auditing our log (M#36) ...")
