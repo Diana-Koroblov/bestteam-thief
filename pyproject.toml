@@ -42,6 +42,23 @@ target-version = "py310"
 select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM"]
 ignore = ["E501"]
 
+[tool.ruff.lint.isort]
+# Stated, never inferred. Ruff decides first-party from what is on disk, and
+# each published repository ships one role package (ADR-001) -- so in
+# `bestteam-cop` the `thief` package is absent, `from thief.search import ...`
+# is classified THIRD-party, and every test that imports the other role has to
+# sort its imports the other way round. Nine files are I001 in the cop repo and
+# ten in the thief repo, while the working tree that holds both roles sees
+# nothing at all: CI red on files nobody touched, for a reason no local gate
+# could reproduce.
+#
+# Naming all three packages makes the classification a fact about the project
+# rather than about the checkout -- the same reason `[tool.coverage.run]
+# source_pkgs` is written out below. `scripts/check_split_repos.py` now runs
+# ruff inside each split tree, so the next rule that reads the filesystem is
+# caught before the push rather than after it.
+known-first-party = ["core", "police", "thief"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
