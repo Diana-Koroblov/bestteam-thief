@@ -4,6 +4,43 @@ Everything here has been run end to end. The scoreboard, the four artefacts and
 the `Verified OK` replay in this document come from a real two-process match over
 HTTP, not from the test suite.
 
+Read it in order on the day: **set up → agree the terms → play → report.** Each
+section is what the one before it makes possible, and the two that most often go
+wrong are the ones with no code in them at all.
+
+---
+
+## Before match day
+
+Once per machine, and once more the morning of a counted match.
+
+```powershell
+uv sync --all-extras --dev          # uv only; pip/venv are not used here
+uv run python scripts/check_setup.py
+ollama list                         # the model named in [llm] must be pulled
+```
+
+`check_setup.py` checks the `.env` file, the credentials path, the Gmail token,
+Ollama and the ngrok binary and authtoken. Every failure it reports names the
+`docs/SETUP.md` step that fixes it.
+
+**Three values in `.env` are facts about the computer, not about the match.** None
+of them is negotiated and none belongs in a committed file:
+
+| Variable | Why it is not in `game.toml` |
+|---|---|
+| `P2P_PUBLIC_DOMAIN` | The reserved ngrok domain belongs to one account, so the committed value can only ever be one team-mate's. On the other machine `--tunnel` fails binding a domain that account does not own. |
+| `P2P_LLM_PROVIDER` | Private per peer under Appendix F Table 21. `ollama` for graded matches — zero tokens, which is scored (ADR-003). |
+| `NGROK_AUTHTOKEN` | A secret. Nothing that identifies an account belongs in a committed file (M#39, M#40). |
+
+**Commit before a counted match.** The handshake prints *"working tree is DIRTY"*
+otherwise, and the declared commit hash is what makes the result reproducible
+after the fact (M#53).
+
+```powershell
+uv run python scripts/ship.py -m "chore: clean tree for the match vs <them>"
+```
+
 ---
 
 ## Before you connect
@@ -18,7 +55,7 @@ uv run python -m core negotiate --role cop --review their-game.json
 `--review` exits non-zero on an Appendix F breach. Agreeing to one disqualifies
 **both** teams (M#12), and "they proposed it" is not a defence.
 
-**2. Settle the four things no Appendix decides.** These are the ones that void a
+**2. Settle the five things no Appendix decides.** These are the ones that void a
 match when discovered mid-play, and a voided match scores 0 for both sides (M#35):
 
 | Term | Ours | Why it must be written down |
@@ -41,6 +78,25 @@ they set --first thief ->  their Thief plays 1-3, their Cop plays 4-6
 Both peers sending the string `"3-3"` settles nothing about who opens as Cop. Get
 this wrong in the same direction and both sides field a Cop in sub-game one.
 
+**4. Write their team id into the contract, then re-send the pack.** Both
+`config/police/game.json` and `config/thief/game.json` ship with
+`"agreed_between": ["bestteam"]`, and the handshake warns about it every time.
+Add the opponent:
+
+```json
+"agreed_between": ["bestteam", "their-team-id"],
+```
+
+Two things follow, in this order:
+
+- **The two files must stay byte-identical.** They are the same shared contract
+  and both of our processes hash it; a match played under two versions of our own
+  config is one our own two halves cannot agree on.
+- **This changes `config_sha256`.** So do it *before* the final pack goes out, and
+  re-run `--pack` afterwards. Editing it after they have loaded your `game.json`
+  means their digest no longer matches yours and the handshake refuses — which is
+  the correct outcome, and an avoidable way to lose a booked slot.
+
 ---
 
 ## Playing
@@ -57,7 +113,34 @@ uv run python -m core play --role thief --tunnel --first cop --out results\ `
     --opponent https://their-domain.ngrok-free.dev/mcp
 ```
 
-The command prints our public URL on startup — give that to the opponent.
+**`--opponent` is always *their* URL, never ours**, and it is the same value in
+both terminals: they hold one reserved domain too, mapped to whichever of their
+two processes is running. Ours is what the command prints on startup, and the
+line to paste into the chat window is spelled out for you:
+
+```
+role            : cop  (AdvancedCop)
+our url         : https://denotatively-sciuroid-florine.ngrok-free.dev/mcp
+give them       : --opponent https://denotatively-sciuroid-florine.ngrok-free.dev/mcp
+their url       : https://their-domain.ngrok-free.dev/mcp
+```
+
+Check `their url` against what they sent. Pointing `--opponent` at our own URL
+does not quietly half-work: the peer negotiates with itself, both sides claim
+the same role, and `settle` refuses with *"we both propose to play cop"* — exit
+1, no move sent (C-011). Confusing for a second, then obvious.
+
+**One after the other, not side by side.** The Cop listens on 8081 and the Thief
+on 8082 (`[network] listen_port`), and one reserved ngrok domain maps to exactly
+one of them at a time. Start the second terminal when the first has finished its
+three sub-games and its `--linger` has run out. The opponent keeps the *same*
+`--opponent` URL across the whole match, because it is the domain that is fixed
+and not the port behind it.
+
+In this working tree both roles are present, so both terminals run from here. In
+the published repositories they are two clones — each ships one role (ADR-001),
+and asking a Cop repository for `--role thief` says so plainly rather than
+failing later on a missing file.
 
 | Flag | Default | Notes |
 |---|---|---|
@@ -70,6 +153,12 @@ The command prints our public URL on startup — give that to the opponent.
 
 A refused handshake exits **1** with no move sent. That is the correct outcome —
 a match played under configs differing by one byte cannot be audited.
+
+**Play a warm-up against them first if there is time.** Uncounted matches are
+explicitly permitted (M#52) and they are where protocol bugs surface, at no cost
+to either side. Run it exactly as above but **without `--out`**, so nothing is
+filed that a grader could mistake for a league match, and record what you learned
+in the warm-up table of `docs/LEAGUE_LOG.md`.
 
 ## What you should see
 
@@ -168,9 +257,37 @@ not the opponent, and not their config.
 
 ## Two warnings the handshake will print
 
-Both appeared on every rehearsal and both matter:
+Both appeared on every rehearsal, and each means a step above was skipped. They
+are warnings rather than refusals because either one can be legitimate in a
+rehearsal — and neither is, in a counted match.
 
-- *"working tree is DIRTY"* — commit before a counted match. The declared commit
-  is what makes the result reproducible (M#53).
-- *"agreed_between names bestteam"* — add the opponent's team id to the shared
-  config before signing, or the filed snapshot does not record who agreed to it.
+- *"working tree is DIRTY"* — commit first. The declared commit hash is what
+  makes the result reproducible (M#53). See **Before match day**.
+- *"agreed_between names bestteam"* — the opponent's team id is not in the shared
+  config, so the filed snapshot will not record who agreed to it. See step 4 of
+  **Before you connect**, and note that fixing it changes the digest.
+
+---
+
+## The whole thing, in ten lines
+
+For the second match, when you no longer need the prose.
+
+```powershell
+uv run python scripts/check_setup.py                                  # once, per machine
+uv run python scripts/ship.py -m "chore: clean tree for <them>"       # M#53
+
+uv run python -m core negotiate --role cop --pack outbox\             # send them this
+uv run python -m core negotiate --role cop --review their-game.json   # exit 1 = refuse
+#   settle: role split, decay 0.81, capture readings, sampling, axes, --first
+#   add their team id to BOTH game.json files, then re-send the pack
+
+#   --opponent is always THEIR public MCP URL, and the same one both times:
+#   they hold one reserved domain too, mapped to whichever of their two
+#   processes is running. OURS is printed on startup - that is what they need.
+uv run python -m core play --role cop   --tunnel --first cop --out results\ --opponent https://THEIR-domain.ngrok-free.dev/mcp
+uv run python -m core play --role thief --tunnel --first cop --out results\ --opponent https://THEIR-domain.ngrok-free.dev/mcp
+
+uv run python -m core replay results\log_<game_id>_g01.json --headless # Verified OK
+#   confirm they sent their report; add the row to docs/LEAGUE_LOG.md
+```

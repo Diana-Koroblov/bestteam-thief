@@ -162,6 +162,8 @@ mandatory pre-match worked example (M#23) is designed to catch.
 
 | Document | Contents |
 |---|---|
+| `docs/MATCHDAY.md` | **How to play another group, start to finish** — setup, the terms to agree, the two commands, reporting |
+| `docs/SETUP.md` | The four external accounts: Gmail OAuth, Groq, Ollama, ngrok |
 | `docs/PRD.md` | Requirements, KPIs, binding parameters, acceptance criteria |
 | `docs/PLAN.md` | Architecture, C4 diagrams, state machine, data schemas, ADRs |
 | `docs/TODO.md` | Task breakdown by phase, with owner and definition of done |
