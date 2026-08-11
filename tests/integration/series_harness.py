@@ -27,6 +27,7 @@ from core.protocol.tools import build_guarded_tools
 from core.report.identifiers import game_id
 from core.runtime.brain_loader import brain_for
 from core.runtime.filing import MatchFiling
+from core.runtime.live import declare
 from core.runtime.match_driver import MatchDriver
 from core.runtime.orchestrator import Orchestrator
 from core.runtime.peer_runtime import PeerRuntime
@@ -96,6 +97,12 @@ def runners(config: Any, directory: Any = None) -> tuple[SeriesRunner, SeriesRun
         if directory
         else None
     )
+    if filing is not None:
+        # Before the first move, exactly as `cli_play` does it. Filed **here**
+        # rather than by the test, so `test_the_series_files_all_four_artefacts`
+        # proves the declaration is produced by playing a series — which is the
+        # claim it was making while the test wrote the file itself.
+        declare(filing, us.peers[Role.COP], ("in-process://ours", "in-process://theirs"), None)
     return (
         SeriesRunner(
             build=lambda n, role: us.driver(n, role, them),

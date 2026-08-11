@@ -32,7 +32,28 @@ from core.domain.rules import Outcome, Verdict
 from core.domain.scoring import ScoreTable, level_series
 from core.report.artefacts import ArtefactError
 
-__all__ = ["load_rows", "merge_rows", "series_block"]
+__all__ = ["load_rows", "merge_rows", "series_block", "first_start"]
+
+
+def first_start(path: Path) -> str:
+    """Return the `started_utc` already filed at *path*, or ``""``.
+
+    The declaration is the second artefact named for the whole match rather than
+    for a sub-game, so it meets the same two-process problem as the result: both
+    of our role processes write it, and the later one must not move the match's
+    start time forward past three sub-games that had already been played.
+
+    Unreadable is treated as absent here, unlike `load_rows`. The cost of being
+    wrong is a start time stamped a few minutes late in one field; the cost of
+    refusing is no declaration at all for a match that was really played.
+    """
+    if not path.is_file():
+        return ""
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return str(payload.get("started_utc", ""))
+    except (OSError, ValueError, TypeError):
+        return ""
 
 
 def load_rows(path: Path) -> list[dict[str, Any]]:

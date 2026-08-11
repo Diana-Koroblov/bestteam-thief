@@ -8,6 +8,7 @@ matches, `groq` runs on Diana's during development.
 
 from core.infra.llm.base import ProviderError, TextProvider
 from core.infra.llm.factory import build_provider, build_writer
+from core.infra.llm.meter import TokenMeter
 from core.infra.llm.template import TemplateProvider
 from core.infra.llm.writer import HintWriter, WrittenHint
 
@@ -17,6 +18,7 @@ __all__ = [
     "TemplateProvider",
     "HintWriter",
     "WrittenHint",
+    "TokenMeter",
     "build_provider",
     "build_writer",
 ]

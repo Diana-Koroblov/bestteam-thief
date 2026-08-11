@@ -101,11 +101,17 @@ def build(
     sub_game: int,
     llm_model: str,
     repo: Path,
+    members: tuple[str, ...] = (),
 ) -> StepZero:
     """Assemble and seal this peer's Step-0 declaration.
 
     Args:
         team_name: Ours, as agreed with the league.
+        members: Who is on this team. Declared because the pre-game declaration
+            artefact must name *"the identity of both groups and their members"*
+            (Ch. 9.3.3), and this exchange is the only channel that carries the
+            opponent's. Additive: a peer that sends none is read as an empty
+            list, not refused.
         role: ``cop`` or ``thief`` for this sub-game.
         sub_game: 1-6. Inside the digest, so a declaration signed for sub-game 1
             cannot be replayed as sub-game 4 — the same replay hole the audit
@@ -116,6 +122,7 @@ def build(
     """
     payload = {
         "team_name": team_name,
+        "members": list(members),
         "role": role,
         "sub_game": sub_game,
         "llm_model": llm_model,

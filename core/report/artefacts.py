@@ -61,8 +61,15 @@ def build_declaration(
     mcp_urls: dict[str, str],
     llm_model: str,
     token_cap: int,
+    step_zero: dict[str, Any] | None = None,
+    started_utc: str = "",
+    ended_utc: str = "",
 ) -> dict[str, Any]:
-    """Assemble ``declaration_<game_id>.json`` (7.2.1).
+    """Assemble ``declaration_<game_id>.json`` (7.2.1, M#24).
+
+    Ch. 9.3.3 defines this file as everything **fixed** about the whole match:
+    both groups and their members, the repository links, the MCP addresses, the
+    hardware, the model, the agreed token ceiling, and the start and end times.
 
     Args:
         teams: ``{team_name: [member, ...]}`` for both sides.
@@ -71,10 +78,23 @@ def build_declaration(
         mcp_urls: Each peer's public endpoint.
         llm_model: Our model name — never the provider (Appendix F Table 21).
         token_cap: The agreed ceiling, for the meter to be checked against.
+        step_zero: ``{"ours": {...}, "theirs": {...}}`` — both sealed Step-0
+            payloads with their digests. **This is what makes the hardware
+            declaration a signed one** rather than a claim typed into a report:
+            each half hashes to a digest the other peer already holds, so a
+            machine specification cannot be rewritten after the match without
+            contradicting a value the opponent can produce (M#24).
+        started_utc: When the first sub-game of this match began. Passed rather
+            than stamped here, because the file is rewritten at the end of the
+            series and the start time must survive that.
+        ended_utc: When the last one finished; ``""`` while the match is running,
+            which is exactly what an interrupted series should leave on disk.
     """
     return {
         "game_id": game_identifier,
         "created_utc": utc_now(),
+        "started_utc": started_utc or utc_now(),
+        "ended_utc": ended_utc,
         "code_version": VERSION,
         "teams": teams,
         "repositories": {key: repos.get(key, "") for key in REPO_LINKS},
@@ -82,6 +102,7 @@ def build_declaration(
         "llm_model": llm_model,
         "token_cap": token_cap,
         "hardware": describe(),
+        "step_zero": dict(step_zero or {}),
     }
 
 

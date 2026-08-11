@@ -1,0 +1,272 @@
+{
+  "code_version": "1.00",
+  "config_sha256": "8909ee10fbb4af11016d70b52ac7de18068bffd964eb4f4a4f121b722d9e16bc",
+  "created_utc": "2026-08-11T17:45:41+00:00",
+  "game_id": "2026-08-08_bestteam-vs-opponents_a8e6212c",
+  "outcome": "cop and thief share cell (6, 5)",
+  "role": "cop",
+  "step_count": 12,
+  "steps": [
+    {
+      "barrier_cell": null,
+      "claimed_digest": "be576936d55741e80587f6e4ad3fa893ed3dd3148874594b5a1a5d9a39e776b0",
+      "hint": "The southern side suits me better today.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "866ff83119f1797c5814e2e420409420",
+      "scent_digest": "2b8164ffeb4cdf67bdb9edddad093c875d420eb230a0d615ab70f36e21cfecee",
+      "state": {
+        "cop": [
+          0,
+          0
+        ],
+        "step": 0,
+        "thief": [
+          3,
+          3
+        ]
+      },
+      "step": 0
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "b3b8b46fffab3fae5d7a2031e8b4b7233456d3bdb0a8b2c7378ed775a2861ae1",
+      "hint": "I drift north while you guess at shadows.",
+      "intent": "lie",
+      "move": "S",
+      "nonce": "ada14a67ac17c2698571d7e116394755",
+      "scent_digest": "c7efba78bc19497ef6f895365540eaea08ee5e3d5360bbcc9e0665b55b667185",
+      "state": {
+        "cop": [
+          1,
+          0
+        ],
+        "step": 1,
+        "thief": [
+          4,
+          3
+        ]
+      },
+      "step": 1
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "4bd8cb8ba1b35df3499d9737a00587d45b49d9525db2a751fed64ff504124b18",
+      "hint": "East it is. Catch me if the board allows.",
+      "intent": "truth",
+      "move": "E",
+      "nonce": "c76cdc4676d1dc5731356213b3c07595",
+      "scent_digest": "21b8dad0e264d9ca92cbf918439af88dcfc091dbcd2d2e39018e3a50e80bf7ab",
+      "state": {
+        "cop": [
+          2,
+          0
+        ],
+        "step": 2,
+        "thief": [
+          5,
+          3
+        ]
+      },
+      "step": 2
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "d9c4ab34c96c36dc865c9fe0c30b43c0487738d19cbb1206af0b0a60b4bf29e7",
+      "hint": "I lean east, where your trail runs thin.",
+      "intent": "truth",
+      "move": "E",
+      "nonce": "c8571c4b73d232325e74f35d73530f75",
+      "scent_digest": "245c82d6ac1b0e6c14d64a0985dd5b273d2d3fd802693081e5c30e17216430d4",
+      "state": {
+        "cop": [
+          2,
+          1
+        ],
+        "step": 3,
+        "thief": [
+          5,
+          4
+        ]
+      },
+      "step": 3
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "e36c290559d2168a59f0ddf81402eb8f1e3e11db7062889672fad7a49b779886",
+      "hint": "The western edge suits my plans nicely.",
+      "intent": "lie",
+      "move": "E",
+      "nonce": "33008846fd0cc6eff186eb5d10feeea4",
+      "scent_digest": "69aeb941cfa9a21c69a7134b7f46c815f10d0e2614a9f74947bb1f5b273ea09e",
+      "state": {
+        "cop": [
+          2,
+          2
+        ],
+        "step": 4,
+        "thief": [
+          5,
+          5
+        ]
+      },
+      "step": 4
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "4692c530e83959b0fda5f4ef9bc5cb23347ad44d04d46d773ddec325d21c5188",
+      "hint": "The northern edge is calling me. Try to keep up.",
+      "intent": "lie",
+      "move": "S",
+      "nonce": "93c7685028d84d3a603ee0aa3368f694",
+      "scent_digest": "aed3dd5885a2a671e4f46cff9835cfa7015dd14badb95fcf4f9a1742168f7fd0",
+      "state": {
+        "cop": [
+          2,
+          3
+        ],
+        "step": 5,
+        "thief": [
+          5,
+          5
+        ]
+      },
+      "step": 5
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "789a1f0a6437553d9b98236c8b8dab1080f5e7f1c2712b64596a68d5f54ac3c1",
+      "hint": "South, and unhurried. Your move.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "54d8384fb89d06f34420e5bafb57a9aa",
+      "scent_digest": "a4ea29d923b8b8d91c1cf522921856bf05492fa42249ff698f2f7b2f5e8de390",
+      "state": {
+        "cop": [
+          3,
+          3
+        ],
+        "step": 6,
+        "thief": [
+          5,
+          5
+        ]
+      },
+      "step": 6
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "3a6d482c35babcdb2cbea2bb2da8892b3b37d24b5c3cd43730e5e80f299bc52b",
+      "hint": "Eastward now. The far side is friendlier.",
+      "intent": "truth",
+      "move": "E",
+      "nonce": "562fa131a754b0cd0fef4d42648b53c9",
+      "scent_digest": "a768344e8deedcf84e2c73beb2bfb90b72afbff5528928f4225c2a0bc6a16bdb",
+      "state": {
+        "cop": [
+          4,
+          3
+        ],
+        "step": 7,
+        "thief": [
+          5,
+          5
+        ]
+      },
+      "step": 7
+    },
+    {
+      "barrier_cell": [
+        5,
+        4
+      ],
+      "claimed_digest": "c61ccbf9fe395996945fc4735c8e65cebc49805d38660f8663590e653fc2425e",
+      "hint": "You are chasing a rumour, not an agent.",
+      "intent": "truth",
+      "move": "STAY",
+      "nonce": "cdfe4ae77c377a49d87797252d1b51f8",
+      "scent_digest": "3a26c5418e9f53284603a1a67ce5161b1adc19501f4998344c247620f45bc89b",
+      "sealed_barrier_cell": [
+        5,
+        4
+      ],
+      "state": {
+        "cop": [
+          4,
+          4
+        ],
+        "step": 8,
+        "thief": [
+          5,
+          5
+        ]
+      },
+      "step": 8
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "82ae83a4d9411320d15584a80317703d1641f81aece144ffd099e8d4051316b4",
+      "hint": "Eastward now. The far side is friendlier.",
+      "intent": "truth",
+      "move": "E",
+      "nonce": "c4453a31a0d90c3bff3f29f6c481e9be",
+      "scent_digest": "afd09fae769f0580bf5a1a58b52e5b2f40cdd3012d18b9ddb7b08b59373da43e",
+      "state": {
+        "cop": [
+          4,
+          4
+        ],
+        "step": 9,
+        "thief": [
+          5,
+          5
+        ]
+      },
+      "step": 9
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "472a54d79ec12c21279cd3389cbf3a62545d4dc00c1448d996adb4ad9da66645",
+      "hint": "South, and unhurried. Your move.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "27da26bf018e428de96870ac9f57f992",
+      "scent_digest": "0de047b5eb5ede19b8aaf631bc1196785c229accb161f6aa9c88238a5f158e3e",
+      "state": {
+        "cop": [
+          4,
+          5
+        ],
+        "step": 10,
+        "thief": [
+          6,
+          5
+        ]
+      },
+      "step": 10
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "7a28b58ab713e70334d4675a1db402b8dbfe5a85c4865c887e2a251366ad40d1",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "052d5964a7369ab312cdb0e527785482",
+      "scent_digest": "fbd3ef0db490af8092775d78658a81ffb76759834d21164b48f9ef792c897482",
+      "state": {
+        "cop": [
+          5,
+          5
+        ],
+        "step": 11,
+        "thief": [
+          6,
+          5
+        ]
+      },
+      "step": 11
+    }
+  ],
+  "sub_game": 1,
+  "unverifiable_steps": []
+}

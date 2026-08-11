@@ -102,6 +102,19 @@ class ReplaySession:
         failure recorded for ordering or duplication is about the log's *shape*
         and says nothing about whether that individual seal is genuine. A viewer
         that conflated them would point at the wrong row.
+
+        🐛 **Both sealed fields, or this contradicts the banner above it.** This
+        read `scent_digest` and not `sealed_barrier_cell`, so it rebuilt a
+        payload the sealing peer never hashed and reported `MISMATCH` on every
+        turn that walled a cell (C-018) — while `verify_all`, which goes through
+        `records()` and does read both, passed the same log. The viewer
+        therefore showed a green `Verified OK` over a red `MISMATCH` on an
+        honest log, and a placement moves as `STAY`, so the affected steps are
+        exactly the Cop's most consequential ones.
+
+        The field set has to be read the way `match_log.records` reads it, which
+        is why both use `.get` on the same two keys: presence is the signal, and
+        an opponent who sealed neither has neither key.
         """
         if not 0 <= index < self.total:
             return False
@@ -113,6 +126,7 @@ class ReplaySession:
             step["intent"],
             step["nonce"],
             step.get("scent_digest"),
+            step.get("sealed_barrier_cell"),
         )
 
     def forward(self) -> int:

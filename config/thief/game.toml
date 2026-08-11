@@ -14,6 +14,13 @@ version = "1.00"
 
 [identity]
 team_name = "bestteam"
+# Both group members, by name. Declared in the Step-0 handshake and filed into
+# `declaration_<game_id>.json`, which Ch. 9.3.3 requires to name "the identity
+# of both groups and their members" — the opponent's half arrives the same way.
+# ⚠️ VERIFY THESE AGAINST THE MOODLE SUBMISSION before a graded match. A name
+# spelled differently here than in the form is an attribution problem for a
+# grader joining two reports to one group (M#45).
+members = ["Itay Malich", "Diana Koroblov"]
 role = "thief"
 # Free-text, sent in the handshake. Keep it boring; it is public.
 contact_label = "bestteam-thief"

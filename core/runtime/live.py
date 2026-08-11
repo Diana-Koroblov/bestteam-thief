@@ -24,13 +24,14 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from core.crypto.canonical import digest
 from core.domain.barriers import BarrierManager
 from core.protocol.schemas import Role
 from core.runtime.filing import MatchFiling
 from core.runtime.match_driver import MatchDriver
 from core.runtime.peer_runtime import PeerRuntime
 
-__all__ = ["driver_factory", "filing_for"]
+__all__ = ["driver_factory", "filing_for", "declare"]
 
 
 def reopen(runtime: PeerRuntime, prepared: set[int]) -> Callable[[int], None]:
@@ -121,3 +122,60 @@ def filing_for(
         readings=dict(locked.readings),
         github_commit=locked.our_commit,
     )
+
+
+def declare(
+    filing: MatchFiling, runtime: PeerRuntime, urls: tuple[str, str], theirs: Any
+) -> None:
+    """File the pre-game declaration before the first move (7.2.1, M#24).
+
+    `declaration_<game_id>.json` is one of the four artefacts Ch. 9.3.3 names,
+    and until this function existed nothing outside the test suite called the
+    builder: a real match filed a config snapshot, six logs and a result, and no
+    declaration at all.
+
+    Assembled here rather than in the CLI because every value comes from the
+    handshake that just settled. **Both peers' Step-0 payloads go in whole**,
+    each beside the digest that seals it, which is what makes the hardware
+    specification a signed declaration rather than a line in a report (M#24) —
+    a machine restated later contradicts a digest the opponent already holds.
+
+    Args:
+        urls: ``(ours, theirs)`` — the public MCP endpoints this match ran over.
+        theirs: The opponent's settled `Negotiation`, or None if the handshake
+            never produced one. Their half is then recorded as empty rather than
+            guessed; an absent opponent declaration is a visible finding and an
+            invented one is a false statement in a signed artefact.
+    """
+    ours = runtime.prematch.step_zero()
+    away = dict(getattr(theirs, "step_zero", None) or {})
+    config = runtime.orchestrator.config
+    filing.declaration(
+        teams=_teams(ours.payload, away),
+        mcp_urls={"ours": urls[0], "theirs": urls[1]},
+        llm_model=str(ours.payload.get("llm_model", "")),
+        token_cap=int(config.get("network_and_league.token_budget_per_series", 0)),
+        step_zero={
+            "ours": {"payload": ours.payload, "sha256": ours.digest},
+            # **Recomputed over what they actually sent, not quoted from them.**
+            # The handshake carries their payload and no digest of it, and a
+            # digest a peer supplies for its own declaration proves nothing. This
+            # one is ours to stand behind: it is the value their bytes hash to.
+            "theirs": {"payload": away, "sha256": digest(away) if away else ""},
+        },
+    )
+
+
+def _teams(ours: dict[str, Any], theirs: dict[str, Any]) -> dict[str, list[str]]:
+    """Return ``{team: [member, ...]}`` for both sides, ours first.
+
+    An opponent running an older peer sends no `members` key, and that is read
+    as an empty list rather than refused: the roster is a reporting field, and
+    losing a graded match over one would be the wrong trade entirely.
+    """
+    named: dict[str, list[str]] = {
+        str(ours.get("team_name", "")) or "ours": list(ours.get("members", []))
+    }
+    label = str(theirs.get("team_name", "")) or "opponent"
+    named[label] = list(theirs.get("members", []))
+    return named

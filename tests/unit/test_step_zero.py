@@ -100,9 +100,25 @@ def _declaration(repo: Path | None = None, **overrides) -> StepZero:
 def test_it_carries_every_required_field() -> None:
     payload = _declaration().payload
     assert set(payload) == {
-        "team_name", "role", "sub_game", "llm_model",
+        "team_name", "members", "role", "sub_game", "llm_model",
         "code_version", "github_commit", "hardware",
     }
+
+
+def test_members_are_declared_so_the_opponent_can_file_them() -> None:
+    """**This is the only channel that carries the opponent's roster.**
+
+    Ch. 9.3.3 requires `declaration_<game_id>.json` to name both groups *and
+    their members*, and nothing else in the handshake asks who is on a team. A
+    peer that sends none is read as an empty list rather than refused (`live.
+    _teams`), because a roster is a reporting field and refusing a graded match
+    over one would be the wrong trade.
+    """
+    assert _declaration(members=("Itay Malich", "Diana Koroblov")).payload["members"] == [
+        "Itay Malich",
+        "Diana Koroblov",
+    ]
+    assert _declaration().payload["members"] == []
 
 
 def test_it_declares_the_model_but_never_the_provider() -> None:

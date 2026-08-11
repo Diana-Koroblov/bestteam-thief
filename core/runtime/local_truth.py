@@ -29,6 +29,7 @@ from core.domain.brain_base import Decision, Observation
 from core.domain.filter import BeliefFilter
 from core.domain.scent import decode, encode
 from core.infra.llm.factory import build_writer
+from core.infra.llm.meter import TokenMeter
 from core.infra.llm.writer import HintWriter, compass_word
 from core.protocol.schemas import Reveal, Role
 from core.runtime.orchestrator import Orchestrator
@@ -43,10 +44,15 @@ class LocalTruth:
     Attributes:
         orchestrator: Owns the game state; the only thing allowed to change it.
         reveals: Opponent move per step, and the scent field that came with it.
+        meter: What the verbal channel has cost in model tokens (M#54). Owned
+            here because this is the file that builds the writer, and it
+            **survives `reset`**: the report wants the series, and the providers
+            are built once and reused across all six sub-games.
     """
 
     orchestrator: Orchestrator
     reveals: dict[int, Reveal] = field(default_factory=dict)
+    meter: TokenMeter = field(default_factory=TokenMeter)
     _filter: BeliefFilter | None = field(default=None, repr=False)
     _filtered_step: int = field(default=-1, repr=False)
     _writer: HintWriter | None = field(default=None, repr=False)
@@ -184,7 +190,7 @@ class LocalTruth:
         `Reveal` for why that also fixes the timing of the whole game.
         """
         if self._writer is None:
-            self._writer = build_writer(self.orchestrator.config)
+            self._writer = build_writer(self.orchestrator.config, self.meter)
         turn = self.orchestrator.state.step if step is None else step
         # Idempotent, so the field we transmit is this turn's even if nobody
         # called `observe` first. Sending a stale trail would be a lie about the

@@ -20,6 +20,7 @@ import os
 import httpx
 
 from core.infra.llm.base import ProviderError, TextProvider
+from core.infra.llm.meter import TokenMeter
 
 __all__ = ["OllamaProvider", "GroqProvider"]
 
@@ -34,10 +35,19 @@ SYSTEM = (
 class _ChatProvider(TextProvider):
     """Shared request/parse logic for any OpenAI-compatible chat endpoint."""
 
-    def __init__(self, model: str, timeout: float = 8.0, max_tokens: int = 200) -> None:
+    def __init__(
+        self,
+        model: str,
+        timeout: float = 8.0,
+        max_tokens: int = 200,
+        meter: TokenMeter | None = None,
+    ) -> None:
         self.model = model
         self.timeout = timeout
         self.max_tokens = max_tokens
+        # Optional so a provider built in a test or a script still runs; the
+        # match wiring always supplies the peer's one meter (M#54).
+        self.meter = meter
 
     def _url(self) -> str:
         raise NotImplementedError
@@ -63,11 +73,13 @@ class _ChatProvider(TextProvider):
             "temperature": 0.8,
             "stream": False,
         }
+        payload: dict = {}
         try:
             with httpx.Client(timeout=self.timeout) as client:
                 response = client.post(self._url(), json=body, headers=self._headers())
                 response.raise_for_status()
-                content = response.json()["choices"][0]["message"]["content"]
+                payload = response.json()
+                content = payload["choices"][0]["message"]["content"]
         except Exception as error:  # noqa: BLE001 - deliberate, see below
             # **Catching bare Exception is the correct call here, not laziness.**
             # This started as a tidy `(httpx.HTTPError, KeyError, IndexError,
@@ -83,6 +95,12 @@ class _ChatProvider(TextProvider):
             # chance to miss one.
             raise ProviderError(f"{self.name}: {type(error).__name__}: {error}") from error
 
+        # **Outside the try, deliberately.** A call that produced a sentence has
+        # already cost tokens, so it is counted even if the sentence is then
+        # rejected as empty — and an accounting surprise must never be raised as
+        # a ProviderError, which would discard a hint the model did produce.
+        if self.meter is not None:
+            self.meter.record(payload.get("usage"))
         if not content or not content.strip():
             raise ProviderError(f"{self.name}: empty completion")
         return content.strip().strip('"')

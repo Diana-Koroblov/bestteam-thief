@@ -204,6 +204,71 @@ def test_the_viewer_reaches_the_system_only_through_the_sdk(tmp_path: Path) -> N
     assert sdk_load(target).verdict == SDK_OK
 
 
+def walled_log() -> dict:
+    """A clean log whose middle step seals a barrier (C-018).
+
+    ⚠️ **`sealed_log` never places one, which is why the bug below survived.**
+    A placement moves as `STAY` and carries `sealed_barrier_cell`; a helper that
+    only ever walks the board exercises neither.
+    """
+    steps, nonces = [], {}
+    for index in range(3):
+        state = {"cop": [0, index], "thief": [3, 3], "step": index}
+        wall = (5, 4) if index == 1 else None
+        move = "STAY" if wall else "N"
+        locked = seal(state, move, "truth", barrier_cell=wall)
+        steps.append(
+            build_step(
+                index, locked.digest, state, locked.move, locked.intent,
+                hint=f"h{index}", barrier_cell=wall, sealed_barrier=wall is not None,
+            )
+        )
+        nonces[str(index)] = locked.nonce
+    return build_log("gid", 2, "cop", steps, nonces, outcome="capture")
+
+
+def test_a_sealed_barrier_step_is_not_marked_a_mismatch() -> None:
+    """🐛 **The viewer contradicted its own banner on every walling turn.**
+
+    `step_ok` re-hashed with `scent_digest` and without `sealed_barrier_cell`,
+    so it rebuilt a payload the sealing peer never hashed. `verify_all` goes
+    through `match_log.records`, which reads both — so the window showed a green
+    `Verified OK` over a red `MISMATCH` on an honest log.
+
+    That is the worst possible failure for this artefact: the screenshot of this
+    window is a required submission deliverable (7.25) whose entire job is to
+    prove integrity, and a placement moves as `STAY`, so the steps it accused
+    were the Cop's most consequential ones.
+    """
+    session = ReplaySession(walled_log())
+    assert session.verdict == VERIFIED_OK
+    assert [session.step_ok(i) for i in range(session.total)] == [True, True, True]
+
+
+def test_every_step_mark_agrees_with_the_whole_log_verdict() -> None:
+    """**The general property, so the two paths cannot drift again.**
+
+    They are deliberately separate computations — the banner audits shape as
+    well as seals — but on a clean log they must not disagree about any step. A
+    field added to one payload builder and not the other reappears here.
+    """
+    for payload in (sealed_log(), walled_log()):
+        session = ReplaySession(payload)
+        assert session.result.passed
+        assert all(session.step_ok(i) for i in range(session.total))
+
+
+def test_a_forged_barrier_cell_is_still_caught() -> None:
+    """The fix must not become a blanket pass. Rewriting the walled cell after
+    the fact is exactly the after-the-fact revision C-018 seals against."""
+    payload = walled_log()
+    payload["steps"][1]["sealed_barrier_cell"] = [0, 0]
+
+    session = ReplaySession(payload)
+    assert session.verdict == TAMPERED
+    assert not session.step_ok(1)
+
+
 def test_a_step_index_outside_the_log_is_not_ok() -> None:
     """The viewer clamps its cursor, but `step_ok` is public and must not raise
     for a caller that does not."""

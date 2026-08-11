@@ -18,7 +18,6 @@ from core.domain.rules import Verdict
 from core.protocol.schemas import Role
 from core.report.identifiers import artefact_name
 from core.report.match_log import verify_log
-from core.runtime.filing import MatchFiling
 from tests.integration.series_harness import GAME_ID, play
 from tests.paths import brain_class
 
@@ -103,14 +102,14 @@ def test_the_series_files_all_four_artefacts(tmp_path, minimal_config) -> None:
 
     Two per sub-game plus the result, and the declaration filed alongside. Every
     one under the same `game_id`, which is what makes six logs one match.
+
+    **The declaration is no longer written by this test.** It used to be, and
+    that hid the defect it was supposed to catch: nothing outside the suite
+    called the builder, so a real match filed three of the four artefacts and
+    this assertion still passed. The harness now declares before the first move,
+    as `cli_play` does.
     """
     play(minimal_config, tmp_path)
-    MatchFiling(game_id=GAME_ID, directory=tmp_path, config=minimal_config).declaration(
-        teams={"bestteam": ["id-1"], "opponents": ["id-2"]},
-        mcp_urls={"cop": "https://example.invalid/mcp"},
-        llm_model="template",
-        token_cap=200000,
-    )
     for sub_game in range(1, 7):
         assert (tmp_path / artefact_name("log", GAME_ID, sub_game)).is_file()
         assert (tmp_path / artefact_name("config", GAME_ID, sub_game)).is_file()

@@ -125,6 +125,10 @@ def play(sdk: PeerSDK, args: argparse.Namespace) -> int:
     if manager is not None:
         our_url = f"{manager.start()}/mcp"
 
+    # Stashed on `args` because the declaration has to record the address this
+    # match was really reachable on, and only this scope knows it: with --tunnel
+    # it is read back from the agent, not computed from config.
+    args.our_url = our_url
     print(f"role            : {sdk.role.value}  ({sdk.brain_name})")
     print(f"our url         : {our_url}")
     print(f"give them       : --opponent {our_url}")
@@ -237,7 +241,7 @@ async def _series(
 ) -> int:
     """Play this process's sub-games and report what they were worth."""
     from core.report.identifiers import game_id
-    from core.runtime.live import driver_factory, filing_for, reopen
+    from core.runtime.live import declare, driver_factory, filing_for, reopen
     from core.runtime.reporting import send_series_report
     from core.runtime.series import SeriesRunner
 
@@ -247,6 +251,10 @@ async def _series(
     filing = (
         filing_for(sdk.runtime, identifier, Path(args.out), locked) if args.out else None
     )
+    # Before the first move, not after the last: an interrupted series must
+    # still leave the declaration it was played under (7.2.1, M#24).
+    if filing is not None:
+        declare(filing, sdk.runtime, (getattr(args, "our_url", ""), args.opponent), theirs)
 
     print(f"game id         : {identifier}")
     print(f"our sub-games   : {', '.join(str(number) for number, _ in plan)}\n")

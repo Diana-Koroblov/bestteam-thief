@@ -17,6 +17,7 @@ from __future__ import annotations
 import os
 
 from core.infra.llm.base import TextProvider
+from core.infra.llm.meter import TokenMeter
 from core.infra.llm.remote import GroqProvider, OllamaProvider
 from core.infra.llm.template import TemplateProvider
 from core.infra.llm.writer import HintWriter
@@ -26,11 +27,17 @@ __all__ = ["build_provider", "build_writer", "model_name", "PROVIDERS"]
 PROVIDERS = ("template", "ollama", "groq")
 
 
-def build_provider(config) -> TextProvider:
+def build_provider(config, meter: TokenMeter | None = None) -> TextProvider:
     """Return the provider this machine should use.
 
     The environment wins over the file, and an unrecognised name degrades to
     the template bank instead of raising (ADR-003).
+
+    Args:
+        meter: Where model calls report their token cost (M#54). Optional, and
+            **only the model-backed providers take it**: the template bank calls
+            nothing, so its honest contribution is the absence of a call rather
+            than a zero.
     """
     name = os.environ.get("P2P_LLM_PROVIDER") or config.get("trash_talk.provider", "template")
     name = str(name).strip().lower()
@@ -38,10 +45,11 @@ def build_provider(config) -> TextProvider:
     tokens = int(config.get("llm.max_output_tokens", 200))
 
     if name == "ollama":
-        return OllamaProvider(str(config.get("llm.ollama_model", "llama3.1:8b")), timeout, tokens)
+        model = str(config.get("llm.ollama_model", "llama3.1:8b"))
+        return OllamaProvider(model, timeout, tokens, meter)
     if name == "groq":
         model = str(config.get("llm.groq_model", "llama-3.3-70b-versatile"))
-        return GroqProvider(model, timeout, tokens)
+        return GroqProvider(model, timeout, tokens, meter)
     return TemplateProvider()
 
 
@@ -61,10 +69,10 @@ def model_name(config) -> str:
     return str(getattr(provider, "model", "") or provider.name)
 
 
-def build_writer(config) -> HintWriter:
+def build_writer(config, meter: TokenMeter | None = None) -> HintWriter:
     """Return a `HintWriter` wired to Appendix F's caps and fabrication bans."""
     return HintWriter(
-        provider=build_provider(config),
+        provider=build_provider(config, meter),
         max_words=int(config.get("trash_talk.max_words", 15)),
         forbidden=tuple(config.get("trash_talk.never_fabricate", ())),
         allow_fallback=bool(config.get("llm.allow_template_fallback", True)),

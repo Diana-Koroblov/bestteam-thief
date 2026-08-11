@@ -89,6 +89,10 @@ class SubGameReport:
         audit: The re-hash of *their* log, or None when the closing exchange
             never completed. None and "failed" are different findings and are
             kept apart: one is an accusation, the other is a missing document.
+        llm_tokens: Model tokens this sub-game cost us (M#54, which wants the
+            sub-game figure as well as the series). Per sub-game rather than per
+            series because the series is summed from the **merged** rows, and
+            under a 3-3 split neither process meters the other's half.
     """
 
     sub_game: int
@@ -96,6 +100,7 @@ class SubGameReport:
     outcome: Outcome
     steps: int
     audit: Any = None
+    llm_tokens: int = 0
 
     def points(self, table: ScoreTable) -> tuple[int, int]:
         """Return ``(ours, theirs)`` for this sub-game."""
@@ -117,6 +122,7 @@ class SubGameReport:
             "our_points": ours,
             "their_points": theirs,
             "opponent_log_audit": _audit_word(self.audit),
+            "llm_tokens": self.llm_tokens,
         }
 
 
@@ -125,6 +131,18 @@ def _audit_word(audit: Any) -> str:
     if audit is None:
         return "not_run"
     return "passed" if audit.passed else "FAILED"
+
+
+def _tokens_spent(driver: MatchDriver) -> int:
+    """Return the model tokens the sub-game just played cost us (M#54).
+
+    Read through `getattr` because a test double standing in for the runtime is
+    a legitimate driver and has no meter. A missing meter reports 0, which is
+    the same answer the `template` provider gives and is true of every double we
+    ship: none of them calls a model.
+    """
+    meter = getattr(getattr(driver, "runtime", None), "meter", None)
+    return meter.take() if meter is not None else 0
 
 
 @dataclass(frozen=True)
@@ -248,6 +266,7 @@ class SeriesRunner:
             outcome=driver.outcome or Rules.technical_loss("the sub-game reached no verdict"),
             steps=len(driver.records),
             audit=audit,
+            llm_tokens=_tokens_spent(driver),
         )
         if self.filing is not None:
             self.filing.sub_game(report, driver)

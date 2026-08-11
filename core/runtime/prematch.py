@@ -91,6 +91,7 @@ class PreMatch:
         if self._step_zero is None:
             self._step_zero = build(
                 team_name=str(self.config.get("identity.team_name", "")),
+                members=tuple(self.config.get("identity.members", ())),
                 role=self.orchestrator.role.value,
                 sub_game=self.sub_game,
                 llm_model=model_name(self.config),

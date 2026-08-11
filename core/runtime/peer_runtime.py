@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 
 from core.domain.board import Position
 from core.domain.brain_base import BrainBase, Decision, Observation
+from core.infra.llm.meter import TokenMeter
 from core.protocol.schemas import (
     Ack,
     BarrierDeclaration,
@@ -82,6 +83,17 @@ class PeerRuntime:
         and the audit see one record rather than two that can disagree.
         """
         return self.truth.reveals
+
+    @property
+    def meter(self) -> TokenMeter:
+        """Model tokens spent by this peer's verbal channel (M#54).
+
+        Exposed here for the same reason `reveals` is: `SeriesRunner` reads it
+        once per sub-game through the driver, and reaching two objects deep for
+        a number that has to appear in a submitted report is how the number
+        quietly stops being read at all.
+        """
+        return self.truth.meter
 
     def observe(self) -> Observation:
         """Build what the brain is allowed to see. See `LocalTruth.observe`."""

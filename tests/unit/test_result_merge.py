@@ -44,7 +44,7 @@ class StubConfig:
         return digest(self.shared)
 
 
-def half(directory: Path, sub_games, table: ScoreTable) -> Path:
+def half(directory: Path, sub_games, table: ScoreTable, tokens: int = 0) -> Path:
     """File one role process's half of a series and return the result path.
 
     Goes through `SeriesRunner.finish` and `MatchFiling.result` rather than
@@ -52,7 +52,9 @@ def half(directory: Path, sub_games, table: ScoreTable) -> Path:
     that skipped them would have passed against the broken code.
     """
     reports = [
-        SubGameReport(sub_game=number, role=role, outcome=outcome, steps=35)
+        SubGameReport(
+            sub_game=number, role=role, outcome=outcome, steps=35, llm_tokens=tokens
+        )
         for number, role, outcome in sub_games
     ]
     filing = MatchFiling(game_id=GAME_ID, directory=directory, config=StubConfig())
@@ -126,6 +128,28 @@ def test_a_series_decided_on_points_files_the_points(tmp_path: Path, score_table
     payload = read(half(tmp_path, COP_HALF, score_table))
     assert payload["series"]["verdict"] == "decided_on_points"
     assert payload["series"]["our_league_points"] == payload["series"]["our_points"] == 60
+
+
+def test_the_token_total_covers_both_halves(tmp_path: Path, score_table) -> None:
+    """**M#54, and the same two-process trap as the points.**
+
+    The reported figure used to be the literal `0`. Summing this process's meter
+    instead would be a second version of the bug this module exists to fix: each
+    process meters only the three sub-games it played, so the Cop repository
+    would file its own consumption as the series'. The sum is taken over the
+    merged rows for exactly the reason the totals are.
+    """
+    half(tmp_path, COP_HALF, score_table, tokens=100)
+    payload = read(half(tmp_path, THIEF_HALF, score_table, tokens=50))
+
+    assert [row["llm_tokens"] for row in payload["sub_games"]] == [100, 100, 100, 50, 50, 50]
+    assert payload["total_llm_tokens"] == 450
+
+
+def test_a_zero_token_series_is_still_reported(tmp_path: Path, score_table) -> None:
+    """`template` spends nothing, and zero is then the honest answer — which is
+    precisely why the old hardcoded zero was so hard to notice."""
+    assert read(half(tmp_path, COP_HALF, score_table))["total_llm_tokens"] == 0
 
 
 # --- re-running a half ------------------------------------------------------
