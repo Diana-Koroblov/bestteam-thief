@@ -5,7 +5,7 @@ teams cannot collide in the grader's inbox.
 
 Everything here is written as **UTF-8 bytes**, explicitly. Team names and hints
 may be Hebrew, and a Windows console defaults to cp1252 — which raises
-`UnicodeEncodeError` mid-match on Diana's machine and never on a CI runner. That
+`UnicodeEncodeError` mid-match on a real console and never on a CI runner. That
 cost us an afternoon in 6.5.2 and is now a rule rather than a memory.
 """
 

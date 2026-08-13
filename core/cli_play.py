@@ -200,6 +200,12 @@ async def _handshake_then_play(
     for warning in prematch.warnings():
         print(f"  ! {warning}")
     if not locked.agreed:
+        # File the sub-games we will not play, rather than exiting silently: our
+        # inbound server may already have agreed with them, in which case they
+        # are playing a match we are not. See `live.forfeit` (M#35).
+        from core.runtime.live import refuse
+
+        print(refuse(sdk, args, theirs, locked, plan))
         return 1
     return await _series(sdk, args, theirs, locked, plan, prepared)
 
@@ -271,9 +277,12 @@ async def _series(
     # still lose a match already won, and a human who reads the scoreboard and
     # closes the window must not be the reason it never left (M#35).
     if filing is not None:
-        print(
-            send_series_report(sdk.mailer, filing.result_path, sdk.num_games, sdk.role.value)
-        )
+        # A self-match can never be counted, whatever the flag says: both sides
+        # are us, so the "opponent" would never file the second report M#35
+        # requires and the pair could only ever contradict a real one.
+        counted = bool(getattr(args, "counted", False)) and their_team != sdk.team_name
+        print(send_series_report(sdk.mailer, filing.result_path, sdk.num_games,
+                                 sdk.role.value, counted))
     linger = float(getattr(args, "linger", LINGER_SECONDS))
     if linger > 0:
         print(f"\nstaying up {linger:.0f}s so they can finish auditing our log (M#36) ...")

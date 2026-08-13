@@ -64,7 +64,7 @@ Everything the report recommends, we had already chosen independently:
 | Report's recommendation | Our decision | Where |
 |---|---|---|
 | Ship `template` as the default — 0 tokens, offline, instant | Committed default is `template` | `[trash_talk] provider` |
-| Ollama is "the correct free choice" — no RPM, no cap, no network | Itay's machine runs `ollama` for graded matches | ADR-003, `PARAMETERS.md` §5.2 |
+| Ollama is "the correct free choice" — no RPM, no cap, no network | Graded matches run `ollama` locally | ADR-003, `PARAMETERS.md` §5.2 |
 | Never let the model decide the move | Movement is pure Python expectimax; the model only produces text | Ch. 6, ADR-002 |
 | Catch provider errors and fall back to a template line | `allow_template_fallback = true` | `[llm]` |
 | Prefer `claude_api` (stateless, 200 tokens) over `claude_cli` | We use neither, but the reasoning is recorded | §4 below |

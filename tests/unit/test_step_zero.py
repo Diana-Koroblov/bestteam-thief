@@ -50,8 +50,18 @@ def scratch_repo(tmp_path_factory) -> Path:
 
 
 def test_the_declaration_has_every_field_the_rulebook_asks_for() -> None:
+    """FR-6.7 names OS, CPU cores **and frequency**, RAM and GPU.
+
+    Frequency and the processor model were absent entirely until the probe was
+    rewritten, and cores/threads are now separate fields — see
+    `core/shared/hardware.py` for the three faults that made the old output
+    wrong on the machine that plays our matches.
+    """
     reported = describe()
-    assert set(reported) == {"os", "python", "machine", "cpu_cores", "ram_gb", "gpu"}
+    assert set(reported) == {
+        "os", "python", "machine", "cpu_model",
+        "cpu_cores", "cpu_threads", "cpu_mhz", "ram_gb", "gpu",
+    }
     assert all(value not in (None, "") for value in reported.values())
 
 
@@ -66,9 +76,18 @@ def test_no_field_is_ever_missing_even_when_it_cannot_be_read() -> None:
 
 
 def test_a_machine_with_no_gpu_reports_none_rather_than_erroring() -> None:
-    """"none" is a real answer. Diana's machine has no GPU and plays anyway."""
-    assert isinstance(gpu_name(), str)
-    assert gpu_name() != ""
+    """"none" is a real answer; a machine with no discrete card plays anyway.
+
+    🐛 **An error message is not a real answer.** This used to pass while the
+    declared GPU was the text `"NVIDIA-SMI has failed because you do not have
+    suffient permissions."` — a string, non-empty, and completely false on a
+    machine with a Radeon. The return-code check in `hardware._run` is what
+    stops a failed command's stdout from becoming a declaration.
+    """
+    reported = gpu_name()
+    assert isinstance(reported, str) and reported != ""
+    assert "failed" not in reported.lower()
+    assert "permission" not in reported.lower()
 
 
 def test_ram_is_a_number_or_the_word_unknown() -> None:
@@ -100,9 +119,22 @@ def _declaration(repo: Path | None = None, **overrides) -> StepZero:
 def test_it_carries_every_required_field() -> None:
     payload = _declaration().payload
     assert set(payload) == {
-        "team_name", "members", "role", "sub_game", "llm_model",
+        "team_name", "members", "repos", "role", "sub_game", "llm_model",
         "code_version", "github_commit", "hardware",
     }
+
+
+def test_our_repositories_are_declared_so_four_links_can_be_filed() -> None:
+    """**The only channel that carries the opponent's two links.**
+
+    Ch. 9.4 requires four in the closing JSON — our two and theirs — and they
+    were four empty strings until `[identity] repo_cop` / `repo_thief` began
+    riding in this payload (M#49). Read defensively at the far end, so a peer
+    that sends none is recorded blank rather than refused.
+    """
+    urls = {"cop": "https://github.com/x/bestteam-cop", "thief": "https://github.com/x/t"}
+    assert _declaration(repos=urls).payload["repos"] == urls
+    assert _declaration().payload["repos"] == {}
 
 
 def test_members_are_declared_so_the_opponent_can_file_them() -> None:

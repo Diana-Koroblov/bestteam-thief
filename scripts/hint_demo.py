@@ -1,8 +1,8 @@
 """Show the verbal layer working, on whichever provider this machine has.
 
     uv run python scripts/hint_demo.py                    # template, offline
-    uv run python scripts/hint_demo.py --provider groq    # Diana's machine
-    uv run python scripts/hint_demo.py --provider ollama  # Itay's machine
+    uv run python scripts/hint_demo.py --provider ollama  # local, graded matches
+    uv run python scripts/hint_demo.py --provider groq    # hosted, development only
 
 The ``--provider`` flag exists so nobody has to set an environment variable
 correctly under pressure. The syntax differs between PowerShell, cmd and bash,

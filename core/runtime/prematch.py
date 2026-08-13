@@ -92,6 +92,10 @@ class PreMatch:
             self._step_zero = build(
                 team_name=str(self.config.get("identity.team_name", "")),
                 members=tuple(self.config.get("identity.members", ())),
+                repos={
+                    "cop": str(self.config.get("identity.repo_cop", "")),
+                    "thief": str(self.config.get("identity.repo_thief", "")),
+                },
                 role=self.orchestrator.role.value,
                 sub_game=self.sub_game,
                 llm_model=model_name(self.config),

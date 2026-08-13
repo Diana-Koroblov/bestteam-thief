@@ -205,3 +205,36 @@ def test_a_grader_can_open_it(tmp_path: Path) -> None:
     """It is a submission artefact, not only an internal format."""
     target = write(build_result("gid", SUB_GAMES, "abc", 10, REPOS), tmp_path, "r.json")
     assert json.loads(target.read_text(encoding="utf-8"))["totals"]["ours"] == 30
+
+
+def test_a_concurrent_writer_never_leaves_a_spliced_file(tmp_path: Path) -> None:
+    """🐛 **A real match produced an unreadable result file.**
+
+    Both role processes file `result_<game_id>.json` under one identifier — that
+    is what the merge exists for — and their writes overlapped. The shorter
+    truncated the longer and left its tail behind, so the artefact held two JSON
+    documents and `load_rows` refused it, correctly, stopping reporting dead.
+
+    `os.replace` is atomic on Windows and POSIX, so the file is only ever a
+    whole document. A lost update is recoverable by re-running a half; a corrupt
+    artefact is not.
+    """
+    import json as _json
+    from concurrent.futures import ThreadPoolExecutor
+
+    big = {"rows": list(range(400))}
+    small = {"rows": [1]}
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        for _ in range(40):
+            pool.submit(write, big, tmp_path, "r.json")
+            pool.submit(write, small, tmp_path, "r.json")
+
+    loaded = _json.loads((tmp_path / "r.json").read_text(encoding="utf-8"))
+    assert loaded in (big, small)
+
+
+def test_no_temporary_files_are_left_behind(tmp_path: Path) -> None:
+    """The staging file is renamed onto the target, not copied beside it: a
+    directory of `.tmp` leftovers is what a grader would have to read past."""
+    write({"a": 1}, tmp_path, "r.json")
+    assert [p.name for p in tmp_path.iterdir()] == ["r.json"]

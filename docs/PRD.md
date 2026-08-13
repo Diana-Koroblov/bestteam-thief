@@ -288,19 +288,19 @@ academic-freedom clause, which guarantees a documented, reasoned choice is not p
 | FastMCP | Mandated transport | Blocking — no substitute permitted |
 | ngrok / Localtonet | Public exposure | Blocking for league play; Localtonet is the documented fallback |
 | Gmail API + OAuth 2.0 | Mandated reporting | Blocking — unreported match scores 0 |
-| Ollama (partner's machine) | Zero-token verbal layer | Degrades to `template`; no match is lost |
-| Groq API (Diana's machine) | Verbal layer during development | Degrades to `template`; no match is lost |
+| Ollama (local daemon) | Zero-token verbal layer | Degrades to `template`; no match is lost |
+| Groq API | Verbal layer during development only | Degrades to `template`; no match is lost |
 | Opponent availability | League matches | **Highest-risk item in the project** |
 
 ### 6.3 Hardware constraint and its consequence
 
-Diana's machine has no GPU and cannot host a local model; the partner's machine can. This shapes two
-decisions:
+A machine without a GPU cannot usefully host a local model; the machine we play from can. This
+shapes two decisions:
 
 1. The verbal-layer provider is a **private, per-peer, per-machine** setting (`[trash_talk] provider`
-   in the TOML), never part of the shared negotiated config. Diana develops against Groq; the partner
-   develops against Ollama.
-2. **Graded matches are hosted from the partner's machine using Ollama**, so token consumption in the
+   in the TOML), never part of the shared negotiated config. A machine with no GPU can develop
+   against Groq; the one that plays runs Ollama.
+2. **Graded matches are hosted on Ollama**, so token consumption in the
    result JSON is effectively zero. Computational fairness is scored: the lecturer normalises results
    to reward strong outcomes achieved on modest resources. A low token count is an advantage, not an
    admission.

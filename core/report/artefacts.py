@@ -13,9 +13,11 @@ These are the files a grader reads. Two rules shape all of them:
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from core.crypto.canonical import digest
 from core.shared.system_info import describe
@@ -210,18 +212,39 @@ def build_result(
 
 
 def write(payload: dict[str, Any], directory: Path, filename: str) -> Path:
-    """Write *payload* as UTF-8 JSON and return the path.
+    """Write *payload* as UTF-8 JSON, atomically, and return the path.
 
     Unlike ``runtime.snapshot.save`` this **does** raise on failure. A snapshot
     is written while something is already going wrong and must never make it
     worse; a report is written deliberately, and silently failing to produce a
     submission artefact would be discovered only by its absence in the grader's
     inbox — which is to say, too late.
+
+    🐛 **Written through a temporary file and `os.replace`, because a plain
+    truncate-and-write corrupted a real match.** Both of our role processes file
+    `result_<game_id>.json` under one identifier — that is the whole point of the
+    merge — and when their writes overlapped, the shorter one truncated the
+    longer and left its tail behind::
+
+        ArtefactError: ... is not a readable result file (Extra data: line 67)
+
+    `load_rows` then refuses the file, correctly, and reporting stops dead. The
+    replace is atomic on both Windows and POSIX, so a concurrent writer now
+    yields one whole document rather than two spliced halves. It does not make
+    the last writer merge — `merge_rows` does that — but a lost update is
+    recoverable by re-running a half, and a corrupt artefact is not.
+
+    The staged name carries the pid *and* a random token. The pid alone is not
+    enough: it identifies the process for anyone debugging a stray file, but two
+    threads in one process share it, and they would then splice the temporary
+    file instead of the target — the same bug moved one filename along.
     """
     directory.mkdir(parents=True, exist_ok=True)
     target = directory / filename
     body = json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False)
-    target.write_bytes(body.encode("utf-8"))
+    staged = target.with_name(f"{target.name}.{os.getpid()}.{uuid4().hex[:8]}.tmp")
+    staged.write_bytes(body.encode("utf-8"))
+    os.replace(staged, target)
     return target
 
 

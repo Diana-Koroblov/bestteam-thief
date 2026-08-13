@@ -44,7 +44,11 @@ LABEL = "report          : "
 
 
 def send_series_report(
-    make_mailer: Callable[[], Any], path: Path, expected: int, role: str = "cop"
+    make_mailer: Callable[[], Any],
+    path: Path,
+    expected: int,
+    role: str = "cop",
+    counted: bool = False,
 ) -> str:
     """Send our report if the series is complete, and describe what happened.
 
@@ -58,6 +62,21 @@ def send_series_report(
         expected: `[number of sub-games]` — 6 under Appendix F Table 18. The
             report goes out when the file holds that many rows and not before.
         role: Ours, for the hand-filing command in the message.
+        counted: Whether this was a **league match** rather than a rehearsal.
+
+    🐛 **Sending is opt-in, and the asymmetry is deliberate.** Any six-row result
+    used to mail the lecturer, so a self-match or a rehearsal delivered him a
+    fake league report — twice over, once per team process. The two failure
+    directions are not equally bad:
+
+    * Forgetting `--counted` on match day leaves the report unsent, and this
+      function says so in the loudest line it prints, with the exact command
+      that files it by hand. **Recoverable in one minute.**
+    * A rehearsal that mails a fabricated match is a false declaration to the
+      grader, and there is no unsending it.
+
+    So the default fails towards silence, which a human can fix, rather than
+    towards a message that cannot be withdrawn.
 
     Returns:
         Text for the caller to print. Never raises: see the module docstring.
@@ -68,6 +87,13 @@ def send_series_report(
             f"{LABEL}held back - {path.name} covers {played} of {expected} sub-games\n"
             "  the other role process files the rest and sends then (M#35)\n"
             + MANUAL.format(role=role, path=path)
+        )
+    # After completeness, not before: an incomplete series is held back whether
+    # or not it counts, and reporting it as a rehearsal would hide the fact that
+    # the other role process still has three sub-games to file.
+    if not counted:
+        return _unsent(
+            "this run was not marked --counted, so it is treated as a rehearsal", role, path
         )
     try:
         mailer = make_mailer()

@@ -326,25 +326,23 @@ a network dependency in the move loop, removes a source of timeout, and moves th
 onto our strongest ground.
 
 **Resolved 30 Jul (C-012).** The selector now sits at `[trash_talk] provider` where the book
-puts it, and the **committed** value is `template`. Each machine overrides it in `.env`:
+puts it, and the **committed** value is `template`. `.env` overrides it per machine:
 
-| Machine | `P2P_LLM_PROVIDER` | Used for | Token cost |
-|---|---|---|---|
-| Diana (no GPU) | `groq` | development and self-play only | ours, not the series budget |
-| Itay (stronger) | `ollama` | **all graded matches** | zero |
-| any fresh clone | `template` | fallback, always works | zero |
+| `P2P_LLM_PROVIDER` | Used for | Token cost |
+|---|---|---|
+| `ollama` | **all graded matches** | zero |
+| `groq` | development and self-play only | ours, not the series budget |
+| `template` | fallback, works on any clone with no network | zero |
 
 Every graded match therefore runs in `ollama`, one of the book's four modes, at zero tokens.
 Groq never appears in a scored game and never appears in the committed config.
 
-**Two consequences of hosting matches from Itay's machine**, both worth acting on:
-
-1. **His ngrok domain is the one that matters**, not Diana's. TODO 0.2.4 and 0.2.6 move from
-   "Itay's task, whenever" to blocking for the league.
-2. **One hosting machine is a single point of failure.** If it is down at match time the
-   result is a no-show, and a no-show is a technical loss worth 0 — for both sub-games and
-   possibly the series. Diana's machine should stay match-capable on `template`, which costs
-   nothing to maintain because `template` is already the committed default.
+⚠️ **`ollama` is only the better answer while the daemon is actually up.** Selected against a
+service that is not listening, it does not fail — it pays `[llm] timeout_sec` on every turn
+and then writes the template hint anyway, which is 8 s of a 30 s response window spent on text
+that movement never depends on. `scripts/check_setup.py` prints the setting and the service
+together for exactly this reason; `template` is the correct choice whenever the daemon is not
+going to be running.
 
 ---
 

@@ -110,8 +110,8 @@ def test_the_body_carries_no_report_data(tmp_path: Path) -> None:
 def test_a_non_ascii_report_survives_the_attachment(tmp_path: Path) -> None:
     """Read as bytes, never decoded through the local console codec.
 
-    Decoding would put the report through cp1252 on Diana's machine and mangle
-    a Hebrew team name on the way to the grader.
+    Decoding would put the report through cp1252 on a Windows console and
+    mangle a Hebrew team name on the way to the grader.
     """
     path = tmp_path / "result.json"
     path.write_bytes(json.dumps({"team": "Ωμέγα"}, ensure_ascii=False).encode("utf-8"))

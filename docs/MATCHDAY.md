@@ -17,21 +17,41 @@ Once per machine, and once more the morning of a counted match.
 ```powershell
 uv sync --all-extras --dev          # uv only; pip/venv are not used here
 uv run python scripts/check_setup.py
-ollama list                         # the model named in [llm] must be pulled
 ```
 
 `check_setup.py` checks the `.env` file, the credentials path, the Gmail token,
-Ollama and the ngrok binary and authtoken. Every failure it reports names the
+Ollama, the ngrok binary and authtoken, the reserved domain and which trash-talk
+provider this machine will actually use. Every failure it reports names the
 `docs/SETUP.md` step that fixes it.
+
+**Read the Ollama and provider lines together.** They are the one pair that can
+both look fine and still cost the match. `P2P_LLM_PROVIDER=ollama` against a
+service that is not answering does not fail — every turn pays the provider
+timeout and then writes the template hint anyway, which is up to 8 s a turn on
+top of a 30 s response window. On Windows the daemon does not start on demand:
+
+```powershell
+Get-Process ollama -ErrorAction SilentlyContinue   # nothing = it is not running
+ollama serve                                       # in its own terminal, leave it up
+ollama pull llama3.1:8b                            # the model named in [llm]
+```
+
+`ollama list` **hangs** rather than erroring when the daemon is down, which is a
+confusing way to discover it. If you are not going to keep that terminal open,
+set `P2P_LLM_PROVIDER=template` and play — it is the book's own default, costs
+zero tokens, and movement is never decided by a model (Ch. 6).
 
 **Three values in `.env` are facts about the computer, not about the match.** None
 of them is negotiated and none belongs in a committed file:
 
 | Variable | Why it is not in `game.toml` |
 |---|---|
-| `P2P_PUBLIC_DOMAIN` | The reserved ngrok domain belongs to one account, so the committed value can only ever be one team-mate's. On the other machine `--tunnel` fails binding a domain that account does not own. |
-| `P2P_LLM_PROVIDER` | Private per peer under Appendix F Table 21. `ollama` for graded matches — zero tokens, which is scored (ADR-003). |
+| `NGROK_DOMAIN` | The reserved domain is bound to one ngrok account, which makes it an account credential in everything but name. Committed, it fails with `ERR_NGROK_320` for anyone else — and a tunnel that cannot start means no public URL and no league match (M#10). Empty is legal: the agent then assigns a random URL, which is read back rather than computed. |
+| `P2P_LLM_PROVIDER` | Private per peer under Appendix F Table 21. `ollama` is preferred — zero tokens, which is scored (ADR-003) — **but only while it is actually running**, so check it below. `template` is the safe answer otherwise. |
 | `NGROK_AUTHTOKEN` | A secret. Nothing that identifies an account belongs in a committed file (M#39, M#40). |
+
+`P2P_PUBLIC_DOMAIN` is the old name for the first of these. It is still read, but
+last; delete it from `.env` if it is still there.
 
 **Commit before a counted match.** The handshake prints *"working tree is DIRTY"*
 otherwise, and the declared commit hash is what makes the result reproducible
@@ -105,13 +125,21 @@ One command per role. It serves, negotiates, plays, audits and files.
 
 ```powershell
 # terminal 1 - the Cop repository
-uv run python -m core play --role cop --tunnel --first cop --out results\ `
+uv run python -m core play --role cop --tunnel --first cop --out results\ --counted `
     --opponent https://their-domain.ngrok-free.dev/mcp
 
 # terminal 2 - the Thief repository, after sub-game 3
-uv run python -m core play --role thief --tunnel --first cop --out results\ `
+uv run python -m core play --role thief --tunnel --first cop --out results\ --counted `
     --opponent https://their-domain.ngrok-free.dev/mcp
 ```
+
+**`--counted` is what actually mails the report.** Without it the series is
+played and filed exactly as normal and the message is never sent, which under
+M#35 is 0 for both teams. It is opt-in rather than automatic because the two
+mistakes are not equally bad: a forgotten flag is one command to recover
+(`send_report.py`, printed in the same breath), and a rehearsal that mails the
+lecturer a fabricated league result cannot be withdrawn. Put it on **both**
+terminals — whichever files the sixth sub-game is the one that sends.
 
 **`--opponent` is always *their* URL, never ours**, and it is the same value in
 both terminals: they hold one reserved domain too, mapped to whichever of their
@@ -150,6 +178,7 @@ failing later on a missing file.
 | `--linger` | 20 s | Keeps serving after our last sub-game so **they** can finish auditing our log. Do not set this to 0. |
 | `--out` | none | Omit for a warm-up, so a rehearsal leaves nothing that looks like a league match. |
 | `--tunnel` | off | Required for league play (M#10); omit for a local rehearsal. |
+| `--counted` | off | **A league match: mail the report.** See above. Ignored when the opponent's team name is our own, because a self-match has no second reporter. |
 
 A refused handshake exits **1** with no move sent. That is the correct outcome —
 a match played under configs differing by one byte cannot be audited.
@@ -285,8 +314,9 @@ uv run python -m core negotiate --role cop --review their-game.json   # exit 1 =
 #   --opponent is always THEIR public MCP URL, and the same one both times:
 #   they hold one reserved domain too, mapped to whichever of their two
 #   processes is running. OURS is printed on startup - that is what they need.
-uv run python -m core play --role cop   --tunnel --first cop --out results\ --opponent https://THEIR-domain.ngrok-free.dev/mcp
-uv run python -m core play --role thief --tunnel --first cop --out results\ --opponent https://THEIR-domain.ngrok-free.dev/mcp
+uv run python -m core play --role cop   --tunnel --first cop --out results\ --counted --opponent https://THEIR-domain.ngrok-free.dev/mcp
+uv run python -m core play --role thief --tunnel --first cop --out results\ --counted --opponent https://THEIR-domain.ngrok-free.dev/mcp
+#   --counted is what mails the report. Without it: filed, never sent, 0 both (M#35)
 
 uv run python -m core replay results\log_<game_id>_g01.json --headless # Verified OK
 #   confirm they sent their report; add the row to docs/LEAGUE_LOG.md

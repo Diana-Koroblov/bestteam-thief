@@ -65,9 +65,12 @@ The manual equivalent, for debugging:
 ngrok http 8082 --url YOUR-DOMAIN.ngrok-free.dev
 ```
 
-Each machine has a **reserved static domain**, so the address survives a restart and goes into the
-declaration once instead of being re-exchanged per match. Set yours in `config/thief/game.toml`
-under `[network] public_domain`.
+A **reserved static domain** keeps the address alive across a restart, so it goes into the
+declaration once instead of being re-exchanged per match. Set it in `.env` as `NGROK_DOMAIN`, not in
+committed config: a domain is bound to one ngrok account, and a committed one fails with
+`ERR_NGROK_320` for everybody else — which is a tunnel that cannot start, therefore no public URL,
+therefore no league match (M#10). Leaving it empty is legal; the agent then assigns a random URL and
+`core/infra/tunnel.py` reads it back.
 
 ### If the tunnel drops
 

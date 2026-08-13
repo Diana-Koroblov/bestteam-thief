@@ -26,12 +26,14 @@ from typing import Any
 
 from core.crypto.canonical import digest
 from core.domain.barriers import BarrierManager
+from core.domain.rules import Rules
 from core.protocol.schemas import Role
 from core.runtime.filing import MatchFiling
 from core.runtime.match_driver import MatchDriver
 from core.runtime.peer_runtime import PeerRuntime
+from core.runtime.series import SeriesRunner, SubGameReport
 
-__all__ = ["driver_factory", "filing_for", "declare"]
+__all__ = ["driver_factory", "filing_for", "declare", "forfeit", "refuse"]
 
 
 def reopen(runtime: PeerRuntime, prepared: set[int]) -> Callable[[int], None]:
@@ -150,6 +152,10 @@ def declare(
     ours = runtime.prematch.step_zero()
     away = dict(getattr(theirs, "step_zero", None) or {})
     config = runtime.orchestrator.config
+    # Set on the filing, not passed to this call, because `result()` needs the
+    # same four links (M#49) and is written by a different method at a different
+    # time. One assignment covers both artefacts.
+    filing.repos = _repos(ours.payload, away)
     filing.declaration(
         teams=_teams(ours.payload, away),
         mcp_urls={"ours": urls[0], "theirs": urls[1]},
@@ -164,6 +170,85 @@ def declare(
             "theirs": {"payload": away, "sha256": digest(away) if away else ""},
         },
     )
+
+
+def forfeit(filing: MatchFiling, plan: list, table: Any, reason: str) -> None:
+    """File the sub-games we planned but never played, as technical losses.
+
+    🐛 **A refused handshake used to file nothing at all, and that is an M#35
+    hazard rather than a tidy exit.** Observed in a real localhost match: our
+    peer's outbound handshake failed while its *inbound* server had already
+    agreed, so the opponent played its half against a peer that had given up. It
+    correctly scored three technical losses and filed a six-row report. We filed
+    three rows — because the process exited before `_series` ever built a filing.
+
+    Two teams, one match, two reports disagreeing about how many sub-games
+    happened. A contradictory pair voids the match and scores **0 for both**,
+    which is the rule that punishes the honest side for the paperwork.
+
+    A technical loss is already 0-0, so filing them costs nothing in points and
+    buys the one thing that matters: a report that says the same as theirs. It
+    is also the honest record — those sub-games really did not happen, and
+    saying so beats silence, which a grader cannot distinguish from a team that
+    never turned up.
+    """
+    reports = [
+        SubGameReport(
+            sub_game=number, role=role, outcome=Rules.technical_loss(reason), steps=0
+        )
+        for number, role in plan
+    ]
+    SeriesRunner(build=None, plan=[], table=table, filing=filing, reports=reports).finish()
+
+
+def refuse(sdk: Any, args: Any, theirs: Any, locked: Any, plan: list) -> str:
+    """File a match the handshake never settled, and describe what was written.
+
+    Lives here rather than in the CLI for the reason `filing_for` does: every
+    value comes from the handshake that just failed, and the CLI's job is to
+    print the sentence this returns.
+
+    With no ``--out`` there is nowhere to file and nothing to reconcile, which is
+    the rehearsal case; the refusal is then just a non-zero exit.
+    """
+    from core.report.identifiers import game_id
+
+    if not args.out:
+        return "  no --out, so nothing was filed"
+    declared = getattr(theirs, "step_zero", None) or {}
+    identifier = game_id(
+        sdk.team_name, str(declared.get("team_name", "")) or "opponent", locked.agreed_at[:10]
+    )
+    filing = filing_for(sdk.runtime, identifier, Path(args.out), locked)
+    declare(filing, sdk.runtime, (getattr(args, "our_url", ""), args.opponent), theirs)
+    forfeit(filing, plan, sdk.scoring, f"handshake not agreed: {locked.result}")
+    return (
+        f"artefacts       : {len(filing.written)} files in {filing.directory}\n"
+        "  filed as technical losses so our report matches theirs (M#35)"
+    )
+
+
+def _repos(ours: dict[str, Any], theirs: dict[str, Any]) -> dict[str, str]:
+    """Return the four repository links Ch. 9.4 requires in the closing JSON.
+
+    🐛 **These were four empty strings in every artefact we filed.**
+    `MatchFiling.repos` was never populated by anything outside the test suite,
+    so a real match reported `{"ours_cop": "", ...}` against a rule that asks for
+    *"group A's two links and group B's two links"* (M#49).
+
+    They could not even have been filled in: the URLs lived only in README prose
+    and the handshake never exchanged them. Ours now come from `[identity]` and
+    the opponent's ride in their Step-0 payload, read with `.get` so a peer that
+    sends none is recorded as blank rather than refused.
+    """
+    mine = ours.get("repos") or {}
+    yours = theirs.get("repos") or {}
+    return {
+        "ours_cop": str(mine.get("cop", "")),
+        "ours_thief": str(mine.get("thief", "")),
+        "theirs_cop": str(yours.get("cop", "")),
+        "theirs_thief": str(yours.get("thief", "")),
+    }
 
 
 def _teams(ours: dict[str, Any], theirs: dict[str, Any]) -> dict[str, list[str]]:

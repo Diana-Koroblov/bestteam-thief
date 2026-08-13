@@ -2,8 +2,8 @@
 
 The provider choice is **private to each peer** (Appendix F Table 21) and is
 never negotiated, so everything here is behind one interface: `template` runs
-offline at zero tokens, `ollama` runs locally on Itay's machine for graded
-matches, `groq` runs on Diana's during development.
+offline at zero tokens, `ollama` runs locally for graded matches, and `groq`
+is a hosted option for development.
 """
 
 from core.infra.llm.base import ProviderError, TextProvider

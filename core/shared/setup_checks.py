@@ -20,7 +20,7 @@ from pathlib import Path
 from core.shared.env import redact
 
 __all__ = ["Status", "CheckResult", "check_env_file", "check_groq_key", "check_credentials",
-           "check_ollama", "check_ngrok", "run_all"]
+           "check_ollama", "check_ngrok", "check_domain", "check_provider", "run_all"]
 
 OK = "OK"
 WARN = "WARN"
@@ -130,13 +130,56 @@ def check_ngrok(authtoken: str | None) -> CheckResult:
     return CheckResult("ngrok", OK, "installed and configured")
 
 
+def check_domain() -> CheckResult:
+    """Report the public address a graded match would be reachable on (M#10).
+
+    Silent until now, which is how a domain reserved on an account we do not own
+    survived in committed config: `--tunnel` failed with `ERR_NGROK_320` at the
+    only moment it is ever used. Printing the answer makes that a five-second
+    check instead of a match-day surprise.
+
+    Not a FAIL when unset — an ephemeral URL is a legitimate way to play (see
+    `tunnel.reserved_domain`) — but it is worth saying out loud, because the URL
+    then changes on every restart and the opponent has to be told again.
+    """
+    from core.infra.tunnel import DOMAIN_VAR, LEGACY_DOMAIN_VAR
+
+    for name in (DOMAIN_VAR, LEGACY_DOMAIN_VAR):
+        if found := (os.getenv(name) or "").strip():
+            legacy = f"  (via the old {name}; rename it to {DOMAIN_VAR})"
+            return CheckResult("Tunnel domain", OK,
+                               found + (legacy if name == LEGACY_DOMAIN_VAR else ""))
+    return CheckResult("Tunnel domain", WARN, f"{DOMAIN_VAR} not set - ngrok will assign one",
+                       "SETUP 0.2.4 - reserve a free domain, or re-send the URL after a restart.")
+
+
+def check_provider(provider: str | None, ollama: CheckResult) -> CheckResult:
+    """Which trash-talk provider this machine will use, and whether it can.
+
+    The dangerous combination is `ollama` selected while nothing is listening:
+    it does not fail, it *degrades*, paying the full provider timeout every turn
+    before falling back to the template bank. So this check reads the Ollama
+    result rather than the setting alone — the setting on its own is not the
+    question anyone actually has on match day.
+    """
+    selected = (provider or "template").strip() or "template"
+    if selected == "ollama" and ollama.status != OK:
+        return CheckResult("LLM provider", WARN, f"{selected}, but Ollama is not answering",
+                           "Start it (`ollama serve`) or set P2P_LLM_PROVIDER=template. "
+                           "Selected-but-absent costs [llm] timeout_sec on every turn.")
+    return CheckResult("LLM provider", OK, selected)
+
+
 def run_all(root: Path) -> list[CheckResult]:
     """Run every check and return the results in report order."""
+    ollama = check_ollama(os.getenv("OLLAMA_BASE_URL"))
     return [
         check_env_file(root),
         check_credentials(os.getenv("GMAIL_CREDENTIALS_PATH"), root.parent),
         check_token(os.getenv("GMAIL_TOKEN_PATH")),
         check_groq_key(os.getenv("GROQ_API_KEY")),
-        check_ollama(os.getenv("OLLAMA_BASE_URL")),
+        ollama,
+        check_provider(os.getenv("P2P_LLM_PROVIDER"), ollama),
         check_ngrok(os.getenv("NGROK_AUTHTOKEN")),
+        check_domain(),
     ]

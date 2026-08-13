@@ -1,75 +1,68 @@
-"""What this machine is, declared at Step-0 (TODO 6.3.1, M#24).
+"""What this machine is, declared at Step-0 (TODO 6.3.1, M#24, FR-6.7).
 
 The rulebook requires each peer to declare its hardware before the first move,
 and the reason is fairness rather than curiosity: a match between a laptop and a
 GPU workstation is a different contest, and the declaration is what lets the
-grader see which one happened.
+grader see which one happened. FR-6.7 names the fields — OS, CPU cores and
+frequency, RAM, GPU.
 
-**Everything here degrades rather than fails.** A missing GPU, an unreadable
-`/proc`, a Windows API that answers differently than expected — none of those
-should stop a match starting. An unknown field reports `"unknown"` and the game
-proceeds; refusing to play because we could not read a CPU frequency would turn
-a cosmetic gap into a forfeit.
+This module assembles the declaration; `core/shared/hardware.py` does the
+probing, and its docstring records the three faults that made the old output
+wrong on the machine that plays our matches.
 
-No third-party dependency. `psutil` would report more, but it is one more thing
-to install correctly on two machines under deadline, and the fields the rulebook
-asks for are all reachable from the standard library.
+**Cores and threads are declared separately, and that is the point.** A field
+called `cpu_cores` holding the logical processor count reports a Ryzen 7 9700X
+as a 16-core machine. It has 8. Under a weighting that rewards doing well on
+modest hardware, overstating the machine is the direction that costs us — and
+either number alone loses information a reader needs, so both are declared.
+
+**Everything degrades rather than fails.** An unknown field reports `"unknown"`
+and the game proceeds. What is not permitted is a confident wrong answer.
 """
 
 from __future__ import annotations
 
-import os
 import platform
-import shutil
-import subprocess
+from functools import lru_cache
 
-__all__ = ["describe", "gpu_name", "total_ram_gb"]
+from core.shared.hardware import UNKNOWN, Machine, probe
 
-UNKNOWN = "unknown"
+__all__ = ["describe", "gpu_name", "total_ram_gb", "cpu_summary"]
+
+
+@lru_cache(maxsize=1)
+def _machine() -> Machine:
+    """Probe once per process.
+
+    Cached for the reason `step_zero.commit_hash` is: this shells out to CIM,
+    Step-0 is built per sub-game, and — more importantly — what we declare must
+    be the *same bytes* all series. A function that re-probes is a function that
+    can answer differently after the digest was signed.
+    """
+    return probe()
 
 
 def total_ram_gb() -> float | str:
-    """Physical RAM in GB, or ``"unknown"``.
-
-    Tries the POSIX `sysconf` pair first, then Windows' `wmic`. Both are absent
-    often enough that the fallback is the expected path, not an edge case.
-    """
-    try:
-        pages = os.sysconf("SC_PHYS_PAGES")
-        page_size = os.sysconf("SC_PAGE_SIZE")
-        return round(pages * page_size / 1024**3, 1)
-    except (AttributeError, ValueError, OSError):
-        pass
-
-    try:
-        output = subprocess.run(
-            ["wmic", "computersystem", "get", "TotalPhysicalMemory"],
-            capture_output=True, text=True, timeout=5, check=False,
-        ).stdout
-        digits = "".join(c for c in output if c.isdigit())
-        return round(int(digits) / 1024**3, 1) if digits else UNKNOWN
-    except (OSError, ValueError):
-        return UNKNOWN
+    """Physical RAM in GB, or ``"unknown"``."""
+    return _machine().ram_gb
 
 
 def gpu_name() -> str:
-    """The GPU model, or ``"none"`` when there is not one we can see.
+    """The GPU model(s), or ``"none"`` when there is not one we can see.
 
-    **"none" is a real answer, not a failure.** Diana's machine has no GPU and
-    plays anyway; the declaration is meant to record that difference, not to
-    treat it as an error.
+    **"none" is a real answer, not a failure.** A machine with no discrete card
+    plays anyway; the declaration records that difference rather than treating
+    it as an error. An *error message* is not a real answer, which is what the
+    return-code check in `hardware._run` now enforces.
     """
-    if shutil.which("nvidia-smi") is None:
-        return "none"
-    try:
-        result = subprocess.run(
-            ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
-            capture_output=True, text=True, timeout=5, check=False,
-        )
-        first = result.stdout.strip().splitlines()
-        return first[0].strip() if first else "none"
-    except (OSError, subprocess.SubprocessError):
-        return "none"
+    return _machine().gpu
+
+
+def cpu_summary() -> str:
+    """One line naming the processor, for the setup check and the scoreboard."""
+    cpu = _machine()
+    speed = f" @ {cpu.cpu_mhz} MHz" if cpu.cpu_mhz != UNKNOWN else ""
+    return f"{cpu.cpu_model} ({cpu.cpu_cores}C/{cpu.cpu_threads}T){speed}"
 
 
 def describe() -> dict[str, object]:
@@ -79,11 +72,15 @@ def describe() -> dict[str, object]:
     payload, so anything that serialises differently on two machines would break
     the digest comparison.
     """
+    cpu = _machine()
     return {
         "os": f"{platform.system()} {platform.release()}".strip() or UNKNOWN,
         "python": platform.python_version(),
         "machine": platform.machine() or UNKNOWN,
-        "cpu_cores": os.cpu_count() or UNKNOWN,
-        "ram_gb": total_ram_gb(),
-        "gpu": gpu_name(),
+        "cpu_model": cpu.cpu_model,
+        "cpu_cores": cpu.cpu_cores,
+        "cpu_threads": cpu.cpu_threads,
+        "cpu_mhz": cpu.cpu_mhz,
+        "ram_gb": cpu.ram_gb,
+        "gpu": cpu.gpu,
     }

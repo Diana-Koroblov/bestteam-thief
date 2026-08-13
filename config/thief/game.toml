@@ -21,6 +21,13 @@ team_name = "bestteam"
 # spelled differently here than in the form is an attribution problem for a
 # grader joining two reports to one group (M#45).
 members = ["Itay Malich", "Diana Koroblov"]
+# Our two submitted repositories. Declared in Step-0 and filed into BOTH the
+# declaration and the closing result, which Ch. 9.4 requires to carry four links
+# — our two and the opponent's two (M#49). They were empty strings in every
+# artefact until now, and could not have been filled in: the URLs existed only
+# in README prose and nothing exchanged them.
+repo_cop = "https://github.com/Diana-Koroblov/bestteam-cop"
+repo_thief = "https://github.com/Diana-Koroblov/bestteam-thief"
 role = "thief"
 # Free-text, sent in the handshake. Keep it boring; it is public.
 contact_label = "bestteam-thief"
@@ -36,9 +43,19 @@ auto_advance = false
 step_delay_sec = 0.0
 
 [network]
-# Diana's reserved free ngrok domain. Static, so no per-match URL exchange.
-# Itay overrides this locally with his own domain; it is never negotiated.
-public_domain = "customs-countdown-uncork.ngrok-free.dev"
+# EMPTY ON PURPOSE — the reserved domain lives in .env as NGROK_DOMAIN.
+#
+# 🐛 This used to hold a domain reserved on a different ngrok account, and
+# `--tunnel` could not start at all: ERR_NGROK_320, "This domain is reserved for
+# another account". Public exposure (M#10) was therefore unavailable and no
+# league match could be played over the internet — invisible to every test we
+# had, because localhost needs no tunnel.
+#
+# A reserved domain is bound to one account, which makes it a credential in
+# everything but name. Empty here means the agent assigns a random URL, which
+# `core/infra/tunnel.py` reads back rather than computes, so a fresh clone still
+# plays. See `tunnel.reserved_domain`.
+public_domain = ""
 listen_host = "127.0.0.1"
 # Different port from the cop so both roles can run on one machine for
 # self-play. The public domain still maps to exactly one of them at a time.
@@ -177,9 +194,14 @@ enabled = true
 #
 # The committed value is `template` — the book's own default. It costs zero
 # tokens, needs no network inside the move loop, and works on any machine, so a
-# fresh clone always runs. Each machine overrides it in .env, never here:
-#   Diana  P2P_LLM_PROVIDER=groq     development only, weak machine, no GPU
-#   Itay   P2P_LLM_PROVIDER=ollama   graded matches, zero tokens
+# fresh clone always runs. Override in .env, never here:
+#   P2P_LLM_PROVIDER=ollama   local model, zero API tokens; needs ollama running
+#   P2P_LLM_PROVIDER=groq     hosted and METERED — raise every_n_steps to 3
+#
+# ⚠️ ollama is only a better choice than template while it is actually up. If
+# `localhost:11434` does not answer, every turn pays the provider timeout and
+# then falls back to the bank anyway; `scripts/check_setup.py` reports whether
+# it is reachable, and that check is worth running before a graded match.
 #
 # In template and ollama modes the whole 6-sub-game series runs at zero tokens
 # and the contest reduces to movement-algorithm quality (Table 21) — which is

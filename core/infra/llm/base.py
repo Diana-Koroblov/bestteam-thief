@@ -2,9 +2,9 @@
 
 Appendix F Table 21 names four provider modes and states that the choice is
 **private to each peer** — it is not negotiated and the opponent never learns
-it. That is why this is an interface rather than a setting: Diana's machine
-runs `groq`, Itay's runs `ollama` for graded matches, and a fresh clone runs
-`template` offline. All three must be interchangeable at the call site.
+it. That is why this is an interface rather than a setting: graded matches run
+`ollama`, development may run `groq`, and a fresh clone runs `template`
+offline. All three must be interchangeable at the call site.
 
 One method, because a provider's only job is turning a prompt into a sentence.
 Everything that makes a hint *legal* — the word cap, the coordinate scanner,

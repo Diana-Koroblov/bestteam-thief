@@ -168,13 +168,11 @@ class PeerSDK:
         """
         manager = TunnelManager.from_config(self._config, "", **overrides)
         manager.authtoken = env.optional(manager.spec.token_env) or ""
-        # The reserved domain belongs to one account, so the committed value can
-        # only ever be one team-mate's — and on the other machine `--tunnel`
-        # fails binding a domain that account does not own. `P2P_PUBLIC_DOMAIN`
-        # overrides it per machine, exactly as `P2P_LLM_PROVIDER` overrides the
-        # provider, and for the same reason: it is a fact about this computer,
-        # not about the match.
-        manager.domain = env.optional("P2P_PUBLIC_DOMAIN") or manager.domain
+        # The domain is NOT re-resolved here. `from_config` already asked
+        # `tunnel.reserved_domain`, which is the single place that knows the
+        # precedence — and a second lookup in this method used to override it
+        # with `.env-example`'s placeholder. See that function for what that
+        # cost. Anything this method sets, it sets by overriding `from_config`.
         return manager
 
     @property

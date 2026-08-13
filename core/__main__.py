@@ -82,6 +82,9 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="The role OUR TEAM holds in the first block. Negotiated with the "
         "opponent, never assumed, and identical for both of our processes (C-011).",
     )
+    match.add_argument("--counted", action="store_true", help="A LEAGUE match: mail the "
+                       "closing report (M#32). Omit for rehearsals - the report is filed, "
+                       "not sent, and the command to send it by hand is printed.")
 
     settle = sub.add_parser("negotiate", help="Run the pre-match protocol (TODO 9.1).")
     settle.add_argument("--role", required=True, choices=sorted(CONFIG_DIRS))

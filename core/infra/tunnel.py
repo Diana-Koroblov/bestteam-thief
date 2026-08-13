@@ -38,7 +38,55 @@ from typing import Any
 
 from core.shared.config_manager import Config
 
-__all__ = ["TunnelError", "Provider", "PROVIDERS", "TunnelManager", "build_command", "AGENT_API"]
+__all__ = ["TunnelError", "Provider", "PROVIDERS", "TunnelManager", "build_command",
+           "AGENT_API", "reserved_domain", "DOMAIN_VAR", "LEGACY_DOMAIN_VAR"]
+
+# Where the reserved domain really lives. See `reserved_domain`.
+DOMAIN_VAR = "NGROK_DOMAIN"
+
+# The name it used to live under, still honoured so an existing .env keeps
+# working — but deliberately *lower* precedence than DOMAIN_VAR. See below.
+LEGACY_DOMAIN_VAR = "P2P_PUBLIC_DOMAIN"
+
+
+def reserved_domain(config: Config) -> str | None:
+    """Return the static domain to publish on, or None for an ephemeral URL.
+
+    🐛 **The committed default used to be a domain reserved on another
+    account.** `--tunnel` therefore could not start at all::
+
+        ERR_NGROK_320: This domain is reserved for another account.
+
+    which meant public exposure (M#10) was unavailable and no league match could
+    be played over the internet — a failure invisible to every localhost test we
+    had, because localhost needs no tunnel.
+
+    So the domain is read from the **environment** first. A reserved domain is
+    an account credential in everything but name: it is tied to one ngrok login,
+    it is useless to anyone else, and committing it to two public repositories
+    guarantees it goes stale the moment the account changes. `.env` is where the
+    authtoken beside it already lives.
+
+    The config key is kept as a fallback so an existing setup is not broken by
+    this, and **empty is a legitimate answer**: with no domain the agent assigns
+    a random URL, which `TunnelManager` reads back rather than computes. A match
+    can be played that way; the URL simply has to be re-sent after a restart.
+
+    🐛 **One resolver, and the placeholder must never win.** For a while there
+    were two variables for one value: this one, and `P2P_PUBLIC_DOMAIN`, applied
+    *afterwards* by `PeerSDK.tunnel` and therefore overriding it. `.env-example`
+    shipped the second holding the literal text `your-domain.ngrok-free.dev`, so
+    copying the example and filling in the domain the file tells you to fill in
+    left the placeholder in charge — and a placeholder domain fails exactly like
+    a domain owned by someone else, which is the ERR_NGROK_320 failure this
+    function was written to end. The legacy name is still read so an old `.env`
+    plays, but it is last, because the value someone set on purpose beats one
+    they inherited from a template.
+    """
+    for name in (DOMAIN_VAR, LEGACY_DOMAIN_VAR):
+        if found := os.environ.get(name, "").strip():
+            return found
+    return str(config.get("network.public_domain") or "").strip() or None
 
 # ngrok's agent exposes a local inspection API on a fixed port. Not the public
 # tunnel: this is loopback-only and is how we ask the agent what it published.
@@ -145,7 +193,7 @@ class TunnelManager:
         port: The local port our FastMCP server listens on.
         domain: Our reserved static domain. Optional, but a match played
             without one strands the opponent at a dead address after any
-            restart, which is why both machines reserved one.
+            restart, which is why we reserved one.
         provider: Key into :data:`PROVIDERS`.
         spawn: Starts the child process. Injected; see the module docstring.
         probe: Returns the published public URL, or None.
@@ -181,7 +229,7 @@ class TunnelManager:
         """
         derived: dict[str, Any] = {
             "port": config.require("network.listen_port"),
-            "domain": config.get("network.public_domain"),
+            "domain": reserved_domain(config),
             "provider": config.get("network.tunnel_provider", "ngrok"),
         }
         return cls(authtoken=authtoken, **{**derived, **overrides})

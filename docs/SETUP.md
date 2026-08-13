@@ -24,7 +24,7 @@ report would silently fail, and a missing report scores **0 for both teams**
 **2. Keep `credentials.json` outside both repositories.**
 Not merely git-ignored — physically outside. A secret committed once lives in
 the Git history forever (M#39, M#40). Use a folder such as
-`C:\Users\diana\.p2p-secrets\`.
+`C:\Users\itaym\.p2p-secrets\`.
 
 ---
 
@@ -82,15 +82,15 @@ would be a security overreach the grader can see in your code.
 ### 0.2.1.f Store it outside the repository
 
 ```powershell
-mkdir C:\Users\diana\.p2p-secrets
-Move-Item $HOME\Downloads\client_secret_*.json C:\Users\diana\.p2p-secrets\credentials.json
+mkdir C:\Users\itaym\.p2p-secrets
+Move-Item $HOME\Downloads\client_secret_*.json C:\Users\itaym\.p2p-secrets\credentials.json
 ```
 
-Then in `C:\Users\diana\final_project\p2p-chase\.env`:
+Then in `C:\Users\itaym\Documents\hw6-ai-orchestration\p2p-chase\.env`:
 
 ```
-GMAIL_CREDENTIALS_PATH=C:\Users\diana\.p2p-secrets\credentials.json
-GMAIL_TOKEN_PATH=C:\Users\diana\.p2p-secrets\token.json
+GMAIL_CREDENTIALS_PATH=C:\Users\itaym\.p2p-secrets\credentials.json
+GMAIL_TOKEN_PATH=C:\Users\itaym\.p2p-secrets\token.json
 ```
 
 ### 0.2.1.g ⚠️ Publish the app — removes the 7-day token expiry
@@ -170,7 +170,7 @@ like on day 8.
 
 ---
 
-## 0.2.2 — Groq API key (Diana's machine)
+## 0.2.2 — Groq API key (optional)
 
 1. Go to <https://console.groq.com/keys>
 2. Sign in → **Create API Key** → name it `p2p-cop-chase` → copy it immediately
@@ -189,12 +189,12 @@ uv run python -c "from core.shared.env import optional, redact; print(redact(opt
 
 prints your key, not `None`.
 
-Groq is your development provider only. Graded matches run from Itay's machine
-on Ollama, at zero tokens — computational fairness is scored (ADR-003).
+Groq is a development provider only. Graded matches run on Ollama, at zero
+tokens — computational fairness is scored (ADR-003).
 
 ---
 
-## 0.2.3 — Ollama (Itay's machine)
+## 0.2.3 — Ollama
 
 1. Download from <https://ollama.com/download> → install
 2. Pull a small model. It must return a 15-word bluff inside the 30-second step
@@ -219,9 +219,17 @@ hardware declaration for every match (M#24).
 Ollama serves on `http://localhost:11434` by default; that is already the
 `OLLAMA_BASE_URL` value in `.env-example`.
 
+⚠️ **On Windows the daemon does not start on demand, and `ollama list` hangs
+rather than erroring when it is down.** Selecting `ollama` in `.env` while
+nothing is listening does not fail either — every turn pays `[llm] timeout_sec`
+and then writes the template hint anyway. Leave `ollama serve` running in its
+own terminal for a graded match, or set `P2P_LLM_PROVIDER=template`.
+`scripts/check_setup.py` prints the two on one line so the combination is
+visible.
+
 ---
 
-## 0.2.4 — ngrok (both machines)
+## 0.2.4 — ngrok
 
 1. Sign up at <https://dashboard.ngrok.com/signup>
 2. Copy your authtoken from <https://dashboard.ngrok.com/get-started/your-authtoken>
@@ -287,7 +295,7 @@ Phase 1. Until then this table is where the domains live, so nothing is lost.
 
 | Machine | Owner | Static domain | Recorded |
 |---|---|---|---|
-| Diana's | [D] | `customs-countdown-uncork.ngrok-free.dev` | 2026-07-28 |
+| Ours | [I] | from `.env` as `NGROK_DOMAIN` — see `tunnel.reserved_domain` | 2026-08-13 |
 | Itay's | [I] | `denotatively-sciuroid-florine.ngrok-free.dev` | 2026-08-02 |
 
 Start the tunnel pinned to it:

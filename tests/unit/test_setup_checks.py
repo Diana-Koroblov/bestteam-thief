@@ -16,10 +16,13 @@ from core.shared.setup_checks import (
     FAIL,
     OK,
     WARN,
+    CheckResult,
     check_credentials,
+    check_domain,
     check_env_file,
     check_groq_key,
     check_ngrok,
+    check_provider,
     check_token,
 )
 
@@ -46,7 +49,7 @@ def test_env_file_present_passes(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("value", ["", None])
 def test_missing_groq_key_warns_rather_than_fails(value: str | None) -> None:
-    """Itay's machine uses Ollama and legitimately has no Groq key."""
+    """A machine that runs the template or ollama provider needs no Groq key."""
     assert check_groq_key(value).status == WARN
 
 
@@ -126,3 +129,63 @@ def test_ngrok_fully_configured_passes(monkeypatch) -> None:
     """The happy path."""
     monkeypatch.setattr("core.shared.setup_checks.shutil.which", lambda _: "/usr/bin/ngrok")
     assert check_ngrok("token").status == OK
+
+
+# --- what the report was not saying ----------------------------------------
+#
+# Both of these were added after a real match found the gap. Neither is a
+# failure the setup *has* — they are answers the report never printed, so the
+# first place the wrong one showed up was a live handshake.
+
+
+def test_the_reserved_domain_is_printed_so_it_can_be_checked(monkeypatch) -> None:
+    """🐛 **A domain reserved on an account we do not own lived in config.**
+
+    `--tunnel` failed with `ERR_NGROK_320` at the only moment it is ever used,
+    so M#10 was unmet and no match could be played publicly. Nothing printed it
+    beforehand. Now it is one line of the report.
+    """
+    monkeypatch.setenv("NGROK_DOMAIN", "ours.ngrok-free.dev")
+    result = check_domain()
+    assert result.status == OK
+    assert "ours.ngrok-free.dev" in result.detail
+
+
+def test_an_unset_domain_warns_but_does_not_block(monkeypatch) -> None:
+    """An ephemeral URL is a legitimate way to play; it just changes on restart."""
+    monkeypatch.delenv("NGROK_DOMAIN", raising=False)
+    monkeypatch.delenv("P2P_PUBLIC_DOMAIN", raising=False)
+    assert check_domain().status == WARN
+
+
+def test_the_old_domain_variable_is_reported_as_such(monkeypatch) -> None:
+    """It still works, and the report says to rename it rather than staying quiet."""
+    monkeypatch.delenv("NGROK_DOMAIN", raising=False)
+    monkeypatch.setenv("P2P_PUBLIC_DOMAIN", "legacy.ngrok-free.dev")
+    result = check_domain()
+    assert result.status == OK
+    assert "NGROK_DOMAIN" in result.detail
+
+
+def test_ollama_selected_while_absent_warns() -> None:
+    """**The combination that degrades instead of failing.**
+
+    A provider that is selected but not answering costs `[llm] timeout_sec` on
+    every single turn before falling back to the template bank — 8 s against a
+    30 s response window, for text that movement never depends on. The setting
+    alone reads fine; only the pair tells you anything.
+    """
+    absent = CheckResult("Ollama", WARN, "not reachable")
+    assert check_provider("ollama", absent).status == WARN
+
+
+def test_ollama_selected_and_running_passes() -> None:
+    assert check_provider("ollama", CheckResult("Ollama", OK, "llama3.1:8b")).status == OK
+
+
+@pytest.mark.parametrize("value", ["", None, "   "])
+def test_an_unset_provider_reports_the_committed_default(value: str | None) -> None:
+    """`template` is what a fresh clone runs, and it needs nothing at all."""
+    result = check_provider(value, CheckResult("Ollama", WARN, "not reachable"))
+    assert result.status == OK
+    assert result.detail == "template"

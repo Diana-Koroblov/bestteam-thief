@@ -75,7 +75,7 @@ def build_message(sender: str, recipient: str, subject: str, attachment: Path) -
         attachment: The `result_<game_id>.json` to send. Read as **bytes** and
             attached as `application/json`, not decoded and pasted: decoding
             would put the report through the local console codec, which is
-            cp1252 on Diana's machine and would mangle a Hebrew team name.
+            cp1252 on Windows and would mangle a Hebrew team name.
 
     Raises:
         GmailError: The attachment is missing. Better here than at the API,

@@ -25,8 +25,8 @@ def print_series(report: Any, table: Any, filing: Any = None) -> None:
         report: The finished `SeriesReport`.
         table: The negotiated `ScoreTable` the rows are priced with.
         filing: The `MatchFiling`, or None when the series was played without
-            writing artefacts — a rehearsal against a team-mate, which must not
-            leave files that look like a league match.
+            writing artefacts — a warm-up, which must not leave files that
+            look like a league match.
     """
     for row in report.rows(table):
         print(

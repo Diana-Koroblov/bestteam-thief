@@ -52,7 +52,7 @@ def test_a_completed_series_reports_itself(tmp_path: Path) -> None:
     """The whole point: nobody types a command and the report still goes out."""
     mailer = FakeMailer()
     path = result_file(tmp_path, 6)
-    message = send_series_report(lambda: mailer, path, 6)
+    message = send_series_report(lambda: mailer, path, 6, counted=True)
 
     assert mailer.sent == [path]
     assert "sent to lecturer@example.com" in message
@@ -84,7 +84,7 @@ def test_a_failed_send_is_loud_and_not_fatal(tmp_path: Path) -> None:
     """The match is over; raising would lose nothing and bury the one line the
     human still has to act on."""
     mailer = FakeMailer(fails="invalid_grant: the token was revoked")
-    message = send_series_report(lambda: mailer, result_file(tmp_path, 6), 6)
+    message = send_series_report(lambda: mailer, result_file(tmp_path, 6), 6, counted=True)
 
     assert "NOT SENT" in message
     assert "invalid_grant" in message
@@ -98,7 +98,7 @@ def test_a_reporter_that_cannot_be_built_is_reported_as_unsent(tmp_path: Path) -
     def broken():
         raise RuntimeError("no Gmail token. Run the one-time consent flow first")
 
-    message = send_series_report(broken, result_file(tmp_path, 6), 6)
+    message = send_series_report(broken, result_file(tmp_path, 6), 6, counted=True)
     assert "NOT SENT" in message and "consent flow" in message
 
 
@@ -106,7 +106,7 @@ def test_switching_reporting_off_says_so_rather_than_sending(tmp_path: Path) -> 
     """`[email] send_on_series_end = false` is a real choice, and a silent one
     would be indistinguishable from a broken send."""
     mailer = FakeMailer(on_series_end=False)
-    message = send_series_report(lambda: mailer, result_file(tmp_path, 6), 6)
+    message = send_series_report(lambda: mailer, result_file(tmp_path, 6), 6, counted=True)
 
     assert mailer.sent == []
     assert "NOT SENT" in message and "send_on_series_end" in message
@@ -116,7 +116,7 @@ def test_disabled_email_does_not_reach_the_mailer(tmp_path: Path) -> None:
     """`[email] enabled = false` is the development setting, checked separately
     so a disabled peer never constructs a message at all."""
     mailer = FakeMailer(enabled=False)
-    send_series_report(lambda: mailer, result_file(tmp_path, 6), 6)
+    send_series_report(lambda: mailer, result_file(tmp_path, 6), 6, counted=True)
     assert mailer.sent == []
 
 
@@ -141,5 +141,37 @@ def test_an_absent_result_is_held_back_rather_than_crashing(tmp_path: Path) -> N
 def test_every_message_is_ascii(tmp_path: Path, played: int, mailer: FakeMailer) -> None:
     """Printed to a Windows console, which is cp1252: an em dash in one of these
     strings is a `UnicodeEncodeError` at the end of a match instead of a report."""
-    message = send_series_report(lambda: mailer, result_file(tmp_path, played), 6)
+    message = send_series_report(lambda: mailer, result_file(tmp_path, played), 6, counted=True)
     message.encode("ascii")
+
+
+# --- the rehearsal guard ----------------------------------------------------
+
+
+def test_a_rehearsal_files_its_report_but_never_sends_it(tmp_path: Path) -> None:
+    """🐛 **A self-match used to mail the lecturer a fake league report.**
+
+    Any six-row result triggered a send, and a 3-3 self-match produces two of
+    them — one per team process. Nothing distinguished a rehearsal from a
+    counted match.
+    """
+    mailer = FakeMailer()
+    message = send_series_report(lambda: mailer, result_file(tmp_path, 6), 6)
+
+    assert mailer.sent == []
+    assert "NOT SENT" in message and "rehearsal" in message
+
+
+def test_the_rehearsal_message_still_shows_how_to_send_by_hand(tmp_path: Path) -> None:
+    """**Which is why the default may be silence.** Forgetting `--counted` on
+    match day costs one command; an unsendable fake report costs the grader's
+    trust. The asymmetry is what decides the direction of the default."""
+    message = send_series_report(lambda: FakeMailer(), result_file(tmp_path, 6), 6, role="thief")
+    assert "send_report.py" in message and "--role thief" in message
+
+
+def test_an_incomplete_rehearsal_is_still_reported_as_held_back(tmp_path: Path) -> None:
+    """Completeness is checked first. Calling three of six sub-games a rehearsal
+    would hide that the other role process has three left to file (M#35)."""
+    message = send_series_report(lambda: FakeMailer(), result_file(tmp_path, 3), 6)
+    assert "held back" in message and "3 of 6" in message

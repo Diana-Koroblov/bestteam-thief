@@ -217,8 +217,8 @@ class SeriesRunner:
         plan: The ``(sub_game, role)`` pairs this process plays, in order.
         table: The negotiated scoring values.
         filing: A `MatchFiling`, or None to play without writing artefacts.
-            Optional because a rehearsal against a team-mate should not file a
-            log that looks like a league match.
+            Optional because a warm-up should not file a log that looks
+            like a league match.
         reports: Filled as the series proceeds, so a series interrupted halfway
             still has everything it managed to play.
     """

@@ -109,8 +109,10 @@ class _ChatProvider(TextProvider):
 class OllamaProvider(_ChatProvider):
     """Local model on ``localhost:11434``. Unmetered, so ``every_n_steps`` is 1.
 
-    Itay's machine runs this for graded matches: zero tokens, no rate limit and
-    no dependency on a service being up during a match we cannot replay.
+    This is what graded matches run: zero tokens, no rate limit and no
+    dependency on a hosted service being up during a match we cannot replay.
+    It does need the local daemon up — selected while nothing is listening it
+    degrades rather than fails, paying ``timeout_sec`` on every single turn.
     """
 
     name = "ollama"
@@ -123,7 +125,7 @@ class OllamaProvider(_ChatProvider):
 class GroqProvider(_ChatProvider):
     """Hosted model, our own fifth provider (ADR-003).
 
-    Diana's machine runs this in development because it has no GPU. It is
+    Used in development on a machine with no GPU to run a local model. It is
     **metered**, which is the one condition under which ``every_n_steps`` must
     rise from 1 to 3 — see the note in ``game.toml``.
     """
