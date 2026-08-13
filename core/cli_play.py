@@ -39,10 +39,10 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import time
 from pathlib import Path
 from typing import Any
 
+from core.cli_handshake import greet
 from core.protocol.schemas import Role
 from core.report.scoreboard import print_series
 from core.runtime.live import reopen
@@ -54,9 +54,6 @@ __all__ = ["play", "plan_for"]
 # opponent may answer our handshake by calling straight back, and a refusal
 # because our port was not up yet reads exactly like a refusal on the merits.
 BIND_SECONDS = 1.0
-
-# Gap between handshake attempts while the opponent is still starting up.
-RETRY_SECONDS = 2.0
 
 # How long to keep serving after our last sub-game. Their closing exchange
 # calls *our* tools, so a peer that exits the moment its own series ends leaves
@@ -134,6 +131,13 @@ def play(sdk: PeerSDK, args: argparse.Namespace) -> int:
     print(f"give them       : --opponent {our_url}")
     print(f"their url       : {args.opponent}\n")
     try:
+        if getattr(args, "gui", False):
+            # Tk must own the main thread, so the match moves off it. See
+            # `core/cli_gui.py` — and note this is the only way to obtain the
+            # belief-map capture Ch. 9.4 calls an absolute requirement.
+            from core.cli_gui import play_with_window
+
+            return play_with_window(sdk, spec, args, plan, prepared)
         return asyncio.run(_run(sdk, spec, args, plan, prepared))
     finally:
         if manager is not None:
@@ -185,7 +189,7 @@ async def _handshake_then_play(
 
     theirs = None
     try:
-        theirs = await _greet(sdk, ours, float(args.wait))
+        theirs = await greet(sdk, ours, float(args.wait))
     except PeerError as error:
         locked = prematch.refused(str(error))
     else:
@@ -208,33 +212,6 @@ async def _handshake_then_play(
         print(refuse(sdk, args, theirs, locked, plan))
         return 1
     return await _series(sdk, args, theirs, locked, plan, prepared)
-
-
-async def _greet(sdk: PeerSDK, ours: Any, seconds: float) -> Any:
-    """Send our handshake, waiting out an opponent who has not started yet.
-
-    Two humans on two machines never start their peers in the same second, and
-    without this the earlier one hits a closed port, records a refusal and exits
-    before the later one is listening.
-
-    **Only `TransportError` is retried.** It is the one failure the client's own
-    taxonomy marks retryable — the call never completed, so nothing was decided.
-    A `RemoteToolError` is the opponent refusing on the merits and retrying it
-    would bury a verdict we already hold; a `DeadlineError` means the agreed
-    window is spent and another attempt walks into the watchdog (M#5).
-    """
-    from core.infra.errors import TransportError
-    from core.protocol.tools import decode_negotiation
-
-    deadline = time.monotonic() + seconds
-    while True:
-        try:
-            return decode_negotiation(await sdk.opponent.call("negotiate", ours.payload()))
-        except TransportError:
-            if time.monotonic() >= deadline:
-                raise
-            print(f"  no answer yet; retrying for {deadline - time.monotonic():.0f}s more ...")
-            await asyncio.sleep(RETRY_SECONDS)
 
 
 async def _series(

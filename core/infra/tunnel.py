@@ -36,6 +36,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from core.shared import env
 from core.shared.config_manager import Config
 
 __all__ = ["TunnelError", "Provider", "PROVIDERS", "TunnelManager", "build_command",
@@ -82,9 +83,19 @@ def reserved_domain(config: Config) -> str | None:
     function was written to end. The legacy name is still read so an old `.env`
     plays, but it is last, because the value someone set on purpose beats one
     they inherited from a template.
+
+    🐛 **And it must read `.env`, not the ambient environment.** This function
+    called `os.environ` directly, which is empty of `.env` until somebody calls
+    `env.load_env()` — so it answered `None` and the agent assigned a random
+    URL. It was invisible because the very override removed above happened to
+    run `env.optional()` two lines later, which *does* load the file: the
+    reserved domain only ever arrived through the legacy name, and deleting that
+    line unpublished the domain. Caught by a rehearsal that read the agent's own
+    API instead of trusting the code. `core/shared/env.py` says it in its own
+    docstring — nothing reads `os.environ` directly — and this is what it costs.
     """
     for name in (DOMAIN_VAR, LEGACY_DOMAIN_VAR):
-        if found := os.environ.get(name, "").strip():
+        if found := (env.optional(name) or "").strip():
             return found
     return str(config.get("network.public_domain") or "").strip() or None
 

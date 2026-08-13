@@ -140,9 +140,15 @@ class ReplaySession:
         return self.cursor
 
     def describe(self) -> str:
-        """One line for the window title and the report."""
-        text, _ = self.verdict
-        return f"{text} - {self.result.describe()}"
+        """One line for the window title and the report.
+
+        The audit's own sentence, unprefixed. It already opens with the verdict
+        — `Verified OK - 35 steps re-hashed` — so pasting `self.verdict` in
+        front of it printed *"Verified OK - Verified OK - 35 steps re-hashed"*,
+        which is what `--headless` put on screen for the M#20 deliverable. The
+        `verdict` tuple stays where it belongs: the viewer's coloured badge.
+        """
+        return self.result.describe()
 
     def audit_records(self) -> list:
         """The parsed step records, for anything that wants them directly."""

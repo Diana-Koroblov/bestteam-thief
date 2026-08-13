@@ -49,12 +49,21 @@ class LiveGui:
         provider: Callable[[], GuiState],
         cell_pixels: int = 64,
         title: str = "p2p-chase - live",
+        keep_open: Callable[[], bool] | None = None,
     ) -> None:
-        """Build the window. Nothing is drawn until :meth:`run`."""
+        """Build the window. Nothing is drawn until :meth:`run`.
+
+        Args:
+            keep_open: Asked once per frame. Returning False closes the window,
+                which is how a finished match ends its own display instead of
+                leaving a dead board on screen waiting for a human. Default
+                keeps it open forever, which is what a standalone launch wants.
+        """
         import tkinter as tk
 
         self.provider = provider
         self.cell_pixels = cell_pixels
+        self.keep_open = keep_open or (lambda: True)
         self.state = provider()
 
         self.root = tk.Tk()
@@ -100,8 +109,15 @@ class LiveGui:
         )
 
     def _tick(self) -> None:
-        """Repaint and schedule the next frame."""
+        """Repaint and schedule the next frame, unless the match is over.
+
+        The final frame is drawn *before* the check, so the last thing on
+        screen is the position the match actually ended in.
+        """
         self.refresh()
+        if not self.keep_open():
+            self.root.destroy()
+            return
         self.root.after(POLL_MS, self._tick)
 
     def run(self) -> None:  # pragma: no cover - opens a window

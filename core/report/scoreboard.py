@@ -49,4 +49,9 @@ def print_series(report: Any, table: Any, filing: Any = None) -> None:
         print(f"AUDIT FAILED on sub-game(s) {report.forged} - file it, do not score it (M#19)")
     if filing is not None:
         print(f"\nartefacts       : {len(filing.written)} files in {filing.directory}")
+        # Survivable, and therefore easy to miss. The declaration is on disk and
+        # the result is filed; only the end timestamp is absent, and a reader
+        # comparing two teams' declarations deserves to know why.
+        if getattr(filing, "close_failure", ""):
+            print(f"  ! declaration not closed - no ended_utc: {filing.close_failure}")
         print("send yours, and confirm they sent theirs - a missing report is 0 for BOTH (M#35)")

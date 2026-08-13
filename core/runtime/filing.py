@@ -68,6 +68,10 @@ class MatchFiling:
     github_commit: str = ""
     repos: dict[str, str] = field(default_factory=dict)
     written: list[Path] = field(default_factory=list)
+    # Why the declaration could not be closed, empty when it could. Printed by
+    # the scoreboard: a missing `ended_utc` is survivable, but a reader has to
+    # be told rather than left to notice.
+    close_failure: str = ""
     # What was declared before the first move, kept so the end-of-series rewrite
     # restates it verbatim. A second caller re-assembling it could file a
     # declaration that disagrees with the one the opponent was handed.
@@ -128,10 +132,23 @@ class MatchFiling:
         or a harness that never declared has nothing to close, and inventing a
         declaration at the end of a series would produce the one artefact whose
         whole purpose is to have existed *before* the first move.
+
+        🐛 **A failure here is recorded, never raised.** The declaration is
+        already on disk — it was written before the first move, which is the
+        whole point of it — so everything this adds is an `ended_utc`. It used
+        to raise, and a live rehearsal showed what that costs: a Windows sharing
+        conflict on the replace threw out of here, through `result` and out of
+        `SeriesRunner.run`, and a peer that had just played three clean
+        sub-games filed no result and sent no report at all. Trading a timestamp
+        for the report is not a trade worth making (M#35).
         """
         if self._declared is None:
             return None
-        return self.declaration(ended_utc=utc_now(), **self._declared)
+        try:
+            return self.declaration(ended_utc=utc_now(), **self._declared)
+        except OSError as error:
+            self.close_failure = f"{type(error).__name__}: {error}"
+            return None
 
     def sub_game(self, report: Any, driver: Any) -> list[Path]:
         """File the config snapshot and the log for one sub-game (7.2.2, 7.2.3).
@@ -200,10 +217,14 @@ class MatchFiling:
         moment a series is known to be over, and an `ended_utc` that depends on
         the CLI remembering to ask for it is one that is absent from exactly the
         matches that ended badly.
+
+        **The result is written first, and the declaration closed after.** The
+        order is the fix for a real failure, not a preference: this file is what
+        the report is built from and what M#35 counts, and closing first put a
+        second write in front of it that could — and once did — take it down.
         """
-        self.close_declaration()
         rows = merge_rows(load_rows(self.result_path), series.rows(table))
-        return self._write(
+        filed = self._write(
             build_result(
                 game_identifier=self.game_id,
                 sub_games=rows,
@@ -219,6 +240,8 @@ class MatchFiling:
             ),
             "result",
         )
+        self.close_declaration()
+        return filed
 
     def _write(self, payload: dict[str, Any], kind: str, sub_game: int | None = None) -> Path:
         """Write one artefact, remember it once, and return where it went.

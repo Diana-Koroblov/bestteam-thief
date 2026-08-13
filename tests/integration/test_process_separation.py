@@ -34,22 +34,28 @@ FOUNDATIONS = ("core.domain", "core.shared", "core.crypto")
 # The gateway. Only these may join subsystems together.
 # `core.cli_commands` is `__main__`'s body, moved out when that file reached 149
 # of its 150 permitted lines; `core.cli_negotiate` is the pre-match protocol moved
-# out of *that* one at 110; and `core.cli_play` is the match itself, which needs
-# the transport and the protocol in one place because playing is precisely the
-# act of joining them. All four are one gateway with one permission — listing
-# them here records where the CLI now lives, it does not widen the rule.
+# out of *that* one at 110; `core.cli_play` is the match itself, which needs the
+# transport and the protocol in one place because playing is precisely the act of
+# joining them; `core.cli_handshake` is the retry that waits for an opponent to
+# start, split out of `cli_play` at 151; and `core.cli_gui` hosts the Live GUI
+# beside a running match, which no module below the gateway may do because it
+# joins the window to the turn loop. They are one gateway with one permission —
+# listing them here records where the CLI now lives, it does not widen the rule.
 #
-# This test is what noticed the third file, and the fourth, on the runs that
-# added them. That is the point of writing the layering down rather than
+# This test is what noticed the third file, and every one since, on the run that
+# added it. That is the point of writing the layering down rather than
 # remembering it: a new module quietly acquiring gateway privileges is not
 # something anyone spots in review.
 GATEWAY = (
     "core.runtime",
     "core.sdk",
     "core.__main__",
+    "core.cli_args",
     "core.cli_commands",
     "core.cli_negotiate",
     "core.cli_play",
+    "core.cli_handshake",
+    "core.cli_gui",
 )
 
 

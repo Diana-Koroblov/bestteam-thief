@@ -13,7 +13,9 @@ from __future__ import annotations
 
 import pytest
 
+from core.infra import tunnel as tunnel_module
 from core.infra.tunnel import DOMAIN_VAR, LEGACY_DOMAIN_VAR, reserved_domain
+from core.shared import env
 
 RESERVED = "denotatively-sciuroid-florine.ngrok-free.dev"
 PLACEHOLDER = "your-domain.ngrok-free.dev"
@@ -31,7 +33,13 @@ class FakeConfig:
 
 @pytest.fixture(autouse=True)
 def _clean_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Never read the developer's own .env: the answer would depend on it."""
+    """Never read the developer's own .env: the answer would depend on it.
+
+    `load_env` runs first and deliberately: it is idempotent, so letting it
+    happen *before* the variables are cleared stops the resolver from loading
+    the real `.env` underneath a test and putting them back.
+    """
+    env.load_env()
     monkeypatch.delenv(DOMAIN_VAR, raising=False)
     monkeypatch.delenv(LEGACY_DOMAIN_VAR, raising=False)
 
@@ -103,6 +111,33 @@ def test_whitespace_is_not_a_domain(blank: str, monkeypatch: pytest.MonkeyPatch)
     """
     monkeypatch.setenv(DOMAIN_VAR, blank)
     assert reserved_domain(FakeConfig()) is None
+
+
+def test_the_domain_is_read_through_the_env_loader_not_the_ambient_shell(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """🐛 **`.env` is not the environment until something loads it.**
+
+    This function called `os.environ` directly, so in a fresh process it saw
+    nothing and returned `None` — and ngrok, given no domain, quietly assigned a
+    random URL. Every peer would then publish an address the opponent had never
+    been told, which is a match that cannot start.
+
+    It hid behind the override deleted above: that line called `env.optional`,
+    which *does* load `.env`, so the reserved domain only ever arrived through
+    the legacy name. Removing the duplicate unpublished the domain, and only a
+    rehearsal reading ngrok's own API noticed. So the loader is pinned here
+    rather than the value.
+    """
+    asked: list[str] = []
+
+    def spy(name: str, default: str | None = None) -> str | None:
+        asked.append(name)
+        return RESERVED if name == DOMAIN_VAR else default
+
+    monkeypatch.setattr(tunnel_module.env, "optional", spy)
+    assert reserved_domain(FakeConfig()) == RESERVED
+    assert asked == [DOMAIN_VAR], "the loader must be what answers, not os.environ"
 
 
 def test_the_sdk_does_not_resolve_the_domain_a_second_time() -> None:

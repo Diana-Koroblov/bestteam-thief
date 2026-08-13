@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -244,8 +245,58 @@ def write(payload: dict[str, Any], directory: Path, filename: str) -> Path:
     body = json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False)
     staged = target.with_name(f"{target.name}.{os.getpid()}.{uuid4().hex[:8]}.tmp")
     staged.write_bytes(body.encode("utf-8"))
-    os.replace(staged, target)
+    _replace_when_windows_lets_go(staged, target)
     return target
+
+
+# One second, in twenty parts. The conflict below lasts as long as another
+# process holds a handle open, which for a peer reading an artefact is
+# milliseconds — and a second is still far inside the 30 s response window.
+REPLACE_ATTEMPTS = 20
+REPLACE_PAUSE_SEC = 0.05
+
+
+def _replace_when_windows_lets_go(staged: Path, target: Path) -> None:
+    """Replace *target* with *staged*, waiting out a concurrent reader.
+
+    🐛 **`os.replace` is atomic on Windows but it is not always permitted.**
+    `MoveFileEx` fails with `ERROR_ACCESS_DENIED` when anything else has the
+    destination open, and both of our role processes write one declaration and
+    one result under a single `game_id`. A live rehearsal over the tunnel hit it
+    exactly once, on the last write of the match::
+
+        PermissionError: [WinError 5] Access is denied:
+            'declaration_....json.4432.5a424743.tmp' -> 'declaration_....json'
+
+    and the cost was the whole report: the exception left `MatchFiling.result`
+    through `SeriesRunner.run`, so a peer that had played three clean sub-games
+    printed no scoreboard, filed no `result_<game_id>.json` and sent nothing —
+    while the opponent filed normally. One side reporting and the other silent
+    is the contradictory pair M#35 scores **0 for both teams** over, produced by
+    the code that made writing atomic in the first place.
+
+    A retry is the whole fix, because the condition is transient by nature: the
+    other process is reading, not holding. When it genuinely will not clear, the
+    staged file is removed rather than left as litter beside the real artefacts,
+    and the caller is told which write failed.
+
+    Raises:
+        ArtefactError: The replace never became possible.
+    """
+    for attempt in range(REPLACE_ATTEMPTS):
+        try:
+            os.replace(staged, target)
+            return
+        except PermissionError:
+            if attempt == REPLACE_ATTEMPTS - 1:
+                break
+            time.sleep(REPLACE_PAUSE_SEC)
+
+    staged.unlink(missing_ok=True)
+    raise ArtefactError(
+        f"could not replace {target.name} after "
+        f"{REPLACE_ATTEMPTS * REPLACE_PAUSE_SEC:g}s - another process is holding it open"
+    )
 
 
 def payload_digest(payload: dict[str, Any]) -> str:
