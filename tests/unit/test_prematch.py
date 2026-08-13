@@ -145,16 +145,25 @@ def test_warnings_gather_from_every_source(minimal_config, tmp_path) -> None:
     assert "M#52" in found and "no Step-0 declaration" in found and "no role split" in found
 
 
-def test_a_contract_naming_only_us_is_flagged_before_signing(prematch) -> None:
-    """**Appendix B.3.** The shipped `agreed_between` is a proposal, not a contract.
+def test_a_contract_naming_only_us_is_flagged_before_signing(minimal_config, league) -> None:
+    """**Appendix B.3.** A one-name `agreed_between` is a proposal, not a contract.
 
     Nothing in the code reads the field, so a config snapshot filed after a match
     would record an agreement without saying who agreed to it — and a contract
     with one signature is exactly what a dispute cannot survive. Since no
     machine consumes it, the only place it can be caught is the list a human
-    reads before play.
+    reads before play. The one-name state is built explicitly because the
+    shipped file stops being one the moment a real opponent signs it.
     """
-    assert any("agreed_between" in warning for warning in prematch.warnings())
+    from dataclasses import replace as replace_field
+
+    proposal = replace_field(
+        minimal_config, shared={**minimal_config.shared, "agreed_between": ["bestteam"]}
+    )
+    peer = PreMatch(
+        orchestrator=Orchestrator.from_config(proposal, Role.COP), league_log_path=league
+    )
+    assert any("agreed_between" in warning for warning in peer.warnings())
 
 
 def test_a_contract_naming_both_teams_is_not_flagged(minimal_config, league) -> None:

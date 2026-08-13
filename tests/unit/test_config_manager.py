@@ -162,8 +162,14 @@ def test_an_absent_schema_version_is_accepted(tmp_path: Path) -> None:
 
 
 def test_agreed_between_reads_the_parties_named_in_the_contract(tmp_path: Path) -> None:
-    """Ours ships as a one-name proposal; a signed contract names both."""
-    assert load_config(_write(tmp_path / "role", SHIPPED)).agreed_between == ["bestteam"]
+    """A one-name file is a proposal; a signed contract names both parties.
+
+    Both shapes are built explicitly rather than read off the shipped file,
+    because the shipped file moves between the two states across a season:
+    one name before an opponent signs, two the moment one does.
+    """
+    proposal = load_config(_write(tmp_path / "role", dict(SHIPPED, agreed_between=["bestteam"])))
+    assert proposal.agreed_between == ["bestteam"]
     signed = load_config(_write(tmp_path / "b", dict(SHIPPED, agreed_between=["us", "them"])))
     assert signed.agreed_between == ["us", "them"]
 
