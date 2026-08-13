@@ -47,6 +47,11 @@ logs/
 # ---------------------------------------------------------------------------
 vaults/
 
+# The outgoing negotiation pack (`negotiate --pack outbox/`). Regenerated per
+# opponent, and the handshake inside embeds the commit hash of the tree that
+# wrote it — a committed copy is stale by construction.
+outbox/
+
 # ---------------------------------------------------------------------------
 # Editors / OS
 # ---------------------------------------------------------------------------

@@ -179,6 +179,7 @@ failing later on a missing file.
 | `--out` | none | Omit for a warm-up, so a rehearsal leaves nothing that looks like a league match. |
 | `--tunnel` | off | Required for league play (M#10); omit for a local rehearsal. |
 | `--counted` | off | **A league match: mail the report.** See above. Ignored when the opponent's team name is our own, because a self-match has no second reporter. |
+| `--gui` | off | Watch it happen: own position, own barriers, the belief heat map, the hints received. Local truth only (M#8, M#9). **Closing the window does not forfeit** — the match plays on and the report still goes. Ch. 9.4 wants a capture of the heat map, so take one mid-series rather than at step 0, where the prior is uniform and the board is a flat wash. |
 
 A refused handshake exits **1** with no move sent. That is the correct outcome —
 a match played under configs differing by one byte cannot be audited.
