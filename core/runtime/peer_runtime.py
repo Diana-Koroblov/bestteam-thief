@@ -66,6 +66,9 @@ class PeerRuntime:
     opponent_nonces: dict[str, str] = field(default_factory=dict)
     truth: LocalTruth = None  # type: ignore[assignment]
     prematch: PreMatch = None  # type: ignore[assignment]
+    closing: bool = False
+    pending_commits: dict[int, str] = field(default_factory=dict)
+    pending_reveals: dict[int, Reveal] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Attach both halves to the same orchestrator we were given."""
@@ -141,8 +144,33 @@ class PeerRuntime:
         self.commits.clear()
         self.barriers.clear()
         self.opponent_nonces.clear()
+        # Anything received since the board closed belongs to the sub-game we
+        # are opening right now, so it is promoted rather than lost. Clearing
+        # first and promoting second is the whole point: the reset must not be
+        # able to destroy a message the opponent has already sent.
+        self.commits.update(self.pending_commits)
+        self.reveals.update(self.pending_reveals)
+        self.pending_commits.clear()
+        self.pending_reveals.clear()
+        self.closing = False
         if self.brain is not None:
             self.brain.restart_sub_game(sub_game)
+
+    def begin_closing(self) -> None:
+        """Note that our board is finished and the next sub-game is coming.
+
+        From this moment the opponent may legitimately open the next sub-game —
+        they close at their own pace, not ours — and a commit for step 0 cannot
+        belong to the sub-game just played, whose step 0 was consumed long ago.
+        So messages are **held** from here until `start_sub_game` promotes them.
+
+        Without this the boundary loses them twice over: the reset clears a
+        commit that already arrived, and the reveal behind it is then refused as
+        unsealed. Both peers score a technical loss on a sub-game neither played
+        wrong, which is exactly what happened against `nis-yar1` on 13/08 in
+        sub-games 2 and 3 (M#35).
+        """
+        self.closing = True
 
     def decide(self) -> Decision:
         """Ask the brain for this turn's decision.
@@ -208,6 +236,12 @@ class PeerRuntime:
         """Store the opponent's sealed move and confirm we are locked too."""
         self._require_agreed("a commit")
         self._require_opponent(message.role, "a commit")
+        if self.closing:
+            # Held for the sub-game we have not opened yet. Acknowledged
+            # normally, because from their side this is an ordinary opening
+            # commit and a silent peer would look like a dead one.
+            self.pending_commits[message.step] = message.digest
+            return Ack(step=message.step, role=self.own_role, acknowledged_digest=message.digest)
         if message.step in self.commits:
             raise ProtocolError(f"step {message.step} was already committed; no second attempt")
         self.commits[message.step] = message.digest
@@ -221,6 +255,16 @@ class PeerRuntime:
         """
         self._require_agreed("a reveal")
         self._require_opponent(message.role, "a reveal")
+        if self.closing:
+            # Same boundary as `on_commit`, and the seal is still enforced —
+            # against the held commit rather than the finished sub-game's.
+            if message.step not in self.pending_commits:
+                raise ProtocolError(
+                    f"reveal for step {message.step} has no matching commit; "
+                    "a move must be sealed before it is shown (Ch. 5.3.1)"
+                )
+            self.pending_reveals[message.step] = message
+            return
         if message.step not in self.commits:
             raise ProtocolError(
                 f"reveal for step {message.step} has no matching commit; "

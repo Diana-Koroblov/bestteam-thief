@@ -19,7 +19,7 @@ from typing import Any
 from core.domain.connectivity import exit_count, region_size
 from core.domain.movement import get_legal_moves
 from core.infra.gmail_sender import GmailSender, build_transport
-from core.infra.mcp_server import ServerSpec, build_server_spec
+from core.infra.mcp_server import Route, ServerSpec, build_server_spec
 from core.infra.tunnel import TunnelManager
 from core.protocol.schemas import Role
 from core.protocol.tools import build_guarded_tools
@@ -27,6 +27,7 @@ from core.runtime.brain_loader import brain_for
 from core.runtime.orchestrator import Orchestrator
 from core.runtime.peer_runtime import PeerRuntime
 from core.runtime.prematch import PreMatch
+from core.sdk.a2a_gateway import readiness_of, routes_for
 from core.sdk.view_state import GuiState
 from core.shared import env
 from core.shared.config_manager import load_config
@@ -96,6 +97,11 @@ class PeerSDK:
         return self._config.shared_digest()
 
     @property
+    def listen_port(self) -> int:
+        """Return the local port this peer's server binds, before any override."""
+        return int(self._config.require("network.listen_port"))
+
+    @property
     def runtime(self) -> PeerRuntime:
         """Return the handler an MCP server registers its tools against."""
         return self._runtime
@@ -142,17 +148,46 @@ class PeerSDK:
         """
         return self._runtime.prematch
 
-    def server_spec(self, port: int | None = None) -> ServerSpec:
+    def server_spec(
+        self, port: int | None = None, tools: dict[str, Any] | None = None
+    ) -> ServerSpec:
         """Return this peer's server definition, tools already built and guarded.
 
         This is the join M#3 puts in the gateway: the protocol builds the tools,
         the transport registers them, and neither imports the other. The wiring
         happens here because here is the one place allowed to know both.
+
+        Args:
+            tools: An alternative surface to expose instead of our native six —
+                `core/compat/mailbox.py` supplies the reference implementation's
+                four. It **replaces** rather than extends, because both
+                protocols spell one tool ``negotiate`` and mean different things
+                by it, and a server exposing both would answer that call wrongly
+                for one of the two.
+
+        The A2A coordination routes ride along **unconditionally**, and under
+        both protocols. They are two read-only endpoints that open no game, and
+        a flag for them would only ever be discovered missing by an opponent
+        getting a 404 while we are mid-match and not reading our terminal.
         """
+        surface = build_guarded_tools(self._runtime) if tools is None else dict(tools)
         return build_server_spec(
-            tools=build_guarded_tools(self._runtime),
+            tools=surface,
             name=self._config.get("identity.contact_label", "peer"),
             port=port or self._config.require("network.listen_port"),
+            routes=self.a2a_routes(tuple(sorted(surface))),
+        )
+
+    def a2a_routes(self, mcp_tools: tuple[str, ...] = ()) -> tuple[Route, ...]:
+        """Return the A2A coordination endpoints (Ch. 2.3, `core/sdk/a2a_gateway.py`)."""
+        return routes_for(
+            readiness_of(
+                self._config,
+                self.role.value,
+                self.config_digest,
+                self._runtime.prematch.role_split,
+                mcp_tools,
+            )
         )
 
     def tunnel(self, **overrides: Any) -> TunnelManager:

@@ -81,6 +81,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     match.add_argument("--gui", action="store_true", help="Watch the match in the Live "
                        "GUI: own position, own barriers, the belief heat map and the hints "
                        "received. Local truth only (M#8, M#9). Closing it does not forfeit.")
+    match.add_argument(
+        "--protocol",
+        default="native",
+        choices=["native", "reference"],
+        help="Which wire protocol to speak. 'native' is our six-tool "
+        "commit-reveal surface; 'reference' is the four fire-and-forget "
+        "mailboxes the Appendix D example repository exposes, which most "
+        "teams built on. Ask the opponent which they speak (C-019).",
+    )
 
     settle = sub.add_parser("negotiate", help="Run the pre-match protocol (TODO 9.1).")
     settle.add_argument("--role", required=True, choices=sorted(CONFIG_DIRS))
@@ -106,6 +115,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--out",
         type=Path,
         help="Directory for agreement_<game_id>.json. Omit to settle without filing.",
+    )
+
+    coordinate = sub.add_parser(
+        "a2a",
+        help="Readiness coordination over A2A: show our Agent Card, or probe theirs.",
+    )
+    coordinate.add_argument("--role", required=True, choices=sorted(CONFIG_DIRS))
+    coordinate.add_argument(
+        "--probe",
+        help="Their host, e.g. https://them.trycloudflare.com. Checks the Agent "
+        "Card, the A2A message endpoint and — the one that decides whether a "
+        "match can start — that their MCP server exposes all six tools. Exits "
+        "non-zero if any is unusable.",
+    )
+    coordinate.add_argument(
+        "--base",
+        help="The public origin to write into our own card when printing it. "
+        "Defaults to localhost; in play it is read off the incoming request, so "
+        "this only affects what this command displays.",
     )
 
     replay = sub.add_parser("replay", help="Open a saved match log and verify it (M#20).")

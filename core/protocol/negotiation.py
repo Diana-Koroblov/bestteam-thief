@@ -99,6 +99,28 @@ def refused_by_opponent(ours: Negotiation, detail: str) -> LockedAgreement:
     )
 
 
+def normalised_split(value: Any) -> str:
+    """Return a block plan comparable across dialects.
+
+    ``"3-3"`` is our spelling. Another team may state the same plan as
+    ``{"thief": [1, 2, 3], "cop": [4, 5, 6]}`` — which says strictly more, and
+    says it unambiguously. Comparing the two as written refuses a match over
+    notation while both peers agree completely about who plays what.
+
+    Only the **block sizes in sub-game order** are compared, because that is
+    what the split actually settles; who holds which block is decided by the
+    roles, and `settle` refuses two peers claiming the same one.
+    """
+    if isinstance(value, dict):
+        blocks = sorted(
+            (min(int(number) for number in numbers), len(numbers))
+            for numbers in value.values()
+            if isinstance(numbers, (list, tuple)) and numbers
+        )
+        return "-".join(str(size) for _, size in blocks)
+    return str(value or "")
+
+
 def _commit_warnings(label: str, declaration: dict[str, Any]) -> list[str]:
     """Return what is wrong with one peer's Step-0 declaration (9.1.4, M#53)."""
     if not declaration:
@@ -175,7 +197,7 @@ def settle(ours: Negotiation, theirs: Negotiation) -> LockedAgreement:
                 f"the opponent stated no role split; we assume {ours.role_split} and the "
                 "scoring analysis depends on it (N17, C-011)"
             )
-        elif ours.role_split != theirs.role_split:
+        elif normalised_split(ours.role_split) != normalised_split(theirs.role_split):
             result = REFUSED_ROLE_SPLIT
             reasons.append(
                 f"role split mismatch: we propose {ours.role_split}, they propose "

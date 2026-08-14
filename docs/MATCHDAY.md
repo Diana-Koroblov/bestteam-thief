@@ -117,6 +117,23 @@ Two things follow, in this order:
   means their digest no longer matches yours and the handshake refuses — which is
   the correct outcome, and an avoidable way to lose a booked slot.
 
+**5. Probe them before you play them.** Which protocol an opponent speaks, and
+whether their server is even up, are facts about their running process — not
+things to agree by chat and discover at the handshake. Two friendly slots were
+lost that way on 13/08 (C-019).
+
+```powershell
+uv run python -m core a2a --role cop --probe https://their-domain.trycloudflare.com
+```
+
+It checks their Agent Card, their A2A message endpoint and — the only one that
+decides anything — that their MCP server exposes all six tools we will call.
+Exit code 0 means ready. A missing card is untidy; a missing `declare_barrier`
+is a sub-game that dies at the first placement. Our own side of it is always
+served, on the same port and tunnel as `/mcp`, with no flag to remember; run the
+same command with no `--probe` to read exactly what they will be told. See
+`docs/A2A.md`.
+
 ---
 
 ## Playing
@@ -179,10 +196,38 @@ failing later on a missing file.
 | `--out` | none | Omit for a warm-up, so a rehearsal leaves nothing that looks like a league match. |
 | `--tunnel` | off | Required for league play (M#10); omit for a local rehearsal. |
 | `--counted` | off | **A league match: mail the report.** See above. Ignored when the opponent's team name is our own, because a self-match has no second reporter. |
+| `--protocol` | `native` | Which wire protocol to speak. **Ask them before the slot** — see below. |
 | `--gui` | off | Watch it happen: own position, own barriers, the belief heat map, the hints received. Local truth only (M#8, M#9). **Closing the window does not forfeit** — the match plays on and the report still goes. Ch. 9.4 wants a capture of the heat map, so take one mid-series rather than at step 0, where the prior is uniform and the board is a flat wash. |
 
 A refused handshake exits **1** with no move sent. That is the correct outcome —
 a match played under configs differing by one byte cannot be audited.
+
+### Which protocol do they speak? Ask first, not at the slot
+
+**This is the question that has cost us the most match time.** Our native
+surface is six synchronous tools; the Appendix D example repository exposes four
+fire-and-forget mailboxes, and most teams built on it (C-019). The two cannot
+talk to each other, and the failure looks like a network fault rather than a
+mismatch — an unrecognised tool, a reply of the wrong shape, or a peer that
+simply never answers.
+
+```powershell
+# them: negotiate / receive_turn / submit_audit  ->  the example repository
+uv run python -m core play --role cop --protocol reference --tunnel `
+    --opponent https://their-domain/mcp
+
+# them: receive_commit / receive_reveal / final_reveal  ->  ours
+uv run python -m core play --role cop --tunnel --opponent https://their-domain/mcp
+```
+
+One message settles it, and it can be sent days ahead: *"call `tools/list` on
+your own endpoint and send us the names."* Six tools means `native`; four means
+`reference`.
+
+**`--protocol reference` plays and audits but files nothing** — no artefacts, no
+report, no league row. Use it for friendlies and to prove the wire works. A
+counted match still runs on the native path, because that is the one the four
+submitted artefacts and the audit were built around.
 
 **Play a warm-up against them first if there is time.** Uncounted matches are
 explicitly permitted (M#52) and they are where protocol bugs surface, at no cost

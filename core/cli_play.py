@@ -61,6 +61,12 @@ BIND_SECONDS = 1.0
 # artefact that proves neither side forged anything (M#19, M#36).
 LINGER_SECONDS = 20.0
 
+# How long to pause between sub-games. Both peers close at their own pace, and
+# an opening commit that lands while the opponent is still exchanging nonces is
+# a commit nobody will answer. Cheap next to the sub-game it protects: three
+# seconds against 35 steps, and it cost two sub-games on 13/08 to learn.
+SETTLE_SECONDS = 3.0
+
 
 def plan_for(split: str, first: Role, count: int, ours: Role) -> list[tuple[int, Role]]:
     """Return the ``(sub_game, role)`` pairs *this* process plays.
@@ -99,6 +105,14 @@ def play(sdk: PeerSDK, args: argparse.Namespace) -> int:
     """
     if not args.opponent:
         raise SystemExit("--opponent <url> is required to play a match (M#4)")
+
+    # A different wire protocol is a different everything: a different handshake,
+    # turns that carry no move, one audit at the end. It gets its own entry point
+    # rather than a flag threaded through this one (C-019).
+    if getattr(args, "protocol", "native") == "reference":
+        from core import cli_compat
+
+        return cli_compat.play_reference(sdk, args)
 
     plan = plan_for(args.role_split, Role(args.first), sdk.num_games, sdk.role)
     if not plan:
@@ -247,6 +261,7 @@ async def _series(
         table=sdk.scoring,
         filing=filing,
         reopen=reopen(sdk.runtime, prepared),
+        settle=SETTLE_SECONDS,
     )
     report = await runner.run()
     print_series(report, sdk.scoring, filing)

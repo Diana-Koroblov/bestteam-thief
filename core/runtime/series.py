@@ -26,6 +26,7 @@ the one this file cares about, which is that a sub-game can be played.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -221,6 +222,10 @@ class SeriesRunner:
             like a league match.
         reports: Filled as the series proceeds, so a series interrupted halfway
             still has everything it managed to play.
+        settle: Seconds to wait between sub-games, so an opponent still closing
+            the last one is listening before our first commit of the next
+            arrives. Defaults to 0 because in-process play has no such window
+            and every test would otherwise pay it; the live CLI sets it.
     """
 
     build: Callable[[int, Role], MatchDriver]
@@ -229,10 +234,20 @@ class SeriesRunner:
     filing: Any = None
     reopen: Callable[[int], None] | None = None
     reports: list[SubGameReport] = field(default_factory=list)
+    settle: float = 0.0
 
     async def run(self) -> SeriesReport:
-        """Play every sub-game in the plan and return the priced series."""
-        for sub_game, role in self.plan:
+        """Play every sub-game in the plan and return the priced series.
+
+        The pause between sub-games is the **other half** of the boundary fix.
+        Holding their early messages protects us from losing theirs; it cannot
+        stop an opponent losing *ours*, and a peer still finishing its own
+        closing exchange is not yet listening for our opening commit. Waiting
+        costs seconds; the alternative cost sub-games 2 and 3 on 13/08.
+        """
+        for index, (sub_game, role) in enumerate(self.plan):
+            if index and self.settle > 0:
+                await asyncio.sleep(self.settle)
             self.reports.append(await self.play(sub_game, role))
         return self.finish()
 
@@ -246,6 +261,13 @@ class SeriesRunner:
         """
         driver = self.build(sub_game, role)
         await driver.play_sub_game()
+        # The board is finished, so from here anything the opponent sends
+        # belongs to the *next* sub-game — they close at their own pace, not
+        # ours. Held from this moment and promoted by the reset below, rather
+        # than arriving into an inbox that is about to be cleared.
+        begin = getattr(getattr(driver, "runtime", None), "begin_closing", None)
+        if begin is not None:
+            begin()
         audit = await self._close(driver)
         # Reopen the board for the next sub-game **now**, before the artefacts
         # are written. Filing reads the driver and never the runtime, so this is

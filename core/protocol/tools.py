@@ -64,9 +64,17 @@ def _require(payload: dict[str, Any], *names: str) -> None:
         raise ProtocolError(f"missing required field(s): {', '.join(missing)}")
 
 
+# Tags another team may use for a message we already know the type of. The tool
+# invoked *is* the routing; this field only confirms it, so refusing a match over
+# a synonym trades a booked slot for nothing. `nis-yar1` send ``handshake``.
+KIND_ALIASES: dict[str, MessageKind] = {"handshake": MessageKind.NEGOTIATION}
+
+
 def _common(payload: dict[str, Any], kind: MessageKind) -> tuple[int, Role]:
     """Validate and return the ``step`` and ``role`` every message carries."""
-    if payload.get("kind") not in (None, kind.value):
+    tag = payload.get("kind")
+    tag = KIND_ALIASES[tag].value if tag in KIND_ALIASES else tag
+    if tag not in (None, kind.value):
         raise ProtocolError(f"expected a {kind.value} payload, got {payload.get('kind')!r}")
     step = payload.get("step")
     if not isinstance(step, int) or step < 0:
@@ -227,11 +235,29 @@ def guard(name: str, tool: Callable[..., Any]) -> Callable[..., Any]:
     Lives here rather than in the transport so that the server can take plain
     callables and import nothing from this layer — the transport must never
     learn the rules (M#3).
+
+    **Both ``payload`` and ``message`` are accepted, and that is not
+    cosmetic.** MCP binds arguments by *name*, so a peer that sends the body
+    under the other spelling does not get a rejected message — it gets
+    "Unexpected keyword argument" from the framework, before any code here
+    runs, with nothing in our log to explain it. Ours has always been
+    ``payload``; the Appendix D example repository uses ``message`` for
+    everything except its audit, and most teams built on it (C-019). Accepting
+    either costs one line and removes a failure that reads as a network fault.
     """
 
-    def guarded(payload: dict[str, Any]) -> dict[str, Any]:
+    def guarded(
+        payload: dict[str, Any] | None = None, message: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        body = payload if payload is not None else message
+        if body is None:
+            return {
+                "error": "protocol",
+                "tool": name,
+                "detail": "no message body: send it as 'payload' (ours) or 'message'",
+            }
         try:
-            return tool(payload)
+            return tool(body)
         except ProtocolError as error:
             return {"error": "protocol", "tool": name, "detail": str(error)}
 

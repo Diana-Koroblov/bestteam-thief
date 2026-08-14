@@ -112,12 +112,19 @@ class OpponentClient:
             return self.transport
         return self.base_url.rstrip("/") if self.base_url.endswith("/") else self.base_url
 
-    async def call(self, tool: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def call(
+        self, tool: str, payload: dict[str, Any], argument: str = "payload"
+    ) -> dict[str, Any]:
         """Invoke *tool* on the opponent and return its reply.
 
         Args:
             tool: The remote tool name, e.g. ``receive_commit``.
             payload: The message body, already canonical.
+            argument: The **parameter name** the remote tool declares. Ours all
+                take ``payload``; the reference implementation's take ``message``
+                for everything except ``submit_audit`` (`core/compat/`). MCP
+                binds arguments by name, so a tool invoked with the wrong one
+                fails as an unrecognised call rather than a rejected message.
 
         Raises:
             DeadlineError: No answer inside ``timeout_sec``. Not retryable —
@@ -133,7 +140,7 @@ class OpponentClient:
         session = await self._connect()
         try:
             result = await session.call_tool(
-                tool, {"payload": payload}, timeout=self.timeout_sec
+                tool, {argument: payload}, timeout=self.timeout_sec
             )
         except Exception as error:  # noqa: BLE001 - every path re-raises as a typed failure
             # A session that failed is not a session to send the next move on,

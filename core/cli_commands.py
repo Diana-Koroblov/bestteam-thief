@@ -59,6 +59,7 @@ def serve(sdk: PeerSDK, port: int | None, tunnel: bool = False) -> int:
         url = f"{manager.start()}/mcp"
 
     print(f"\nserving {len(spec.tools)} tools on http://{spec.host}:{spec.port}/mcp")
+    print(f"a2a coordination: {url.removesuffix('/mcp')}/.well-known/agent-card.json")
     print(f"give the other terminal:  --opponent {url}")
     print("ctrl-c to stop.\n")
     try:

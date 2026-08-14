@@ -36,7 +36,9 @@ FOUNDATIONS = ("core.domain", "core.shared", "core.crypto")
 # of its 150 permitted lines; `core.cli_negotiate` is the pre-match protocol moved
 # out of *that* one at 110; `core.cli_play` is the match itself, which needs the
 # transport and the protocol in one place because playing is precisely the act of
-# joining them; `core.cli_handshake` is the retry that waits for an opponent to
+# joining them; `core.cli_compat` is that same act against a peer speaking the
+# Appendix D protocol (C-019), and joins the same two for the same reason;
+# `core.cli_handshake` is the retry that waits for an opponent to
 # start, split out of `cli_play` at 151; and `core.cli_gui` hosts the Live GUI
 # beside a running match, which no module below the gateway may do because it
 # joins the window to the turn loop. They are one gateway with one permission —
@@ -54,6 +56,7 @@ GATEWAY = (
     "core.cli_commands",
     "core.cli_negotiate",
     "core.cli_play",
+    "core.cli_compat",
     "core.cli_handshake",
     "core.cli_gui",
 )

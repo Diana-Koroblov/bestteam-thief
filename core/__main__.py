@@ -66,6 +66,10 @@ def main(argv: list[str] | None = None) -> int:
         from core import cli_play
 
         return cli_play.play(sdk, args)
+    if args.command == "a2a":
+        from core import cli_a2a
+
+        return cli_a2a.a2a(sdk, args)
 
     view = sdk.board_view()
     print(f"role            : {sdk.role.value}")
