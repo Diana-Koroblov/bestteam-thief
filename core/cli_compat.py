@@ -32,11 +32,10 @@ from core.compat.mailbox import Inboxes, build_reference_tools
 from core.compat.session import HandshakeError, ReferenceSession, reconnect
 from core.compat.turn_wait import TURN_WAIT_SECONDS, await_agreement
 from core.infra.errors import PeerError
-from core.infra.llm.factory import model_name
 from core.protocol.schemas import Role
+from core.reference_identity import identity_of
 from core.report.artefacts import utc_now
 from core.sdk.peer_sdk import PeerSDK
-from core.shared.league_log import counted_matches
 
 __all__ = ["play_reference"]
 
@@ -130,7 +129,7 @@ async def _series(
     and then stayed silent would leave every later agreement sitting unread in
     their inbox while they waited for ours.
     """
-    identity = _identity(sdk)
+    identity = identity_of(sdk)
     failures = 0
     rows: list[dict[str, Any]] = []
     their_group = ""
@@ -207,26 +206,3 @@ async def _series(
         print("not filed - pass --out to write the four artefacts (M#35 needs a real report)")
     return 1 if failures else 0
 
-
-def _identity(sdk: PeerSDK) -> dict:
-    """Return who we are, for the declaration both sides must publish.
-
-    Built here rather than in the session because `model_name` reads the
-    provider registry, and `core/compat/` must not reach into `core.infra` —
-    joining two subsystems is the gateway's job and nobody else's (M#3).
-    """
-    config = sdk.runtime.orchestrator.config
-    return {
-        "group_id": sdk.team_name,
-        "group_name": sdk.team_name,
-        "members": list(config.get("identity.members", ()) or ()),
-        "repos": {
-            "cop": str(config.get("identity.repo_cop", "")),
-            "thief": str(config.get("identity.repo_thief", "")),
-        },
-        "llm_model": model_name(config),
-        # Read from the log, never typed: M#38 disqualifies the whole project
-        # for a wrong declared count, and the only caller that may read this
-        # key is the one thing that cannot lie about it (core/shared/league_log.py).
-        "counted_games_played": counted_matches(),
-    }

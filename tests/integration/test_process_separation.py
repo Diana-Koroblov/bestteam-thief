@@ -59,6 +59,13 @@ GATEWAY = (
     "core.cli_compat",
     "core.cli_handshake",
     "core.cli_gui",
+    # Split out of `cli_compat` on 16/08 when the missing M#53 commit field
+    # pushed that file over the 150-line ceiling. It inherits the gateway role
+    # rather than acquiring one: the identity block joins the provider registry
+    # (`core.infra`) to the commit reader (`core.protocol`), which is exactly
+    # what it was already doing one file over. Declared here because this test
+    # refused it otherwise — which is the test working, not an obstacle.
+    "core.reference_identity",
 )
 
 
