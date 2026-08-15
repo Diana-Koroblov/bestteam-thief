@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import contextlib
+import logging
 from typing import Any
 
 from core.compat import reporting
@@ -102,7 +103,18 @@ async def _run(
     finally:
         if sdk.opponent is not None:
             await sdk.opponent.aclose()
+        # The same deliberate-shutdown noise `cli_play._run` silences, and for
+        # the same reason: uvicorn.Server._serve() has no try/finally around its
+        # main loop, so cancelling it never reaches uvicorn's own shutdown and
+        # asyncio.run()'s teardown force-cancels the ASGI lifespan task and any
+        # open SSE stream instead. Uvicorn logs both at ERROR with a full
+        # traceback on every clean exit — here, twice, after a series that
+        # passed every audit. The process ends immediately after, so the logger
+        # is never restored.
+        logging.getLogger("uvicorn.error").setLevel(logging.CRITICAL)
         serving.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await serving
 
 
 async def _series(
