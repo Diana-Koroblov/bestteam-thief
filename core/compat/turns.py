@@ -13,7 +13,7 @@ from typing import Any
 
 from core.compat import sealing
 from core.compat.exchange import Incoming, grid_of, now_iso, sealed_payload, synthetic_reveal
-from core.compat.wire import TurnMessage
+from core.compat.wire import TurnMessage, wire_role
 from core.domain.movement import IllegalMoveError, resolve_move
 from core.domain.scent import decay, decode
 from core.protocol.schemas import Role
@@ -102,7 +102,17 @@ async def send_turn(session: Any, owed: dict | None) -> None:
         "receive_turn",
         TurnMessage(
             step=session.sent,
-            sender=session.role.value,
+            # `wire_role`, not the raw value. Our vocabulary says "cop"; the
+            # reference's says "police", and the greeting already translates
+            # (session.py). This did not, so every turn went out labelled from a
+            # role the receiver does not know. Harmless until the first barrier,
+            # which is checked against the sender's role — the reference then
+            # refused with "a barrier arrived from sender 'cop' — only the cop
+            # places barriers", a sentence that only parses once you see that
+            # 'cop' and "the cop" are two different strings to it. Cost a whole
+            # sub-game as a technical loss, eight turns in, against imreeyal's
+            # sparring peer.
+            sender=wire_role(session.role.value),
             hint=reveal.hint,
             smell_grid=grid_of({
                 cell: round(value, _WIRE_DECIMALS) for cell, value in wire_field.items()
