@@ -39,6 +39,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -184,7 +186,23 @@ async def _run(
         # normal end of a match, not an error to raise out of a finally.
         if sdk.opponent is not None:
             await sdk.opponent.aclose()
+        # uvicorn.Server._serve() has no try/finally around main_loop(), so a
+        # cancelled loop never reaches its own `await self.shutdown()` — the
+        # ASGI lifespan task it spawned separately (uvicorn/lifespan/on.py)
+        # is left pending on a message that orderly shutdown would have sent,
+        # and is instead force-cancelled by asyncio.run()'s own teardown once
+        # this coroutine returns. uvicorn logs that as an ERROR-level
+        # `CancelledError` traceback on every run, match outcome
+        # notwithstanding — real noise about our own deliberate shutdown, not
+        # a fault, and not something `await serving` here can pre-empt since
+        # the cancellation lands after this function has already returned.
+        # Silencing the logger is the only hook available from outside
+        # uvicorn's own code; the process exits right after, so it is never
+        # restored.
+        logging.getLogger("uvicorn.error").setLevel(logging.CRITICAL)
         serving.cancel()
+        with suppress(asyncio.CancelledError):
+            await serving
 
 
 async def _handshake_then_play(

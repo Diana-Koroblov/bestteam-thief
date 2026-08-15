@@ -226,10 +226,25 @@ class OpponentClient:
             if status in (401, 403):
                 return AuthError(f"{tool!r} was refused: HTTP {status}")
             return TransportError(f"{tool!r} returned HTTP {status}")
+        # The streamable-http transport manufactures error code 32600 itself,
+        # client-side, whenever a POST comes back HTTP 404 (mcp/client/
+        # streamable_http.py `_handle_post_request`) — the spec's signal for
+        # "this session id is no longer valid". The very first call has no
+        # session yet, so a 404 there cannot be a real opponent rejecting us;
+        # it is an offline tunnel, a wrong domain, or a peer who has not
+        # started — connectivity facts, not a verdict, and exactly what
+        # `greet()`'s retry loop (docs/MATCHDAY.md `--wait`) exists to wait
+        # out. Misclassified as a refusal, it used to end the handshake on
+        # the first attempt instead of retrying for the full `--wait` budget.
+        if type(error).__name__ == "McpError":
+            code = getattr(getattr(error, "error", None), "code", None)
+            if code == 32600:
+                return TransportError(f"{tool!r}: no MCP session at the opponent's URL yet")
+            return RemoteToolError(tool, str(error))
         # FastMCP raises its own ToolError when the tool failed on the opponent's
         # side. That is a remote refusal, not a network fault, and the difference
         # decides whether retrying makes any sense at all.
-        if type(error).__name__ in ("ToolError", "McpError"):
+        if type(error).__name__ == "ToolError":
             return RemoteToolError(tool, str(error))
         return TransportError(f"{tool!r} failed: {type(error).__name__}: {error}")
 
