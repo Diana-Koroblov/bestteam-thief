@@ -36,11 +36,12 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from core.infra import tunnel_agent
 from core.shared import env
 from core.shared.config_manager import Config
 
 __all__ = ["TunnelError", "Provider", "PROVIDERS", "TunnelManager", "build_command",
-           "AGENT_API", "reserved_domain", "DOMAIN_VAR", "LEGACY_DOMAIN_VAR"]
+           "reserved_domain", "DOMAIN_VAR", "LEGACY_DOMAIN_VAR"]
 
 # Where the reserved domain really lives. See `reserved_domain`.
 DOMAIN_VAR = "NGROK_DOMAIN"
@@ -99,9 +100,9 @@ def reserved_domain(config: Config) -> str | None:
             return found
     return str(config.get("network.public_domain") or "").strip() or None
 
-# ngrok's agent exposes a local inspection API on a fixed port. Not the public
-# tunnel: this is loopback-only and is how we ask the agent what it published.
-AGENT_API = "http://127.0.0.1:4040/api/tunnels"
+# The agent's loopback inspection API — how we ask what it published — lives in
+# `core/infra/tunnel_agent.py`, one port PER AGENT: see that module for the
+# two-account facts that forced the per-agent config file and probe port.
 
 # The agent needs a moment to register the tunnel before its API admits to one.
 # Twenty polls at half a second is a ten-second budget: generous for a local
@@ -170,10 +171,20 @@ PROVIDERS: dict[str, Provider] = {
 }
 
 
-def build_command(provider: Provider, port: int, domain: str | None) -> tuple[str, ...]:
-    """Return the argument vector for *provider*, with no secret anywhere in it."""
+def build_command(
+    provider: Provider, port: int, domain: str | None, config_path: str | None = None
+) -> tuple[str, ...]:
+    """Return the argument vector for *provider*, with no secret anywhere in it.
+
+    ``config_path`` (ngrok only) displaces the default config file so the
+    token in the child's environment decides the account — measured 14/08:
+    without it the default file's token wins and a second account's reserved
+    domain dies with ERR_NGROK_320. The file itself is token-free, so the path
+    appearing in argv leaks nothing.
+    """
     template = (*provider.args, *(provider.domain_args if domain else ()))
-    return (provider.binary, *(arg.format(port=port, domain=domain or "") for arg in template))
+    built = (provider.binary, *(arg.format(port=port, domain=domain or "") for arg in template))
+    return (*built, "--config", config_path) if config_path else built
 
 
 def _spawn(command: Sequence[str], env: dict[str, str]) -> Any:  # pragma: no cover - real process
@@ -183,16 +194,6 @@ def _spawn(command: Sequence[str], env: dict[str, str]) -> Any:  # pragma: no co
     )
 
 
-def _probe_agent_api() -> str | None:  # pragma: no cover - needs a running agent
-    """Return the agent's public HTTPS URL, or None when it has not published one."""
-    import httpx
-
-    try:
-        payload = httpx.get(AGENT_API, timeout=2.0).json()
-    except Exception:  # noqa: BLE001 - any failure means "no tunnel yet"
-        return None
-    urls = [tunnel.get("public_url", "") for tunnel in payload.get("tunnels", [])]
-    return next((url for url in urls if url.startswith("https://")), None)
 
 
 @dataclass
@@ -206,8 +207,11 @@ class TunnelManager:
             without one strands the opponent at a dead address after any
             restart, which is why we reserved one.
         provider: Key into :data:`PROVIDERS`.
+        api_port: This agent's own inspection port. 4040 for the cop, one up
+            per further agent — two agents sharing one is how a role announces
+            the other role's door (`core/infra/tunnel_agent.py`).
         spawn: Starts the child process. Injected; see the module docstring.
-        probe: Returns the published public URL, or None.
+        probe: Takes ``api_port``, returns the published public URL or None.
         sleep: Waits between polls. Injected so no test spends real seconds.
         process: The running child, or None.
         url: The public URL from the most recent successful start.
@@ -217,8 +221,9 @@ class TunnelManager:
     port: int
     domain: str | None = None
     provider: str = "ngrok"
+    api_port: int = tunnel_agent.AGENT_API_PORT
     spawn: Callable[[Sequence[str], dict[str, str]], Any] = _spawn
-    probe: Callable[[], str | None] = _probe_agent_api
+    probe: Callable[[int], str | None] = tunnel_agent.probe_agent_api
     sleep: Callable[[float], None] = time.sleep
     process: Any = field(default=None)
     url: str = ""
@@ -285,7 +290,12 @@ class TunnelManager:
                 f"({spec.install_hint})."
             )
 
-        self.process = self.spawn(build_command(spec, self.port, self.domain), self._environment())
+        config_path = None
+        if spec.name == "ngrok":
+            config_path = tunnel_agent.write_agent_config(self.api_port)
+        self.process = self.spawn(
+            build_command(spec, self.port, self.domain, config_path), self._environment()
+        )
         try:
             self.url = self._await_url(spec)
         except Exception:
@@ -313,7 +323,7 @@ class TunnelManager:
         """
         command = " ".join(build_command(spec, self.port, self.domain))
         for _ in range(STARTUP_POLLS):
-            url = self.probe()
+            url = self.probe(self.api_port)
             if url:
                 return url
             if not self.is_alive():

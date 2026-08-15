@@ -122,6 +122,7 @@ def test_appendix_f_has_thirty_two_rows() -> None:
     """Tables 13-19 hold 32 parameters. Our additions are counted separately."""
     additions = {
         "scoring.technical_loss",
+        "pheromones.pheromone_min_center_intensity",
         "pheromones.decay_model",
         "pheromones.field_includes_current_turn",
         "pheromones.seal_scent_digest",
@@ -171,11 +172,12 @@ def test_raising_both_limits_together_is_allowed(legal_config: dict) -> None:
 def test_the_rows_we_invented_are_marked_as_ours() -> None:
     """It was a comment until an opponent's proposal had to be reviewed, and the
     distinction turned out to decide fixtures: a peer sending a plain Appendix F
-    config is missing all seven and is entirely legal."""
+    config is missing all eight and is entirely legal."""
     from core.shared.config_spec import PARAMETERS
 
     ours = {parameter.path for parameter in PARAMETERS if parameter.ours}
     assert ours == {
+        "pheromones.pheromone_min_center_intensity",
         "pheromones.decay_model",
         "pheromones.field_includes_current_turn",
         "pheromones.seal_scent_digest",

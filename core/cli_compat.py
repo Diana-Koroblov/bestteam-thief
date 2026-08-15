@@ -1,7 +1,8 @@
 """Playing a series against a peer that speaks the reference protocol.
 
     python -m core play --role cop --protocol reference \
-        --opponent https://them.trycloudflare.com/mcp --tunnel
+        --opponent https://them.trycloudflare.com/mcp --tunnel --out results/ \
+        --report-to friendly@them.example,us@ourteam.example
 
 The mirror of `cli_play.py`, and deliberately a separate entry point rather than
 a branch inside it. That file is the audited native path — it negotiates with
@@ -9,11 +10,12 @@ a branch inside it. That file is the audited native path — it negotiates with
 contact with a protocol whose handshake is a different message, whose turns
 carry no move, and whose audit is one payload at the end.
 
-**Uncounted by design, for now.** Nothing here files a league artefact or sends
-a report: the native path owns those, and a result produced under a different
-protocol should not quietly enter the league record until its scoring has been
-agreed with the lecturer. It plays, it audits, it prints. That is enough to stop
-being unable to play anyone.
+**Files and reports in the league's own schema, not ours.** `core/compat/
+league_report.py` builds the four-artefact shape most of this league already
+files (`docs/PAIRING-PLAYBOOK.md`), keyed by group name rather than "ours" and
+"theirs". Pass `--out` to file it; pass `--report-to` for an uncounted
+(friendly) send, or `--counted` for a league one — exactly the native path's
+gating, applied to a different schema.
 """
 
 from __future__ import annotations
@@ -24,12 +26,16 @@ import contextlib
 import time
 from typing import Any
 
+from core.compat import reporting
+from core.compat.league_row import row_from_session
 from core.compat.mailbox import Inboxes, build_reference_tools
-from core.compat.session import HandshakeError, ReferenceSession
+from core.compat.session import HandshakeError, ReferenceSession, reconnect
 from core.infra.errors import PeerError
 from core.infra.llm.factory import model_name
 from core.protocol.schemas import Role
+from core.report.artefacts import utc_now
 from core.sdk.peer_sdk import PeerSDK
+from core.shared.league_log import counted_matches
 
 __all__ = ["play_reference"]
 
@@ -38,7 +44,6 @@ BIND_SECONDS = 1.0
 
 # How long to wait between handshake attempts while an opponent starts up.
 RETRY_SECONDS = 3.0
-
 
 def play_reference(sdk: PeerSDK, args: argparse.Namespace) -> int:
     """Serve the four mailbox tools, then play our share of the series."""
@@ -90,12 +95,11 @@ async def _run(
 
     server = create_server(spec)
     serving = asyncio.create_task(
-        server.run_async(transport="http", host=spec.host, port=spec.port)
+        server.run_async(transport="http", host=spec.host, port=spec.port,
+                          uvicorn_config={"access_log": False})
     )
     try:
         await asyncio.sleep(BIND_SECONDS)
-        if sdk.opponent is None:
-            sdk.connect(args.opponent)
         return await _series(sdk, args, plan, inboxes)
     finally:
         if sdk.opponent is not None:
@@ -109,32 +113,40 @@ async def _series(
     plan: list[tuple[int, Role]],
     inboxes: Inboxes,
 ) -> int:
-    """Play each sub-game the plan gives us, and report what happened.
+    """Play each sub-game the plan gives us, file, and report what happened.
 
     The handshake runs **per sub-game**, because the reference rebuilds a whole
     runtime for each one and negotiates again from it. A peer that agreed once
     and then stayed silent would leave every later agreement sitting unread in
     their inbox while they waited for ours.
     """
+    identity = _identity(sdk)
     failures = 0
+    rows: list[dict[str, Any]] = []
+    their_group = ""
+    their_identity: dict[str, Any] = {}
     for number, _role in plan:
         sdk.runtime.start_sub_game(number)
         inboxes.drain()
+        await reconnect(sdk, args.opponent)
         session = ReferenceSession(
-            runtime=sdk.runtime,
-            client=sdk.opponent,
-            inboxes=inboxes,
-            identity=_identity(sdk),
+            runtime=sdk.runtime, client=sdk.opponent, inboxes=inboxes,
+            identity=identity, sub_game_number=number,
         )
-        message, terms = session.agreement_message()
+        message, _ = session.agreement_message()
+        started = utc_now()
         try:
             await _push(sdk.opponent, message, float(args.wait))
-            await session.collect_agreement(float(args.wait), terms)
+            theirs = await session.collect_agreement(float(args.wait), message)
         except (HandshakeError, PeerError) as error:
             print(f"  sub-game {number}  HANDSHAKE REFUSED\n    {error}")
             failures += 1
             continue
-        result = await session.play_sub_game()
+        declared = dict(theirs.get("identity") or {})
+        their_group = str(declared.get("group_id", "")) or their_group
+        their_identity = declared or their_identity
+        print("".join(f"    ! {note}\n" for note in session.warnings), end="")
+        result = await session.play_sub_game(on_turn=lambda line, n=number: print(f"  [{n}] {line}"))
         # Best effort: the peer that just won may exit the moment it has read
         # its inbox, killing its server mid-response — while our payload landed
         # anyway and theirs may already be waiting for us.
@@ -150,10 +162,18 @@ async def _series(
         )
         if not verdict["passed"]:
             print(f"    their failed steps: {verdict['failed_steps']}")
-    print(
-        "\nplayed under the reference protocol - not filed, not reported.\n"
-        "  agree the scoreboard with them by hand (M#36)."
-    )
+        if args.out:
+            their_commit = str(getattr(args, "their_commit", "") or "")
+            rows.append(row_from_session(
+                sdk=sdk, session=session, number=number, raw_result=result, verdict=verdict,
+                started=started, ended=utc_now(), their_group=their_group,
+                their_commit=their_commit,
+            ))
+    print()
+    if args.out:
+        print(reporting.send_league_report(sdk, args, rows, identity, their_identity, their_group))
+    else:
+        print("not filed - pass --out to write the four artefacts (M#35 needs a real report)")
     return 1 if failures else 0
 
 
@@ -196,4 +216,8 @@ def _identity(sdk: PeerSDK) -> dict:
             "thief": str(config.get("identity.repo_thief", "")),
         },
         "llm_model": model_name(config),
+        # Read from the log, never typed: M#38 disqualifies the whole project
+        # for a wrong declared count, and the only caller that may read this
+        # key is the one thing that cannot lie about it (core/shared/league_log.py).
+        "counted_games_played": counted_matches(),
     }

@@ -143,15 +143,19 @@ def test_the_domain_is_read_through_the_env_loader_not_the_ambient_shell(
 def test_the_sdk_does_not_resolve_the_domain_a_second_time() -> None:
     """The regression guard for the bug above, at the place that caused it.
 
-    `PeerSDK.tunnel` once re-read the environment after `from_config` had
-    resolved the domain, which is how a lower-precedence name came to win. One
-    resolver means one precedence, so the SDK must not mention a domain
-    variable at all.
+    `PeerSDK.tunnel` once re-read the environment AFTER `from_config` had
+    resolved the domain, which is how a lower-precedence name came to win.
+    Since 14/08 the SDK adds one thing of its own — the role-scoped names
+    (``NGROK_DOMAIN_THIEF``…), which only the SDK can add because only it
+    knows the role — but as an override handed INTO `from_config`, never as a
+    second resolution after it, and only through `env.role_scoped`, never a
+    bare `env.optional` or a domain-variable literal of its own.
     """
     from pathlib import Path
 
     source = Path("core/sdk/peer_sdk.py").read_text(encoding="utf-8")
     body = source.split("def tunnel")[1].split("\n    @")[0]
-    assert "env.optional(" in body, "the authtoken is still resolved here"
+    assert "env.role_scoped(" in body, "token and role-domain resolve via role_scoped"
+    assert "env.optional(" not in body, "a bare optional() here is the old second resolver"
     assert f'"{LEGACY_DOMAIN_VAR}"' not in body
     assert f'"{DOMAIN_VAR}"' not in body

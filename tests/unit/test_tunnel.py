@@ -79,7 +79,7 @@ def build(spawner: Spawner, **fields) -> tuple[TunnelManager, list[float]]:
         "authtoken": "tok_secret_value",
         "port": 8081,
         "domain": DOMAIN,
-        "probe": lambda: PUBLISHED,
+        "probe": lambda api_port: PUBLISHED,
     }
     manager = TunnelManager(
         spawn=spawner, sleep=slept.append, **{**defaults, **fields}
@@ -98,7 +98,7 @@ def test_start_returns_the_url_the_agent_published(binary_present) -> None:
     different from one that worked — a distinction that otherwise only surfaces
     when the opponent cannot reach us, mid-match.
     """
-    manager, _ = build(Spawner(), domain="stale.ngrok-free.dev", probe=lambda: PUBLISHED)
+    manager, _ = build(Spawner(), domain="stale.ngrok-free.dev", probe=lambda api_port: PUBLISHED)
     assert manager.start() == PUBLISHED
 
 
@@ -106,7 +106,7 @@ def test_the_static_domain_is_pinned_on_the_command_line(binary_present) -> None
     spawner = Spawner()
     manager, _ = build(spawner)
     manager.start()
-    assert spawner.commands[0] == ("ngrok", "http", "8081", "--url", DOMAIN)
+    assert spawner.commands[0][:5] == ("ngrok", "http", "8081", "--url", DOMAIN)
 
 
 def test_without_a_domain_the_url_flag_is_dropped_entirely(binary_present) -> None:
@@ -114,7 +114,10 @@ def test_without_a_domain_the_url_flag_is_dropped_entirely(binary_present) -> No
     spawner = Spawner()
     manager, _ = build(spawner, domain=None)
     manager.start()
-    assert spawner.commands[0] == ("ngrok", "http", "8081")
+    assert spawner.commands[0][:3] == ("ngrok", "http", "8081")
+    assert "--url" not in spawner.commands[0]
+
+
 
 
 def test_the_authtoken_never_reaches_the_command_line(binary_present) -> None:
@@ -163,7 +166,7 @@ def test_an_unknown_provider_lists_the_ones_that_exist() -> None:
 
 def test_an_agent_that_dies_during_startup_is_reported_at_once(binary_present) -> None:
     """The ten-second budget spent on an already-dead process learns nothing."""
-    manager, slept = build(Spawner(FakeProcess(exit_code=1)), probe=lambda: None)
+    manager, slept = build(Spawner(FakeProcess(exit_code=1)), probe=lambda api_port: None)
     with pytest.raises(TunnelError, match="exited before publishing"):
         manager.start()
     assert slept == []
@@ -172,7 +175,7 @@ def test_an_agent_that_dies_during_startup_is_reported_at_once(binary_present) -
 def test_an_agent_that_never_publishes_gives_up_and_cleans_up(binary_present) -> None:
     """A tunnel we cannot confirm is not a tunnel; the agent is not left behind."""
     process = FakeProcess()
-    manager, slept = build(Spawner(process), probe=lambda: None)
+    manager, slept = build(Spawner(process), probe=lambda api_port: None)
     with pytest.raises(TunnelError, match="no public URL within"):
         manager.start()
     assert len(slept) == STARTUP_POLLS
@@ -188,7 +191,7 @@ def test_a_failed_start_never_leaves_a_live_agent_behind(binary_present) -> None
     reach it. Any failure therefore tears the process down.
     """
 
-    def explode() -> str:
+    def explode(api_port: int) -> str:
         raise OSError("the agent API refused the connection")
 
     process = FakeProcess()

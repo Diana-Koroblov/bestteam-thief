@@ -15,14 +15,37 @@ from core.compat import sealing
 from core.compat.exchange import Incoming, grid_of, now_iso, sealed_payload, synthetic_reveal
 from core.compat.wire import TurnMessage
 from core.domain.movement import IllegalMoveError, resolve_move
-from core.domain.scent import decode
+from core.domain.scent import decay, decode
 from core.protocol.schemas import Role
+from core.protocol.tools import ProtocolError
+
+# imreeyal §3.13: they read the trail one decay step older than we deposit it,
+# rounded to 3 decimals to kill IEEE-754 last-bit noise on the wire. Applied
+# here, to the outgoing copy only — `LocalTruth`'s own stored trail must stay
+# undecayed-at-centre, or next turn's `deposit()` would age it twice.
+_WIRE_DECIMALS = 3
 
 __all__ = ["send_turn", "read_turn", "apply_move"]
 
 
 def read_turn(session: Any, message: TurnMessage) -> Incoming:
-    """Fold their turn into what we know, and answer any claim honestly."""
+    """Fold their turn into what we know, and answer any claim honestly.
+
+    Raises:
+        ProtocolError: *message* claims to be from our own role, or from
+            neither role this sub-game holds. Bound from role parity at the
+            top, before anything else about the message is trusted — a guard
+            re-bound one beat later has rejected a real opener as "unauthorised
+            sender" on every even sub-game (imreeyal §3.4).
+    """
+    theirs = Role.THIEF if session.role is Role.COP else Role.COP
+    accepted = {theirs.value, "police"} if theirs is Role.COP else {theirs.value}
+    if message.sender not in accepted:
+        raise ProtocolError(f"turn message sender {message.sender!r} is not {theirs.value}")
+    # What actually arrived, independent of anything the closing audit later
+    # claims — this is what a rewritten-and-resealed record is checked against.
+    session.received[int(message.step)] = message.commit
+
     if message.barrier_placed:
         # Their quota, not ours. The cell is blocked for both of us, but
         # `barriers_placed` counts what *we* have spent and inflating it would
@@ -31,7 +54,6 @@ def read_turn(session: Any, message: TurnMessage) -> Incoming:
         state = session.state
         session.orchestrator.advance(replace(state, barriers=state.barriers | {cell}))
 
-    theirs = Role.THIEF if session.role is Role.COP else Role.COP
     session.runtime.truth.reveals[int(message.step)] = synthetic_reveal(message, theirs)
 
     outcome = Incoming()
@@ -69,13 +91,22 @@ async def send_turn(session: Any, owed: dict | None) -> None:
     )
     record = {"payload": payload, **sealing.seal(payload)}
     session.records.append(record)
+    # Per-sender, starting at 1 — not the shared game-progress counter
+    # `state.step` advances on either side's move. A single interleaved
+    # sequence (ours: 0,2,4...) looks like a reordered stream to a receiver
+    # expecting its own counterpart's steps to run 1,2,3... (imreeyal §3.6).
+    session.sent += 1
+    trail = session.runtime.truth.filter
+    wire_field = decay(decode(reveal.scent), trail.rate, trail.model)
     await session.client.call(
         "receive_turn",
         TurnMessage(
-            step=int(session.state.step),
+            step=session.sent,
             sender=session.role.value,
             hint=reveal.hint,
-            smell_grid=grid_of(decode(reveal.scent)),
+            smell_grid=grid_of({
+                cell: round(value, _WIRE_DECIMALS) for cell, value in wire_field.items()
+            }),
             commit=record["commit"],
             timestamp=now_iso(),
             barrier_placed=list(decision.barrier) if decision.barrier else None,

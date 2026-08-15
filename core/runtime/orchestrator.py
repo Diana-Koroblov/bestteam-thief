@@ -100,13 +100,23 @@ class Orchestrator:
         """Return where *we* are — the only position we know for certain."""
         return self.state.cop if self.is_cop else self.state.thief
 
-    def connect(self, base_url: str) -> None:
+    def connect(self, base_url: str, timeout_sec: float | None = None) -> None:
         """Attach the single opponent, using the timeout we negotiated.
+
+        Args:
+            timeout_sec: Overrides the signed `response_timeout_sec` when
+                given. The reference-protocol path uses this to cap every
+                outbound call strictly *under* the signed deadline rather than
+                equal to it — the MCP SDK's own per-call default is exactly
+                that deadline, so one delivered-but-unanswered push plus a
+                retry sleep can breach it while every individual call still
+                looks fine (imreeyal §3.5). The native path never passes it.
 
         Raises:
             RuntimeError: An opponent is already attached. M#4 permits exactly
-                one, and silently replacing it would let a second peer take over
-                a match already in progress.
+                one **at a time**, and silently replacing it would let a second
+                peer take over a match already in progress — `disconnect()`
+                first if this is a deliberate reconnect, not a second peer.
         """
         if self.opponent is not None:
             raise RuntimeError(
@@ -115,7 +125,7 @@ class Orchestrator:
             )
         self.opponent = OpponentClient(
             base_url=base_url,
-            timeout_sec=self.config.require("network_and_league.response_timeout_sec"),
+            timeout_sec=timeout_sec or self.config.require("network_and_league.response_timeout_sec"),
             team=self.config.get("identity.team_name", ""),
             # Private and per-machine, like the port and the domain beside it:
             # it describes what our tunnel plan can carry, and the opponent
@@ -124,6 +134,18 @@ class Orchestrator:
                 self.config.get("network.max_calls_per_minute", DEFAULT_CALLS_PER_MINUTE)
             ),
         )
+
+    def disconnect(self) -> None:
+        """Detach the current opponent so `connect` may attach a fresh one.
+
+        Not a loophole in M#4 — that rule forbids **two opponents at once**,
+        which this cannot produce: the slot is empty until the next `connect`.
+        It exists for the reference protocol, which drops and re-dials its
+        outbound session at every sub-game boundary because the opponent's own
+        runner restarts a process per sub-game too (imreeyal §3.4). The native
+        path never calls this; one match, one opponent, for its whole length.
+        """
+        self.opponent = None
 
     def restart(self, sub_game: int) -> None:
         """Reopen the board for the next sub-game of the series (TODO 9.5).

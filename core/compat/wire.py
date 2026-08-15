@@ -15,13 +15,46 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-__all__ = ["TurnMessage", "AuditPayload", "terms_from_config", "terms_diff", "REFERENCE_TERMS"]
+__all__ = ["TurnMessage", "AuditPayload", "terms_from_config", "terms_diff", "REFERENCE_TERMS",
+           "SCENT_MODEL_SHA256"]
 
 # The reference ships this in `pheromones` and our `game.json` has never had it,
 # because nothing in our own physics reads a floor on the centre intensity. It
 # is still a **signed term** there, so a value we cannot supply is a handshake
 # we cannot pass — 0.5 is the reference's own shipped value.
 DEFAULT_MIN_CENTER_INTENSITY = 0.5
+
+# The two locked-model docs verified against the league conformance kit's own
+# `verify_vectors.py` (registered in `vectors/locked_model.json`, tier PROMOTED):
+# reference-v3 describes the wire shape this module already implements, and
+# `belief` describes the local-truth posture M#8/M#9 already enforce. Declaring
+# them lets an opponent's both-declare-and-differ guard actually do something;
+# omission never refuses, so leaving either unset never costs a handshake.
+WIRE_SHAPE_SHA256 = "229ae6487a418c3fcb6da9be404de2f2533c288ebc228811bff6dedc4164d6f7"
+INFO_MODE_SHA256 = "020947daeeb3f73494af9b04201326791742c7184085456e3517d21981ee1202"
+
+# The registry's two scent models, keyed by our signed `pheromones.decay_model`
+# — the league bundles kernel, decay and merge under one named hash, so the
+# declaration must follow whichever bundle the config claims to run. Re-checked
+# against the live registry (`vectors/locked_model.json`) on 14/08. Our known
+# merge divergence from `multiplicative_book_v1` (max, where its doc pins a
+# clamped sum) is settled IN WRITING with the imreeyal pairing per the fallback
+# clause of their 3.12 letter: one declared form per side, divergence on the
+# record, their physics check logs rather than refuses — and so does ours.
+SCENT_MODEL_SHA256 = {
+    "multiplicative": "934c220d5bf62acaa3297c6c9d723ea954c220260b02292ca17f6d5daef9f4d9",
+    "subtractive": "81ebee59640e80eae8ca9ee5f86abd26e7edf5cdbb27d15925cb6ee45ca6ddf4",
+}
+
+# Our own `Role.value` is "cop"; the reference vocabulary is "police". Translated
+# only at the wire boundary so every other module keeps using ours (M#3).
+_WIRE_ROLE = {"cop": "police", "thief": "thief"}
+
+
+def wire_role(role_value: str) -> str:
+    """Return *role_value* ("cop"/"thief") in the reference's own vocabulary."""
+    return _WIRE_ROLE.get(role_value, role_value)
+
 
 # Every key the reference signs, in the order its own `terms_from_config` builds
 # them. Order does not affect the signature (the JSON is key-sorted) but it does
@@ -80,6 +113,12 @@ class TurnMessage:
         missing = {"step", "sender", "commit"} - data.keys()
         if missing:
             raise ValueError(f"turn message is missing {sorted(missing)}")
+        if not isinstance(data.get("timestamp"), str) or not data["timestamp"]:
+            # Decorative-looking, load-bearing in practice: refused before any
+            # state change, exactly as the league kit's own turn_message.json
+            # vector requires (`vectors/turn_message.json`, "empty timestamp
+            # REFUSED"). An empty stamp is not "unknown", it is malformed.
+            raise ValueError("turn message timestamp must be a non-empty string")
         return cls(**{key: value for key, value in data.items() if key in allowed})
 
 

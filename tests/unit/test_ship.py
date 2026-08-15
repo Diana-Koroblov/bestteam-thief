@@ -80,3 +80,30 @@ def test_message_is_required() -> None:
     """Shipping without a message is a mistake, not a default."""
     with pytest.raises(SystemExit):
         ship.main([])
+
+
+def test_skip_league_drops_only_the_benchmark_gate() -> None:
+    """The other five gates must survive --skip-league untouched."""
+    with_it = [step.name for step in ship.build_steps("m", "both", False, skip_league=False)]
+    without_it = [step.name for step in ship.build_steps("m", "both", False, skip_league=True)]
+    dropped = [name for name in with_it if name not in without_it]
+    assert len(without_it) == len(with_it) - 1
+    assert dropped == ["League benchmark (192 sub-games, both roles)"]
+
+
+def test_skip_league_defaults_to_off() -> None:
+    """Omitting the flag must reproduce the exact GATES ordering, unchanged."""
+    steps = ship.build_steps("m", "both", False)
+    assert [step.name for step in steps[1:-1]] == [gate.name for gate in ship.GATES]
+
+
+def test_skip_league_flag_is_forwarded_from_the_cli() -> None:
+    """--skip-league must reach build_steps, not just be parsed and dropped."""
+    args = ship._parse_args(["-m", "m", "--skip-league"])
+    assert args.skip_league is True
+
+
+def test_skip_league_flag_defaults_to_false() -> None:
+    """No flag typed means no gate is skipped."""
+    args = ship._parse_args(["-m", "m"])
+    assert args.skip_league is False

@@ -87,6 +87,12 @@ PARAMETERS: tuple[Parameter, ...] = (
     Parameter("pheromones.pheromone_center_intensity", FIXED, 0.9),
     Parameter("pheromones.pheromone_decay", FIXED, 0.10),
     Parameter("pheromones.pheromone_grid_size", FIXED, 5),
+    # The reference constitution's own extra key — a floor under the centre
+    # intensity, which the reference signs as a term and imreeyal's game.json
+    # carries explicitly. In no Appendix, like our seven below, and `ours`
+    # marks exactly that leniency: a peer sending a plain Appendix F config
+    # without it stays legal (added 14/08 when our file adopted it verbatim).
+    Parameter("pheromones.pheromone_min_center_intensity", NEGOTIABLE, 0.5, ours=True),
     # Our additions, all negotiable. See CONTRADICTIONS C-005, C-007, C-008.
     Parameter("pheromones.decay_model", NEGOTIABLE, "multiplicative", ours=True),
     Parameter("pheromones.field_includes_current_turn", NEGOTIABLE, True, ours=True),

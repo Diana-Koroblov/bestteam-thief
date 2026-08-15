@@ -22,7 +22,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-__all__ = ["EnvError", "load_env", "require", "optional", "redact", "is_loaded"]
+__all__ = ["EnvError", "load_env", "require", "optional", "role_scoped", "redact", "is_loaded"]
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 _loaded = False
@@ -95,6 +95,17 @@ def optional(name: str, default: str | None = None) -> str | None:
     load_env()
     value = os.environ.get(name, "").strip()
     return value or default
+
+
+def role_scoped(name: str, role: str) -> str | None:
+    """Return ``{name}_{ROLE}`` if set, else the plain *name* (or None).
+
+    Lets our cop and thief processes, sharing one ``.env`` from one working
+    tree (docs/MATCHDAY.md), each get their own tunnel domain and authtoken —
+    a single-role setup that only ever sets the plain name keeps working
+    unchanged, since the suffixed lookup simply never finds anything.
+    """
+    return optional(f"{name}_{role.upper()}") or optional(name)
 
 
 def redact(value: str | None, keep: int = 4) -> str:

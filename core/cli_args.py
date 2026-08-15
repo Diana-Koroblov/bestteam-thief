@@ -90,6 +90,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "mailboxes the Appendix D example repository exposes, which most "
         "teams built on. Ask the opponent which they speak (C-019).",
     )
+    match.add_argument(
+        "--report-to",
+        default="",
+        help="Reference protocol only: comma-separated addresses for an "
+        "UNCOUNTED (friendly) report — the two teams' own inboxes, never the "
+        "lecturer. Omit to file the four artefacts without mailing them.",
+    )
+    match.add_argument(
+        "--their-commit",
+        default="",
+        help="Reference protocol only: the opponent's bare `git rev-parse HEAD`, "
+        "exchanged in writing before the T (their pairing playbook Stage 6). "
+        "Left blank until they send it.",
+    )
 
     settle = sub.add_parser("negotiate", help="Run the pre-match protocol (TODO 9.1).")
     settle.add_argument("--role", required=True, choices=sorted(CONFIG_DIRS))

@@ -71,8 +71,27 @@ def verify(payload: dict[str, Any], nonce: str, commit: str) -> bool:
     return secrets.compare_digest(commit_of(payload, nonce), commit)
 
 
-def audit_records(records: list[dict[str, Any]]) -> dict[str, Any]:
+def audit_records(
+    records: list[dict[str, Any]], live: dict[int, str] | None = None
+) -> dict[str, Any]:
     """Re-verify every ``{payload, nonce, commit}`` the opponent revealed.
+
+    Args:
+        live: ``{step: commit}`` as it actually arrived during play (the
+            ``TurnMessage.commit`` field), if the caller tracked it. When a
+            record's step **was** seen live, it is failed unless its commit
+            equals the one that arrived then — binding the reveal to what was
+            really sent, not only to itself. Without this a record rewritten
+            and re-sealed after the fact is self-consistent and would pass:
+            ``commit_of(payload, nonce) == commit`` proves nothing about
+            whether *that* commit ever crossed the wire.
+
+            A step **absent** from ``live`` is not a mismatch: a step-0
+            system-spec/declaration record legitimately exists only inside the
+            closing audit and never rides a live turn (the reference's own
+            log shape — PAIRING-PLAYBOOK §4f, "readers must accept both" step-0
+            spellings). Treating "never seen live" the same as "seen and
+            different" would fail every clean sub-game on that one record.
 
     Returns the reference's own result shape, so a peer on either side of the
     wire reads the same verdict: ``passed``, ``verified_steps``, ``failed_steps``.
@@ -93,6 +112,9 @@ def audit_records(records: list[dict[str, Any]]) -> dict[str, Any]:
             failed.append(step)
             continue
         if not verify(payload, nonce, commit):
+            failed.append(step)
+            continue
+        if live is not None and step in live and live[step] != commit:
             failed.append(step)
     return {
         "passed": not failed,

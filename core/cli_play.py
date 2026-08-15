@@ -170,7 +170,8 @@ async def _run(
 
     server = create_server(spec)
     serving = asyncio.create_task(
-        server.run_async(transport="http", host=spec.host, port=spec.port)
+        server.run_async(transport="http", host=spec.host, port=spec.port,
+                          uvicorn_config={"access_log": False})
     )
     try:
         await asyncio.sleep(BIND_SECONDS)

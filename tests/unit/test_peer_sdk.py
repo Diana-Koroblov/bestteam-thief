@@ -112,16 +112,31 @@ def test_the_tunnel_reads_the_token_its_provider_actually_uses(
     unauthenticated fallback the day `[network] tunnel_provider` changed, so
     the facade resolves it from the provider rather than from a constant.
     """
+    _clear_role_scoped(monkeypatch)
     monkeypatch.setenv("NGROK_AUTHTOKEN", "tok_from_the_environment")
     manager = sdk.tunnel()
     assert manager.spec.token_env == "NGROK_AUTHTOKEN"
     assert manager.authtoken == "tok_from_the_environment"
 
 
+def _clear_role_scoped(monkeypatch) -> None:
+    """Remove the role-scoped names the machine's real ``.env`` may carry.
+
+    The suite runs on the match machine, whose ``.env`` genuinely holds
+    ``NGROK_*_THIEF`` for the second tunnel account — and the facade correctly
+    prefers those, which is exactly the behaviour these tests must isolate
+    away when they mean to exercise the plain-name path.
+    """
+    for name in ("NGROK_DOMAIN", "NGROK_AUTHTOKEN"):
+        for suffix in ("COP", "THIEF"):
+            monkeypatch.delenv(f"{name}_{suffix}", raising=False)
+
+
 def test_an_absent_token_is_not_an_error_until_the_tunnel_starts(
     sdk: PeerSDK, monkeypatch
 ) -> None:
     """Building the manager to inspect it stays free; `start()` is what refuses."""
+    _clear_role_scoped(monkeypatch)
     monkeypatch.delenv("NGROK_AUTHTOKEN", raising=False)
     monkeypatch.setattr("core.shared.env.load_env", lambda *a, **k: False)
     assert sdk.tunnel().authtoken == ""
@@ -130,6 +145,33 @@ def test_an_absent_token_is_not_an_error_until_the_tunnel_starts(
 def test_the_tunnel_follows_an_overridden_port(sdk: PeerSDK) -> None:
     """Otherwise `--port` publishes a domain that forwards nowhere."""
     assert sdk.tunnel(port=9999).port == 9999
+
+
+def test_the_tunnel_prefers_a_role_scoped_domain_and_token(
+    sdk: PeerSDK, monkeypatch
+) -> None:
+    """Cop and thief share one ``.env`` (docs/MATCHDAY.md); an alternating
+    role-split needs each to claim its own reserved domain, not one they'd
+    fight over."""
+    suffix = sdk.role.value.upper()
+    monkeypatch.setenv("NGROK_DOMAIN", "shared-fallback.ngrok-free.dev")
+    monkeypatch.setenv(f"NGROK_DOMAIN_{suffix}", f"{suffix.lower()}-only.ngrok-free.dev")
+    monkeypatch.setenv(f"NGROK_AUTHTOKEN_{suffix}", "tok_for_this_role_only")
+    manager = sdk.tunnel()
+    assert manager.domain == f"{suffix.lower()}-only.ngrok-free.dev"
+    assert manager.authtoken == "tok_for_this_role_only"
+
+
+def test_the_tunnel_falls_back_to_the_plain_domain_and_token_when_unscoped(
+    sdk: PeerSDK, monkeypatch
+) -> None:
+    """A single-role setup that only ever set the plain names is unaffected."""
+    _clear_role_scoped(monkeypatch)
+    monkeypatch.setenv("NGROK_DOMAIN", "only-domain.ngrok-free.dev")
+    monkeypatch.setenv("NGROK_AUTHTOKEN", "only_token")
+    manager = sdk.tunnel()
+    assert manager.domain == "only-domain.ngrok-free.dev"
+    assert manager.authtoken == "only_token"
 
 
 def test_the_gatekeeper_is_one_instance_per_process(sdk: PeerSDK) -> None:

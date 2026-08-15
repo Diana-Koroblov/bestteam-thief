@@ -1,6 +1,6 @@
 {
   "schema_version": "1.2",
-  "agreed_between": ["bestteam", "nis-yar1"],
+  "agreed_between": ["bestteam", "imreeyal"],
   "version": "1.00",
   "board_and_agents": {
     "grid_size": 7,
@@ -33,6 +33,7 @@
     "pheromone_center_intensity": 0.9,
     "pheromone_decay": 0.1,
     "pheromone_grid_size": 5,
+    "pheromone_min_center_intensity": 0.5,
     "decay_model": "multiplicative",
     "field_includes_current_turn": true,
     "seal_scent_digest": true

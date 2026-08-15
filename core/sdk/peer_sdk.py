@@ -20,7 +20,7 @@ from core.domain.connectivity import exit_count, region_size
 from core.domain.movement import get_legal_moves
 from core.infra.gmail_sender import GmailSender, build_transport
 from core.infra.mcp_server import Route, ServerSpec, build_server_spec
-from core.infra.tunnel import TunnelManager
+from core.infra.tunnel import DOMAIN_VAR, TunnelManager
 from core.protocol.schemas import Role
 from core.protocol.tools import build_guarded_tools
 from core.runtime.brain_loader import brain_for
@@ -198,16 +198,29 @@ class PeerSDK:
         caller that hardcoded ``NGROK_AUTHTOKEN`` would silently start an
         unauthenticated fallback the day the config switched.
 
+        **Role-scoped first.** Our cop and thief both run from this one working
+        tree against one shared ``.env`` (docs/MATCHDAY.md) — an alternating
+        role-split needs both up at once, which needs two distinct domains, which
+        one shared ``NGROK_DOMAIN`` cannot give them. ``NGROK_DOMAIN_COP`` /
+        ``NGROK_DOMAIN_THIEF`` (and the matching ``NGROK_AUTHTOKEN_*`` pair) are
+        tried first; a setup that only ever set the plain names is unaffected.
+
         Missing is not an error yet: ``start()`` raises with the SETUP step that
         fixes it, so building the manager to inspect it stays free.
         """
+        role = self.role.value
+        by_role = env.role_scoped(DOMAIN_VAR, role)
+        if by_role and "domain" not in overrides:
+            overrides = {**overrides, "domain": by_role}
+        # One inspection port per agent: the thief's agent moves off 4040 so
+        # neither role ever reads — and then announces — the other's door.
+        overrides.setdefault("api_port", 4040 if role == "cop" else 4041)
         manager = TunnelManager.from_config(self._config, "", **overrides)
-        manager.authtoken = env.optional(manager.spec.token_env) or ""
-        # The domain is NOT re-resolved here. `from_config` already asked
-        # `tunnel.reserved_domain`, which is the single place that knows the
-        # precedence — and a second lookup in this method used to override it
-        # with `.env-example`'s placeholder. See that function for what that
-        # cost. Anything this method sets, it sets by overriding `from_config`.
+        # `from_config` already asked `tunnel.reserved_domain` for the plain
+        # fallback — the domain override above is the only second lookup, and it
+        # only ever *adds* a role-specific value, never masks the existing
+        # precedence chain the way the old `.env-example` placeholder bug did.
+        manager.authtoken = env.role_scoped(manager.spec.token_env, role) or ""
         return manager
 
     @property
@@ -264,9 +277,13 @@ class PeerSDK:
         """Return the strategy this peer will play with."""
         return self._runtime.brain.name if self._runtime.brain else "none"
 
-    def connect(self, base_url: str) -> None:
-        """Attach the single opponent for this match."""
-        self._orchestrator.connect(base_url)
+    def connect(self, base_url: str, timeout_sec: float | None = None) -> None:
+        """Attach the single opponent for this match. See `Orchestrator.connect`."""
+        self._orchestrator.connect(base_url, timeout_sec)
+
+    def disconnect(self) -> None:
+        """Detach the current opponent, for a deliberate reconnect. See `Orchestrator.disconnect`."""
+        self._orchestrator.disconnect()
 
     @property
     def ui_cell_pixels(self) -> int:

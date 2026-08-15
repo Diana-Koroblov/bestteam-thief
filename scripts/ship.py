@@ -20,6 +20,13 @@ publish a red tree by forgetting a step.
 There is deliberately no --skip-gates flag. If you genuinely need to bypass
 them, run scripts/publish.py directly and know that you are doing it.
 
+--skip-league is a narrow, explicit exception: it drops only the league
+benchmark step (192 sub-games, ~2 minutes), leaving lint, file size, secret
+scan, the unit suite and coverage, and the split-repository check all in
+place. It exists for fast iteration; it must be typed on purpose every time,
+never defaulted on, so a red benchmark can't slip through unnoticed the way
+the 16-vs-48 opening-count discrepancy once did.
+
 Two lock helpers, because a stale .git/index.lock stopped three runs in one
 session::
 
@@ -47,14 +54,21 @@ from core.shared.pipeline import GATES, Step, StepError, banner, run_step  # noq
 __all__ = ["main", "build_steps"]
 
 
-def build_steps(message: str, role: str, dry_run: bool) -> tuple[Step, ...]:
-    """Return the full pipeline: stage, gates, then publish."""
+def build_steps(
+    message: str, role: str, dry_run: bool, skip_league: bool = False
+) -> tuple[Step, ...]:
+    """Return the full pipeline: stage, gates, then publish.
+
+    skip_league drops only the league benchmark gate (see module docstring);
+    every other gate still runs.
+    """
     stage = Step("Stage all changes", ("git", "add", "-A"))
+    gates = tuple(gate for gate in GATES if not (skip_league and "League benchmark" in gate.name))
     publish_command = ["uv", "run", "python", "scripts/publish.py", "--role", role, "-m", message]
     if dry_run:
         publish_command.append("--dry-run")
     publish = Step("Publish to both repositories", tuple(publish_command))
-    return (stage, *GATES, publish)
+    return (stage, *gates, publish)
 
 
 def _commit(message: str, dry_run: bool) -> None:
@@ -89,6 +103,14 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--role", choices=["cop", "thief", "both"], default="both")
     parser.add_argument("--dry-run", action="store_true", help="Show what would happen.")
+    parser.add_argument(
+        "--skip-league",
+        action="store_true",
+        help="Skip only the league benchmark gate (~2 min, 192 sub-games). "
+        "Every other gate - lint, file size, secret scan, unit tests and "
+        "coverage, split-repository check - still runs. Must be passed "
+        "explicitly each time; there is no default-on equivalent.",
+    )
     return parser.parse_args(argv)
 
 
@@ -104,7 +126,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  {explanation}", flush=True)
         if not removed and "No .git" not in explanation:
             return 1
-    steps = build_steps(args.message, args.role, args.dry_run)
+    steps = build_steps(args.message, args.role, args.dry_run, args.skip_league)
     total = len(steps)
     stage, *rest = steps
     gates, publish = rest[:-1], rest[-1]
