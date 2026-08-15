@@ -84,11 +84,19 @@ async def test_send_turn_reads_the_trail_one_decay_step_older_and_rounded(
     minimal_config: Config,
 ) -> None:
     """imreeyal §3.13: `LocalTruth` deposits at peak 0.9, but the wire must
-    carry the already-decayed reading (0.81 under our multiplicative
-    default) rounded to 3 decimals — not the raw deposit."""
+    carry the already-decayed reading rounded to 3 decimals — not the raw
+    deposit.
+
+    The expected figure is **computed from the model the config names**, not
+    written down: 0.81 under the book's multiplicative decay, 0.80 under the
+    reference's subtractive one, and a literal here silently asserts which
+    match we last negotiated rather than that the wire carries a decayed value.
+    """
+    from tests.conftest import decayed_peak
+
     client = _RecordingClient()
     session = _session(Role.THIEF, minimal_config, client=client)
     session.runtime.brain = brain_class("thief")()
     await send_turn(session, None)
     peak = max(client.calls[0]["smell_grid"].values())
-    assert peak == pytest.approx(0.81)
+    assert peak == pytest.approx(round(decayed_peak(minimal_config), 3))

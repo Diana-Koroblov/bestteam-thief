@@ -244,8 +244,15 @@ def test_the_agreement_records_what_was_agreed_not_only_that_it_was(
     `sampling_mode`, 9.1.7) and the clause both sides settled in writing
     (9.1.6), not just the hashes that pin them.
     """
+    from core.domain.scent import decay
+
     payload = prematch.settle(replace(prematch.proposal(), role=Role.THIEF)).payload()
     assert payload["scent_model"]["sampling_mode"] == "end_of_previous_full_turn"
-    assert payload["scent_model"]["worked_example"]["after_one_turn"] == 0.81
+    # Computed from the model the config names — 0.81 multiplicative, 0.80
+    # subtractive — so the artefact is asserted to describe the physics we
+    # actually signed, not one particular match's negotiated choice.
+    model = payload["scent_model"]["decay_model"]
+    expected = decay({(0, 0): 0.9}, 0.10, model)[(0, 0)]
+    assert payload["scent_model"]["worked_example"]["after_one_turn"] == pytest.approx(expected)
     assert "vacated does not capture" in payload["agreed_clause"]
     assert payload["scent_model_sha256"], "the hash still pins the payload beside it"

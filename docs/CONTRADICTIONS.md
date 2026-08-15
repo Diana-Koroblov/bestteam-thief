@@ -165,6 +165,7 @@ detect during the handshake rather than discover during the audit.
 | **Reclassified 31/07** | Not a book contradiction — the book is self-consistent. It is a reference divergence sitting on a mechanism Appendix F does not cover. |
 | **Our choice** | The book's multiplicative model. Appendix D says the book prevails over the repository. |
 | **Effect** | `pheromones.decay_model = "multiplicative"`. The M#23 worked example (0.81 vs 0.80) catches the mismatch **before** the match and also reveals which implementation the opponent built on. Negotiation item **N13b**. |
+| **Conceded per-match, 15/08** | The shipped value is currently `subtractive`, negotiated with **imreeyal** for an uncounted friendly: they declare `scent_model_sha256 = 81ebee59…` and their pairing guard refuses a split declaration outright, so a match was only possible by agreeing one model. The position above is unchanged — the model is `negotiation` status, Appendix F fixes only the *rate*, and Appendix D says the book prevails over the example repository. **Reopen it for any counted match** rather than inheriting this by silence. Nothing in the suite pins either model any more: the worked example, the wire reading and the clause are all computed from whichever model the config names, so flipping this line is a one-line change that stays green both ways. |
 
 ## C-008 — The reference transmits the scent field but never seals it
 

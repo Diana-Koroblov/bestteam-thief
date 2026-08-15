@@ -85,7 +85,16 @@ def test_booleans_are_spelled_the_way_json_spells_them(ours: dict) -> None:
 
 
 def test_a_stated_contradiction_is_reported(ours: dict) -> None:
-    theirs = dict(ours, **{"pheromones.decay_model": "subtractive"})
+    """Whichever model we play, the *other* one must read as a disagreement.
+
+    Derived rather than written down: this asserted a literal ``subtractive``
+    until the shipped config was negotiated onto subtractive for a match, at
+    which point "theirs" equalled ours and the test passed by agreeing with
+    itself instead of by detecting anything.
+    """
+    mine = ours["pheromones.decay_model"]
+    other = "multiplicative" if mine == "subtractive" else "subtractive"
+    theirs = dict(ours, **{"pheromones.decay_model": other})
     assert any("decay_model" in item for item in disagreements(ours, theirs))
 
 
@@ -119,7 +128,8 @@ def test_the_worked_example_is_computed_from_the_model_we_play(minimal_config) -
     quoted the figure instead of computing it would keep saying 0.810 after the
     flag was flipped — agreeing, in writing, to physics we were not running.
     """
-    assert "0.810" in clause(minimal_config)
+    multiplicative = reconfigured(minimal_config, "pheromones.decay_model", "multiplicative")
+    assert "0.810" in clause(multiplicative)
     assert "0.800" in clause(reconfigured(minimal_config, "pheromones.decay_model", "subtractive"))
 
 

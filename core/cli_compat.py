@@ -154,15 +154,30 @@ async def _series(
                 total_wait=float(getattr(args, "turn_wait", TURN_WAIT_SECONDS)),
                 push_wait=float(args.wait),
             )
+            # Redial before the first turn. The wait above legitimately runs for
+            # minutes while they play a sub-game that is not ours and restart
+            # their process for the next one, so the session opened before it is
+            # pointing at a peer that has since exited: the first move of the
+            # sub-game came back `Session terminated` (404) against a handshake
+            # that had just succeeded.
+            await reconnect(sdk, args.opponent)
+            session.client = sdk.opponent
+            declared = dict(theirs.get("identity") or {})
+            their_group = str(declared.get("group_id", "")) or their_group
+            their_identity = declared or their_identity
+            print("".join(f"    ! {note}\n" for note in session.warnings), end="")
+            # Inside the guard, not after it. `play_sub_game` promises never to
+            # raise on the opponent's failure and does not keep that promise —
+            # `send_turn` lets a TransportError out — and one dropped connection
+            # then killed the process, forfeiting every LATER sub-game too
+            # rather than the one it happened in.
+            result = await session.play_sub_game(
+                on_turn=lambda line, n=number: print(f"  [{n}] {line}")
+            )
         except (HandshakeError, PeerError) as error:
-            print(f"  sub-game {number}  HANDSHAKE REFUSED\n    {error}")
+            print(f"  sub-game {number}  ABANDONED\n    {error}")
             failures += 1
             continue
-        declared = dict(theirs.get("identity") or {})
-        their_group = str(declared.get("group_id", "")) or their_group
-        their_identity = declared or their_identity
-        print("".join(f"    ! {note}\n" for note in session.warnings), end="")
-        result = await session.play_sub_game(on_turn=lambda line, n=number: print(f"  [{n}] {line}"))
         # Best effort: the peer that just won may exit the moment it has read
         # its inbox, killing its server mid-response — while our payload landed
         # anyway and theirs may already be waiting for us.

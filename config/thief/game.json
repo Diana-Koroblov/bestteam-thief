@@ -34,7 +34,7 @@
     "pheromone_decay": 0.1,
     "pheromone_grid_size": 5,
     "pheromone_min_center_intensity": 0.5,
-    "decay_model": "multiplicative",
+    "decay_model": "subtractive",
     "field_includes_current_turn": true,
     "seal_scent_digest": true
   },
@@ -45,7 +45,7 @@
   },
   "network_and_league": {
     "response_timeout_sec": 30,
-    "watchdog_timeout_sec": 60,
+    "watchdog_timeout_sec": 240,
     "num_games": 6,
     "diversity_reward": 10,
     "min_games_to_pass": 2,

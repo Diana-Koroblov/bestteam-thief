@@ -107,3 +107,23 @@ def game_state_factory() -> Callable[..., GameState]:
         )
 
     return build
+
+
+def decayed_peak(config: object) -> float:
+    """Return 0.9 aged one turn under the model *config* actually names.
+
+    Shared because three suites assert the same number for three different
+    surfaces — the M#23 worked example, the wire's `smell_grid` reading and the
+    negotiation clause — and all three used to hard-code the book's 0.81. That
+    silently asserted *which model we last negotiated* rather than that each
+    surface reports the model we are really playing, and every one of them went
+    red the first time a match settled on the reference's subtractive decay
+    (C-007). Computed here, they track the config and stay green either way.
+    """
+    from core.domain.scent import decay
+
+    return decay(
+        {(0, 0): float(config.get("pheromones.pheromone_center_intensity", 0.9))},
+        float(config.get("pheromones.pheromone_decay", 0.10)),
+        str(config.get("pheromones.decay_model", "multiplicative")),
+    )[(0, 0)]

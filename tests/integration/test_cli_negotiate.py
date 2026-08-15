@@ -60,7 +60,13 @@ def test_it_prints_our_side_without_an_opponent(capsys) -> None:
     printed = capsys.readouterr().out
     assert "config_sha256" in printed and "scent_model_sha256" in printed
     assert "from docs/LEAGUE_LOG.md" in printed
-    assert "0.810 after one turn" in printed, "the worked example is the point of M#23"
+    # Computed from the shipped model, never quoted — see `decayed_peak`.
+    from core.shared.config_manager import load_config
+    from tests.conftest import decayed_peak
+    from tests.paths import role_dir
+
+    after = decayed_peak(load_config(role_dir(ROLE)))
+    assert f"{after:.3f} after one turn" in printed, "the worked example is the point of M#23"
 
 
 def test_a_full_exchange_agrees_and_exits_zero(attached, capsys) -> None:
