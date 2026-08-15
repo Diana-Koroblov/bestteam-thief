@@ -14,13 +14,12 @@ preferred.
 
 from __future__ import annotations
 
-import os
-
 from core.infra.llm.base import TextProvider
 from core.infra.llm.meter import TokenMeter
 from core.infra.llm.remote import GroqProvider, OllamaProvider
 from core.infra.llm.template import TemplateProvider
 from core.infra.llm.writer import HintWriter
+from core.shared import env
 
 __all__ = ["build_provider", "build_writer", "model_name", "PROVIDERS"]
 
@@ -39,7 +38,7 @@ def build_provider(config, meter: TokenMeter | None = None) -> TextProvider:
             nothing, so its honest contribution is the absence of a call rather
             than a zero.
     """
-    name = os.environ.get("P2P_LLM_PROVIDER") or config.get("trash_talk.provider", "template")
+    name = env.optional("P2P_LLM_PROVIDER") or config.get("trash_talk.provider", "template")
     name = str(name).strip().lower()
     timeout = float(config.get("llm.timeout_sec", 8))
     tokens = int(config.get("llm.max_output_tokens", 200))

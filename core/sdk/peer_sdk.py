@@ -31,7 +31,7 @@ from core.sdk.view_state import GuiState
 from core.shared import env
 from core.shared.config_manager import load_config
 from core.shared.gatekeeper import Gatekeeper
-from core.shared.provider_budget import verify_budget
+from core.shared.provider_budget import verify_budget, verify_reachable
 from core.shared.rate_limits import load_rate_limits
 
 __all__ = ["PeerSDK", "BoardView"]
@@ -249,15 +249,22 @@ class PeerSDK:
         return GmailSender.from_config(self._config, self.gatekeeper, transport or lazy)
 
     def verify_budget(self) -> None:
-        """Refuse a metered provider paired with too short an interval (TODO 7.1.6).
+        """Refuse a provider that would overspend, or one that is not running.
+
+        Two startup refusals, both about `P2P_LLM_PROVIDER`, both fatal only to
+        a human about to play a match rather than to the suite:
+
+        * a **metered** provider paired with too short an interval (TODO 7.1.6)
+        * a **daemon** provider whose daemon is down, which does not fail but
+          stalls every turn on the provider timeout and then writes the template
+          hint anyway (see `verify_reachable` for what that cost us).
 
         Raises:
-            BudgetError: Naming both keys. Called at CLI startup rather than
-                here in ``__init__``, so it stops a human about to play a match
-                instead of failing the suite on a machine whose ``.env`` picks
-                a metered provider.
+            BudgetError: Naming both keys.
+            ProviderUnreachableError: Naming the daemon and both one-line fixes.
         """
         verify_budget(self._config)
+        verify_reachable(self._config)
 
     @property
     def brain_name(self) -> str:

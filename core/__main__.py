@@ -18,7 +18,7 @@ from core import cli_commands
 from core.cli_args import CONFIG_DIRS, parse_args
 from core.protocol.schemas import Role
 from core.sdk.peer_sdk import PeerSDK
-from core.shared.provider_budget import BudgetError
+from core.shared.provider_budget import BudgetError, ProviderUnreachableError
 
 __all__ = ["main"]
 
@@ -63,7 +63,7 @@ def main(argv: list[str] | None = None) -> int:
     # and the two halves live on different machines (TODO 7.1.6).
     try:
         sdk.verify_budget()
-    except BudgetError as error:
+    except (BudgetError, ProviderUnreachableError) as error:
         raise SystemExit(str(error)) from error
 
     if args.command == "negotiate":
