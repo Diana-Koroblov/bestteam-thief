@@ -1,0 +1,748 @@
+{
+  "code_version": "1.00",
+  "config_sha256": "248b334bb18ca97aa6eccb8bd9a04771eef8790f03e180c87c8663c9ac337c8f",
+  "created_utc": "2026-08-15T10:21:30+00:00",
+  "game_id": "2026-08-15_bestteam-vs-bestteam_40a91bfa",
+  "outcome": "thief survived 35 of 35 steps",
+  "role": "cop",
+  "step_count": 35,
+  "steps": [
+    {
+      "barrier_cell": null,
+      "claimed_digest": "8af238f7b7edc28afb1667f922f37750bb7a7c9d29a6ab49f1e5b5027ae81474",
+      "hint": "You are chasing a rumour, not an agent.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "e85edbfceb84fa3c77ee9b4cc3b7909e",
+      "scent_digest": "2b8164ffeb4cdf67bdb9edddad093c875d420eb230a0d615ab70f36e21cfecee",
+      "state": {
+        "cop": [
+          0,
+          0
+        ],
+        "step": 0,
+        "thief": [
+          3,
+          3
+        ]
+      },
+      "step": 0
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "2a13c3debc5a56741efd72e324f6b9b01b24b02d1cb9a0a41a3c801bfda3abc9",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "E",
+      "nonce": "57071923c0f8f680e2d28b2f57ab1463",
+      "scent_digest": "c7efba78bc19497ef6f895365540eaea08ee5e3d5360bbcc9e0665b55b667185",
+      "state": {
+        "cop": [
+          1,
+          0
+        ],
+        "step": 1,
+        "thief": [
+          3,
+          3
+        ]
+      },
+      "step": 1
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "4ab187904ea4c571c98fde23dacae666e76a287f26f5b519ad165bdeed20c48f",
+      "hint": "I am somewhere you have not thought to look.",
+      "intent": "truth",
+      "move": "E",
+      "nonce": "6d24a43d9329dc600fd2489e18899a40",
+      "scent_digest": "6f8a0452adce54e3a1aa712cd5379911ed2a487aa9b2f96bfa7b43b59294c787",
+      "state": {
+        "cop": [
+          1,
+          1
+        ],
+        "step": 2,
+        "thief": [
+          2,
+          3
+        ]
+      },
+      "step": 2
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "f672f0c3dcee7b4afc8e5e4696ea96bc4838288c939e2f3bf5fc2e627a4a8a44",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "a04b3a127adee1eb62413cb3d52a7833",
+      "scent_digest": "10a4ef48384fcb2a4b895ab9401ca2fca371d788c6f218f31dc93afe75b9d713",
+      "state": {
+        "cop": [
+          1,
+          2
+        ],
+        "step": 3,
+        "thief": [
+          1,
+          3
+        ]
+      },
+      "step": 3
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "8d1f53510013c7bcf34e141560abbc9dc7f044300aa554dceafae87aa55e78fb",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "E",
+      "nonce": "b3c1a826f82d52e3c259f8f7a86a9a4a",
+      "scent_digest": "606d5b446cdfe4ae2240305f5def79b915736a9f9df3b61e211d01ba2f96f054",
+      "state": {
+        "cop": [
+          2,
+          2
+        ],
+        "step": 4,
+        "thief": [
+          1,
+          4
+        ]
+      },
+      "step": 4
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "bf532e4aa6094ec142194db3c95e0618af06b1d7a345039df6e07f8bd821023c",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "N",
+      "nonce": "c27ac93ccfbeffbe7860b18a3ae9bb2d",
+      "scent_digest": "3d3d63f9cd4c72f1604fab2520222ab0a65d3fa708c3935703bb7260367f79de",
+      "state": {
+        "cop": [
+          2,
+          3
+        ],
+        "step": 5,
+        "thief": [
+          2,
+          4
+        ]
+      },
+      "step": 5
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "02ce0e7e554fcafd8854a52210e0a0100d4eb43a59eb9f0e4bc43928eb9d5b01",
+      "hint": "I am somewhere you have not thought to look.",
+      "intent": "truth",
+      "move": "E",
+      "nonce": "c5ef5af94bcd50f618cc52ca118949ef",
+      "scent_digest": "698e8e97f09189dc3963113b3faf7aef3c31a083615c0396b3448597aac25fb9",
+      "state": {
+        "cop": [
+          1,
+          3
+        ],
+        "step": 6,
+        "thief": [
+          3,
+          4
+        ]
+      },
+      "step": 6
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "0b81304245335251affefd6eba7a70f273bbe0d15647b162f7d3b2045d57bc74",
+      "hint": "You are chasing a rumour, not an agent.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "69073b0a62c81668b022b3b3baf74c6a",
+      "scent_digest": "1fa69a1708eedae63792493af862fbf2373a381db4b5f563796c78a1848042e2",
+      "state": {
+        "cop": [
+          1,
+          4
+        ],
+        "step": 7,
+        "thief": [
+          4,
+          4
+        ]
+      },
+      "step": 7
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "89f0c4aba011660497bb8aaa71d2e1c34a32d88a65c791a05c2b92864c3e1d2f",
+      "hint": "You are chasing a rumour, not an agent.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "230ae2512cd5ddab58726e579d9ea78e",
+      "scent_digest": "f6ec447ffd8334bf4415d70f1aafdd5e10a08a555ebe9ea0103f3cb67763f4ac",
+      "state": {
+        "cop": [
+          2,
+          4
+        ],
+        "step": 8,
+        "thief": [
+          5,
+          4
+        ]
+      },
+      "step": 8
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "1d1684589c46b5d9deaa7341fb02311a91a29b4b2b528349e6ee14d60499778d",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "78c558b3ca097d8d7b470b38fa2e0ab7",
+      "scent_digest": "4b584063de2656db5db98c394a21a1b8bf42ce7edd029ea21b60b1a30ec32658",
+      "state": {
+        "cop": [
+          3,
+          4
+        ],
+        "step": 9,
+        "thief": [
+          6,
+          4
+        ]
+      },
+      "step": 9
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "57625116afa57ec6de2d4b5749dc9516ad5b971ec0cc0c2b8fc057001f6136ef",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "eba30f7d25515da719ff85d4bd26ad44",
+      "scent_digest": "698149712652f94cd8ce9adf2b8abf178cb83291293cac48c0a129eeb2e1f3ac",
+      "state": {
+        "cop": [
+          4,
+          4
+        ],
+        "step": 10,
+        "thief": [
+          6,
+          3
+        ]
+      },
+      "step": 10
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "fd15b8715b24e7cedcae7ed6c2bca0c15d1d3a33f53361f764e34bacca85d91d",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "N",
+      "nonce": "28697f78c25a976f9bfa5ae5fa04f2f6",
+      "scent_digest": "1b81920a71bb239497bd476a10c3bd7db78b827c7fa29e3db692277e6ac09aa2",
+      "state": {
+        "cop": [
+          5,
+          4
+        ],
+        "step": 11,
+        "thief": [
+          6,
+          2
+        ]
+      },
+      "step": 11
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "a1fad3e9736041497d9de6158d6706c7579864e64e2c605f09e465f286c9227f",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "b3938743716f2da8eb3cf160080945a6",
+      "scent_digest": "babad424598362afd22c6c22231667b91813de2cbe0c4c9c9e3a2b886fc06c94",
+      "state": {
+        "cop": [
+          4,
+          4
+        ],
+        "step": 12,
+        "thief": [
+          6,
+          1
+        ]
+      },
+      "step": 12
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "18cd6e83bc25baa86111e2759855725e49754e15a32110b495a778039013b37c",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "W",
+      "nonce": "f29b99b89a881b4545b54350ef078d2c",
+      "scent_digest": "c3029ffe711a926f6aa5d0eca3866fb88f52fcbb5b1b2d97e7ea9d3568a80c73",
+      "state": {
+        "cop": [
+          5,
+          4
+        ],
+        "step": 13,
+        "thief": [
+          6,
+          1
+        ]
+      },
+      "step": 13
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "eeaa8342742c841ac524eab1ce4a3ea27358bb1eb1f52f0d701ac6695bd89fd6",
+      "hint": "You are chasing a rumour, not an agent.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "55b0371ceb78a395abc34f762a070f58",
+      "scent_digest": "abb047f37beb2fc3d6180ce827d284779ff7cbb02562b8c4b6197c628ef77708",
+      "state": {
+        "cop": [
+          5,
+          3
+        ],
+        "step": 14,
+        "thief": [
+          6,
+          1
+        ]
+      },
+      "step": 14
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "c51b1b39f9dec66f36d215006f2550a5af5cb2839d312210ddae181803a7d380",
+      "hint": "I am somewhere you have not thought to look.",
+      "intent": "truth",
+      "move": "W",
+      "nonce": "473c6a76a11e6b08e611de0cadab1356",
+      "scent_digest": "1cd932b3eb41c8d03d250881348341908890670068f40e305e55cfec75bbf7d2",
+      "state": {
+        "cop": [
+          6,
+          3
+        ],
+        "step": 15,
+        "thief": [
+          5,
+          1
+        ]
+      },
+      "step": 15
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "c492938fa35debccb2b8ea4f3203808c9b0881924f97e654b74c9ed09cb87e3e",
+      "hint": "You are chasing a rumour, not an agent.",
+      "intent": "truth",
+      "move": "N",
+      "nonce": "1b18553971949a1b947263ccd739a11c",
+      "scent_digest": "430f718d701ed9165ff220c9fe92dfdb72a9c391c682d04a71c19fdfcf53c1f8",
+      "state": {
+        "cop": [
+          6,
+          2
+        ],
+        "step": 16,
+        "thief": [
+          4,
+          1
+        ]
+      },
+      "step": 16
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "fad8a25199555abdd0aeedd3ef107b7b5415b49e45034435abe650021c3f4f0b",
+      "hint": "You are chasing a rumour, not an agent.",
+      "intent": "truth",
+      "move": "W",
+      "nonce": "96a4ed6c223217fa067ba60fe9413ace",
+      "scent_digest": "66226d6e93e222dea1fee9034a65037643140a3648a8467e8016b614b0152348",
+      "state": {
+        "cop": [
+          5,
+          2
+        ],
+        "step": 17,
+        "thief": [
+          3,
+          1
+        ]
+      },
+      "step": 17
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "306bf2bea794815e86f229957cf6241dc0bfa523d97837cf49204db879aea69d",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "N",
+      "nonce": "149d61a7f520a25aba56c7747f49fc24",
+      "scent_digest": "f5f6933f45254b867f38cd2282d294818899ad58ad7f3e0f92776c9f3c802fb3",
+      "state": {
+        "cop": [
+          5,
+          1
+        ],
+        "step": 18,
+        "thief": [
+          2,
+          1
+        ]
+      },
+      "step": 18
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "c873600ee79d26ab17dd6c6241bb253fc6dd7e56ec3fe4d999c47b05914adcd8",
+      "hint": "You are chasing a rumour, not an agent.",
+      "intent": "truth",
+      "move": "N",
+      "nonce": "a30cec087b518eb5fd365ad3b622ac85",
+      "scent_digest": "361b53bccb58739ddb431aafe432830011861f48bba2bbaab824558dc2fb03d0",
+      "state": {
+        "cop": [
+          4,
+          1
+        ],
+        "step": 19,
+        "thief": [
+          1,
+          1
+        ]
+      },
+      "step": 19
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "7b42ef60c3a74884520923ee20f16130e0a7101bf3bf91e324bd9eea6ac9cde7",
+      "hint": "I am somewhere you have not thought to look.",
+      "intent": "truth",
+      "move": "N",
+      "nonce": "f3d4d3e3439fd70ead982128c6881de2",
+      "scent_digest": "980a79ba8d9415b6fc9b91f551ec4040de3ecb865a07bcb00401f152cd3fe147",
+      "state": {
+        "cop": [
+          3,
+          1
+        ],
+        "step": 20,
+        "thief": [
+          0,
+          1
+        ]
+      },
+      "step": 20
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "bf645659b3e38aeb92f29e508f01dbbcaac9712f5158c7af01f097114c2798f8",
+      "hint": "You are chasing a rumour, not an agent.",
+      "intent": "truth",
+      "move": "N",
+      "nonce": "92f266020285c3e6d7cc42e8653af057",
+      "scent_digest": "b6f6c8f6e1eef2d53adcb0c70c2eaf2ab3b6752a4249aa6f3678b3550746f18a",
+      "state": {
+        "cop": [
+          2,
+          1
+        ],
+        "step": 21,
+        "thief": [
+          0,
+          2
+        ]
+      },
+      "step": 21
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "baea33a3a872a4b0cebde74cc9875912b9d5c14cfa611ff95d7ad2a3e1735dae",
+      "hint": "I am somewhere you have not thought to look.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "3bdadcc5cca616de6789c78cac6bfb8d",
+      "scent_digest": "88ca0429e8035f7ca9eaf2264af874175527e2fe992f9cb096a13c7eebf6ef35",
+      "state": {
+        "cop": [
+          1,
+          1
+        ],
+        "step": 22,
+        "thief": [
+          0,
+          3
+        ]
+      },
+      "step": 22
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "0c18b13d51c5345adc09a272ce27e73c5779ad800f13b13c9ccd7bc6d0a1e535",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "N",
+      "nonce": "816edd9c65c707787e585dd576c64b20",
+      "scent_digest": "2351ffaf895bb6832890b57148c0aeb1c5b0af492724b9efe43be4b89eebee22",
+      "state": {
+        "cop": [
+          2,
+          1
+        ],
+        "step": 23,
+        "thief": [
+          0,
+          4
+        ]
+      },
+      "step": 23
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "3276822b769dc8bdcff5b166f9c4ea7bb4a6256ac05cde59489fb0f86b1d39c4",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "E",
+      "nonce": "08eadf3eaa8856f7de75981d335e9c77",
+      "scent_digest": "0f10a5ecfdbc3350aec31fc3aceee63ad029aac39fb1f9f33ba1fdb8d092a691",
+      "state": {
+        "cop": [
+          1,
+          1
+        ],
+        "step": 24,
+        "thief": [
+          0,
+          5
+        ]
+      },
+      "step": 24
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "5cb7a7d1086fea59c4bcc2b8c0583d4044fa91db28e558b7a1a9ded06b4cd07e",
+      "hint": "You are chasing a rumour, not an agent.",
+      "intent": "truth",
+      "move": "E",
+      "nonce": "bed5d4d296959bf1eb9c6419aa81db48",
+      "scent_digest": "60dca6825cf293bc53c4e4f79c129fd908eda6f95e40f1f63494bcc9cff040a3",
+      "state": {
+        "cop": [
+          1,
+          2
+        ],
+        "step": 25,
+        "thief": [
+          1,
+          5
+        ]
+      },
+      "step": 25
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "d06fbf50c5a48b2c4dc4b36d75890104e621b97db81c2078691278555e1bb3c8",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "E",
+      "nonce": "65eb7b6083b90e89aa2d842c54c4aae9",
+      "scent_digest": "7a7f8e4b298ae8b8477aedcdec8429ec01dbc119374c686f3f96fe25b279ec77",
+      "state": {
+        "cop": [
+          1,
+          3
+        ],
+        "step": 26,
+        "thief": [
+          2,
+          5
+        ]
+      },
+      "step": 26
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "a38e9e09b472622303d796a91fb2fa1d6f55505cf1f94fb1e118b4a282f6443c",
+      "hint": "I am somewhere you have not thought to look.",
+      "intent": "truth",
+      "move": "E",
+      "nonce": "9e2e87865524460808725f66bf500087",
+      "scent_digest": "481e052ef5fe6bcda9002ceb7c39aad319ddd1be7e69fab5c6585067c7e66bd5",
+      "state": {
+        "cop": [
+          1,
+          4
+        ],
+        "step": 27,
+        "thief": [
+          3,
+          5
+        ]
+      },
+      "step": 27
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "e068f1f69fd3f57fbdf28b59d614e6455bffe7505124c944b670b0b943c18247",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "8376f4fdbfcd260dfe1875552ad5cc01",
+      "scent_digest": "8c46446fce5ed7fdc2366835ba11c54eb7524e51f9554d59ea592d5a28be4945",
+      "state": {
+        "cop": [
+          1,
+          5
+        ],
+        "step": 28,
+        "thief": [
+          4,
+          5
+        ]
+      },
+      "step": 28
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "b8ebb7bd89d0fe328a8d1f8637b8fb270e303d1c4f719f5f220b211d77554d51",
+      "hint": "I am somewhere you have not thought to look.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "ca616359e0aa18c68ed16fdf3950b43f",
+      "scent_digest": "a57761e03877e74bf9307370e51b9879091580688f507997a164f188154d5e22",
+      "state": {
+        "cop": [
+          2,
+          5
+        ],
+        "step": 29,
+        "thief": [
+          5,
+          5
+        ]
+      },
+      "step": 29
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "9d1bf63376a968222b90fdd2cbd52c6a690a3b208b51d6d2eb59268fb7c843d3",
+      "hint": "I am somewhere you have not thought to look.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "ce6c1906607849628d99bc650a77bc59",
+      "scent_digest": "e6ac58facbfea4329e2f8621ed4ae878f07a32ececef6003bc8b5670d0d2ed62",
+      "state": {
+        "cop": [
+          3,
+          5
+        ],
+        "step": 30,
+        "thief": [
+          6,
+          5
+        ]
+      },
+      "step": 30
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "a17b4b604fc5f86c4a4085f3064f24e0be8778bcb5114b215c45f5ae98382579",
+      "hint": "I am somewhere you have not thought to look.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "7a71e8cad6500063db29cd938a10917e",
+      "scent_digest": "320fe253a3c26587414a83ed25862579b2adf7c236c58fc8153481b5acd58050",
+      "state": {
+        "cop": [
+          4,
+          5
+        ],
+        "step": 31,
+        "thief": [
+          6,
+          4
+        ]
+      },
+      "step": 31
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "aea5e81effb0455432c5d7890bfeb53428739ad5a322f5743a731737b4a32556",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "N",
+      "nonce": "85b841c59a118d4d7d683955a8efb0f6",
+      "scent_digest": "5320f75eee3bb1136e906681be8639c8f267521cba0731e86faae3518352921a",
+      "state": {
+        "cop": [
+          5,
+          5
+        ],
+        "step": 32,
+        "thief": [
+          6,
+          3
+        ]
+      },
+      "step": 32
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "c528b5383fd2d40af23c66467d1d84045298fbdb5422717bfc729185ef566ca4",
+      "hint": "Nothing you have read this turn was worth reading.",
+      "intent": "truth",
+      "move": "S",
+      "nonce": "b4df4cbba958ebb0d7588242dc1d5765",
+      "scent_digest": "b389bbd610a986c49f336bf9d86c42d473afd788ddd9253e0c58d97c6ebfa34f",
+      "state": {
+        "cop": [
+          4,
+          5
+        ],
+        "step": 33,
+        "thief": [
+          6,
+          2
+        ]
+      },
+      "step": 33
+    },
+    {
+      "barrier_cell": null,
+      "claimed_digest": "88f05b3edd71d77d1d5dd3875f3e741c611de1d391b608fc7f0a7a0dbd5c58be",
+      "hint": "I am somewhere you have not thought to look.",
+      "intent": "truth",
+      "move": "W",
+      "nonce": "88ddcf0969042380ce2af5d2d0b863e2",
+      "scent_digest": "2b0dd27eddfbbd24b29a95676d28898b7dc93e37e43469cf73808382667c279b",
+      "state": {
+        "cop": [
+          5,
+          5
+        ],
+        "step": 34,
+        "thief": [
+          6,
+          1
+        ]
+      },
+      "step": 34
+    }
+  ],
+  "sub_game": 2,
+  "unverifiable_steps": []
+}

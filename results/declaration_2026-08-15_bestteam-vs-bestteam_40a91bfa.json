@@ -1,0 +1,98 @@
+{
+  "code_version": "1.00",
+  "created_utc": "2026-08-15T10:22:16+00:00",
+  "ended_utc": "2026-08-15T10:22:16+00:00",
+  "game_id": "2026-08-15_bestteam-vs-bestteam_40a91bfa",
+  "hardware": {
+    "cpu_cores": 8,
+    "cpu_mhz": 2000,
+    "cpu_model": "12th Gen Intel(R) Core(TM) i5-12450H",
+    "cpu_threads": 12,
+    "gpu": "Intel(R) UHD Graphics",
+    "machine": "AMD64",
+    "os": "Windows 11",
+    "python": "3.12.13",
+    "ram_gb": 15.7
+  },
+  "llm_model": "template",
+  "mcp_urls": {
+    "ours": "http://127.0.0.1:8081/mcp",
+    "theirs": "http://127.0.0.1:8082/mcp"
+  },
+  "repositories": {
+    "ours_cop": "https://github.com/Diana-Koroblov/bestteam-cop",
+    "ours_thief": "https://github.com/Diana-Koroblov/bestteam-thief",
+    "theirs_cop": "https://github.com/Diana-Koroblov/bestteam-cop",
+    "theirs_thief": "https://github.com/Diana-Koroblov/bestteam-thief"
+  },
+  "started_utc": "2026-08-15T10:16:31+00:00",
+  "step_zero": {
+    "ours": {
+      "payload": {
+        "code_version": "1.00",
+        "github_commit": "44ebee777f7eca9e3e6d7d6db8b33f60eec4516c-dirty",
+        "hardware": {
+          "cpu_cores": 8,
+          "cpu_mhz": 2000,
+          "cpu_model": "12th Gen Intel(R) Core(TM) i5-12450H",
+          "cpu_threads": 12,
+          "gpu": "Intel(R) UHD Graphics",
+          "machine": "AMD64",
+          "os": "Windows 11",
+          "python": "3.12.13",
+          "ram_gb": 15.7
+        },
+        "llm_model": "template",
+        "members": [
+          "Itay Malich",
+          "Diana Koroblov"
+        ],
+        "repos": {
+          "cop": "https://github.com/Diana-Koroblov/bestteam-cop",
+          "thief": "https://github.com/Diana-Koroblov/bestteam-thief"
+        },
+        "role": "cop",
+        "sub_game": 1,
+        "team_name": "bestteam"
+      },
+      "sha256": "7570ad27817465cfbd150e8d736c4e95f97437dd7531f2c54fa720b468c0f79e"
+    },
+    "theirs": {
+      "payload": {
+        "code_version": "1.00",
+        "github_commit": "44ebee777f7eca9e3e6d7d6db8b33f60eec4516c-dirty",
+        "hardware": {
+          "cpu_cores": 8,
+          "cpu_mhz": 2000,
+          "cpu_model": "12th Gen Intel(R) Core(TM) i5-12450H",
+          "cpu_threads": 12,
+          "gpu": "Intel(R) UHD Graphics",
+          "machine": "AMD64",
+          "os": "Windows 11",
+          "python": "3.12.13",
+          "ram_gb": 15.7
+        },
+        "llm_model": "template",
+        "members": [
+          "Itay Malich",
+          "Diana Koroblov"
+        ],
+        "repos": {
+          "cop": "https://github.com/Diana-Koroblov/bestteam-cop",
+          "thief": "https://github.com/Diana-Koroblov/bestteam-thief"
+        },
+        "role": "thief",
+        "sub_game": 1,
+        "team_name": "bestteam"
+      },
+      "sha256": "d378ce99e1422747a0f05f6f538f0fad31871a756027010ab55089f67224e117"
+    }
+  },
+  "teams": {
+    "bestteam": [
+      "Itay Malich",
+      "Diana Koroblov"
+    ]
+  },
+  "token_cap": 200000
+}

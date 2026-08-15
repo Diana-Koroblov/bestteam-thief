@@ -1,0 +1,105 @@
+{
+  "code_version": "1.00",
+  "created_utc": "2026-08-15T10:22:16+00:00",
+  "game_id": "2026-08-15_bestteam-vs-bestteam_40a91bfa",
+  "github_commit": "44ebee777f7eca9e3e6d7d6db8b33f60eec4516c-dirty",
+  "repositories": {
+    "ours_cop": "https://github.com/Diana-Koroblov/bestteam-cop",
+    "ours_thief": "https://github.com/Diana-Koroblov/bestteam-thief",
+    "theirs_cop": "https://github.com/Diana-Koroblov/bestteam-cop",
+    "theirs_thief": "https://github.com/Diana-Koroblov/bestteam-thief"
+  },
+  "series": {
+    "our_league_points": 2,
+    "our_points": 45,
+    "their_league_points": 2,
+    "their_points": 45,
+    "verdict": "TIE"
+  },
+  "sub_games": [
+    {
+      "cop_points": 5,
+      "llm_tokens": 0,
+      "opponent_log_audit": "passed",
+      "our_points": 5,
+      "reason": "thief survived 35 of 35 steps",
+      "role": "cop",
+      "steps": 35,
+      "sub_game": 1,
+      "their_points": 10,
+      "thief_points": 10,
+      "verdict": "SURVIVAL"
+    },
+    {
+      "cop_points": 5,
+      "llm_tokens": 0,
+      "opponent_log_audit": "passed",
+      "our_points": 5,
+      "reason": "thief survived 35 of 35 steps",
+      "role": "cop",
+      "steps": 35,
+      "sub_game": 2,
+      "their_points": 10,
+      "thief_points": 10,
+      "verdict": "SURVIVAL"
+    },
+    {
+      "cop_points": 5,
+      "llm_tokens": 0,
+      "opponent_log_audit": "passed",
+      "our_points": 5,
+      "reason": "thief survived 35 of 35 steps",
+      "role": "cop",
+      "steps": 35,
+      "sub_game": 3,
+      "their_points": 10,
+      "thief_points": 10,
+      "verdict": "SURVIVAL"
+    },
+    {
+      "cop_points": 5,
+      "llm_tokens": 0,
+      "opponent_log_audit": "passed",
+      "our_points": 10,
+      "reason": "thief survived 35 of 35 steps",
+      "role": "thief",
+      "steps": 35,
+      "sub_game": 4,
+      "their_points": 5,
+      "thief_points": 10,
+      "verdict": "SURVIVAL"
+    },
+    {
+      "cop_points": 5,
+      "llm_tokens": 0,
+      "opponent_log_audit": "passed",
+      "our_points": 10,
+      "reason": "thief survived 35 of 35 steps",
+      "role": "thief",
+      "steps": 35,
+      "sub_game": 5,
+      "their_points": 5,
+      "thief_points": 10,
+      "verdict": "SURVIVAL"
+    },
+    {
+      "cop_points": 5,
+      "llm_tokens": 0,
+      "opponent_log_audit": "passed",
+      "our_points": 10,
+      "reason": "thief survived 35 of 35 steps",
+      "role": "thief",
+      "steps": 35,
+      "sub_game": 6,
+      "their_points": 5,
+      "thief_points": 10,
+      "verdict": "SURVIVAL"
+    }
+  ],
+  "total_llm_tokens": 0,
+  "totals": {
+    "ours": 45,
+    "sub_games_played": 6,
+    "theirs": 45
+  }
+}

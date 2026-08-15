@@ -1,0 +1,99 @@
+{
+  "code_version": "1.00",
+  "config_sha256": "248b334bb18ca97aa6eccb8bd9a04771eef8790f03e180c87c8663c9ac337c8f",
+  "created_utc": "2026-08-15T10:21:30+00:00",
+  "game_id": "2026-08-15_bestteam-vs-bestteam_40a91bfa",
+  "readings": {
+    "board_and_agents.axis_origin_corner": "top-left",
+    "board_and_agents.axis_start_index": "0",
+    "capture.resolution": "after_moves",
+    "capture.stay_counts_as_move": "false",
+    "capture.swap_is_capture": "true",
+    "coordinates.component_order": "row,col",
+    "movement_and_barriers.seal_barrier_cell": "true",
+    "pheromones.decay_model": "multiplicative",
+    "pheromones.field_includes_current_turn": "true",
+    "pheromones.seal_scent_digest": "true"
+  },
+  "role": "cop",
+  "role_split": "3-3",
+  "scent_model_digest": "219e37efe434671bdf6d52b5884eb974b80adf46fffd13a0d765f9e9af880b84",
+  "shared_config": {
+    "agreed_between": [
+      "bestteam",
+      "imreeyal"
+    ],
+    "board_and_agents": {
+      "axis_origin_corner": "top-left",
+      "axis_start_index": 0,
+      "cop_start": [
+        0,
+        0
+      ],
+      "grid_size": 7,
+      "num_agents": 2,
+      "thief_start": [
+        3,
+        3
+      ]
+    },
+    "capture": {
+      "resolution": "after_moves",
+      "stay_counts_as_move": false,
+      "swap_is_capture": true
+    },
+    "movement_and_barriers": {
+      "max_barriers": 14,
+      "max_moves": 35,
+      "move_set": [
+        "N",
+        "S",
+        "E",
+        "W",
+        "STAY"
+      ],
+      "seal_barrier_cell": true,
+      "survival_threshold": 35
+    },
+    "network_and_league": {
+      "diversity_reward": 10,
+      "max_games_per_team": 10,
+      "min_games_to_pass": 2,
+      "num_games": 6,
+      "response_timeout_sec": 30,
+      "token_budget_per_series": 200000,
+      "watchdog_timeout_sec": 60
+    },
+    "pheromones": {
+      "decay_model": "multiplicative",
+      "field_includes_current_turn": true,
+      "pheromone_center_intensity": 0.9,
+      "pheromone_decay": 0.1,
+      "pheromone_grid_size": 5,
+      "pheromone_min_center_intensity": 0.5,
+      "seal_scent_digest": true
+    },
+    "rate_limiter_gatekeeper": {
+      "concurrent_requests": 2,
+      "max_retries": 3,
+      "queue_depth": 100,
+      "requests_per_minute": 30,
+      "retry_backoff_sec": 5
+    },
+    "schema_version": "1.2",
+    "scoring": {
+      "capture_cop": 20,
+      "capture_thief": 5,
+      "survival_cop": 5,
+      "survival_thief": 10,
+      "technical_loss": 0,
+      "tie_score": 2
+    },
+    "version": "1.00",
+    "world": {
+      "hint_max_words": 15,
+      "map_area": "New York"
+    }
+  },
+  "sub_game": 2
+}
