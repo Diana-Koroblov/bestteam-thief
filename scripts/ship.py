@@ -27,6 +27,13 @@ place. It exists for fast iteration; it must be typed on purpose every time,
 never defaulted on, so a red benchmark can't slip through unnoticed the way
 the 16-vs-48 opening-count discrepancy once did.
 
+--simple is a second, wider exception for the same reason: it drops the
+league benchmark AND the unit/integration test gate (the self-play batches
+in tests/integration/ are the slow part of that gate), leaving lint, file
+size, the secret scan, and the split-repository check. Same rule as
+--skip-league - typed on purpose every time, never defaulted on, and it does
+not replace a real `ship.py` run before anything that actually matters ships.
+
 Two lock helpers, because a stale .git/index.lock stopped three runs in one
 session::
 
@@ -55,15 +62,22 @@ __all__ = ["main", "build_steps"]
 
 
 def build_steps(
-    message: str, role: str, dry_run: bool, skip_league: bool = False
+    message: str, role: str, dry_run: bool, skip_league: bool = False, simple: bool = False
 ) -> tuple[Step, ...]:
     """Return the full pipeline: stage, gates, then publish.
 
-    skip_league drops only the league benchmark gate (see module docstring);
-    every other gate still runs.
+    skip_league drops only the league benchmark gate; simple additionally drops
+    the unit/integration test gate (see module docstring). Every other gate
+    still runs.
     """
     stage = Step("Stage all changes", ("git", "add", "-A"))
-    gates = tuple(gate for gate in GATES if not (skip_league and "League benchmark" in gate.name))
+    drop_league = skip_league or simple
+    gates = tuple(
+        gate
+        for gate in GATES
+        if not (drop_league and "League benchmark" in gate.name)
+        and not (simple and "Tests and coverage" in gate.name)
+    )
     publish_command = ["uv", "run", "python", "scripts/publish.py", "--role", role, "-m", message]
     if dry_run:
         publish_command.append("--dry-run")
@@ -111,6 +125,14 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "coverage, split-repository check - still runs. Must be passed "
         "explicitly each time; there is no default-on equivalent.",
     )
+    parser.add_argument(
+        "--simple",
+        action="store_true",
+        help="Skip the league benchmark AND the unit/integration test gate "
+        "(the slow self-play batches live there), leaving lint, file size, "
+        "the secret scan, and the split-repository check. For fast "
+        "iteration only; must be passed explicitly each time.",
+    )
     return parser.parse_args(argv)
 
 
@@ -126,7 +148,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  {explanation}", flush=True)
         if not removed and "No .git" not in explanation:
             return 1
-    steps = build_steps(args.message, args.role, args.dry_run, args.skip_league)
+    steps = build_steps(args.message, args.role, args.dry_run, args.skip_league, args.simple)
     total = len(steps)
     stage, *rest = steps
     gates, publish = rest[:-1], rest[-1]
