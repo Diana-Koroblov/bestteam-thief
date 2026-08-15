@@ -19,7 +19,7 @@ from typing import Any
 from core.domain.connectivity import exit_count, region_size
 from core.domain.movement import get_legal_moves
 from core.infra.gmail_sender import GmailSender, build_transport
-from core.infra.mcp_server import Route, ServerSpec, build_server_spec
+from core.infra.mcp_server import ServerSpec, build_server_spec
 from core.infra.tunnel import DOMAIN_VAR, TunnelManager
 from core.protocol.schemas import Role
 from core.protocol.tools import build_guarded_tools
@@ -27,7 +27,6 @@ from core.runtime.brain_loader import brain_for
 from core.runtime.orchestrator import Orchestrator
 from core.runtime.peer_runtime import PeerRuntime
 from core.runtime.prematch import PreMatch
-from core.sdk.a2a_gateway import readiness_of, routes_for
 from core.sdk.view_state import GuiState
 from core.shared import env
 from core.shared.config_manager import load_config
@@ -165,29 +164,17 @@ class PeerSDK:
                 by it, and a server exposing both would answer that call wrongly
                 for one of the two.
 
-        The A2A coordination routes ride along **unconditionally**, and under
-        both protocols. They are two read-only endpoints that open no game, and
-        a flag for them would only ever be discovered missing by an opponent
-        getting a 404 while we are mid-match and not reading our terminal.
+        The server serves `/mcp` and nothing else. It used to carry two
+        read-only A2A discovery endpoints as well; that complement was retired
+        on 15/08 — the league coordinates over the human channel and the only
+        machine question worth asking an opponent's host is which MCP tools it
+        exposes, which `python -m core probe` asks directly.
         """
         surface = build_guarded_tools(self._runtime) if tools is None else dict(tools)
         return build_server_spec(
             tools=surface,
             name=self._config.get("identity.contact_label", "peer"),
             port=port or self._config.require("network.listen_port"),
-            routes=self.a2a_routes(tuple(sorted(surface))),
-        )
-
-    def a2a_routes(self, mcp_tools: tuple[str, ...] = ()) -> tuple[Route, ...]:
-        """Return the A2A coordination endpoints (Ch. 2.3, `core/sdk/a2a_gateway.py`)."""
-        return routes_for(
-            readiness_of(
-                self._config,
-                self.role.value,
-                self.config_digest,
-                self._runtime.prematch.role_split,
-                mcp_tools,
-            )
         )
 
     def tunnel(self, **overrides: Any) -> TunnelManager:

@@ -131,23 +131,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Directory for agreement_<game_id>.json. Omit to settle without filing.",
     )
 
-    coordinate = sub.add_parser(
-        "a2a",
-        help="Readiness coordination over A2A: show our Agent Card, or probe theirs.",
+    check = sub.add_parser(
+        "probe",
+        help="Ask an opponent's MCP server which tools it exposes, and which "
+        "protocol that means they speak.",
     )
-    coordinate.add_argument("--role", required=True, choices=sorted(CONFIG_DIRS))
-    coordinate.add_argument(
-        "--probe",
-        help="Their host, e.g. https://them.trycloudflare.com. Checks the Agent "
-        "Card, the A2A message endpoint and — the one that decides whether a "
-        "match can start — that their MCP server exposes all six tools. Exits "
-        "non-zero if any is unusable.",
-    )
-    coordinate.add_argument(
-        "--base",
-        help="The public origin to write into our own card when printing it. "
-        "Defaults to localhost; in play it is read off the incoming request, so "
-        "this only affects what this command displays.",
+    check.add_argument(
+        "url",
+        help="Their MCP endpoint, e.g. https://them.ngrok-free.dev/mcp. The "
+        "'/mcp' suffix is added when missing.",
     )
 
     replay = sub.add_parser("replay", help="Open a saved match log and verify it (M#20).")

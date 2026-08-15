@@ -46,6 +46,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     if args.command == "replay":
         return cli_commands.replay(args)
+    if args.command == "probe":
+        # Before the SDK, like `replay`: asking a stranger's server what it
+        # exposes needs no role, no config and no runtime of ours, and
+        # requiring one would make the check unrunnable from a clone that has
+        # not been set up yet — which is exactly when it is most useful.
+        from core import cli_probe
+
+        return cli_probe.probe_command(args)
 
     role = Role.COP if CONFIG_DIRS[args.role] == "police" else Role.THIEF
     sdk = PeerSDK(_config_dir(args.role), role)
@@ -66,10 +74,6 @@ def main(argv: list[str] | None = None) -> int:
         from core import cli_play
 
         return cli_play.play(sdk, args)
-    if args.command == "a2a":
-        from core import cli_a2a
-
-        return cli_a2a.a2a(sdk, args)
 
     view = sdk.board_view()
     print(f"role            : {sdk.role.value}")

@@ -123,16 +123,24 @@ things to agree by chat and discover at the handshake. Two friendly slots were
 lost that way on 13/08 (C-019).
 
 ```powershell
-uv run python -m core a2a --role cop --probe https://their-domain.trycloudflare.com
+uv run python -m core probe https://their-domain.ngrok-free.dev/mcp
 ```
 
-It checks their Agent Card, their A2A message endpoint and — the only one that
-decides anything — that their MCP server exposes all six tools we will call.
-Exit code 0 means ready. A missing card is untidy; a missing `declare_barrier`
-is a sub-game that dies at the first placement. Our own side of it is always
-served, on the same port and tunnel as `/mcp`, with no flag to remember; run the
-same command with no `--probe` to read exactly what they will be told. See
-`docs/A2A.md`.
+It lists the tools their MCP server actually exposes and says what to do about
+them: six means ours and no flag, four mailboxes means `--protocol reference`,
+and anything else is named rather than guessed at. Exit 0 means playable. It
+needs no role and no config, so it runs from a fresh clone and against a peer
+who has not finished setting up.
+
+> **Retired 15/08: the A2A complement.** This step used to run
+> `core a2a --role cop --probe <host>`, which also fetched an Agent Card and
+> posted to an A2A message endpoint. Both are gone — the league coordinates
+> over the human channel, and the card asked nothing a match depends on. The
+> old command was actively misleading twice over: it failed the whole verdict
+> unless the card *and* the A2A endpoint *and* MCP all answered, so an opponent
+> who never built A2A read as `NOT READY`; and it checked their tools against
+> our six only, so the reference implementation's perfectly playable four came
+> back as five missing tools.
 
 ---
 
@@ -222,12 +230,22 @@ uv run python -m core play --role cop --tunnel --opponent https://their-domain/m
 
 One message settles it, and it can be sent days ahead: *"call `tools/list` on
 your own endpoint and send us the names."* Six tools means `native`; four means
-`reference`.
+`reference`. `python -m core probe <their-url>` asks the same question directly
+and answers it for you.
 
-**`--protocol reference` plays and audits but files nothing** — no artefacts, no
-report, no league row. Use it for friendlies and to prove the wire works. A
-counted match still runs on the native path, because that is the one the four
-submitted artefacts and the audit were built around.
+**`--protocol reference` is a full league path, not a rehearsal-only one.** It
+files the four artefacts in the league's own schema (`core/compat/
+league_report.py`) and mails the closing report, gated exactly as the native
+path is: `--out` to file, `--report-to` for an uncounted friendly send to the
+two teams' own inboxes, `--counted` for a league one to the lecturer. Since
+most of the league built on the example repository (C-019), this is the path a
+counted match against them runs on.
+
+> **Corrected 15/08.** This section used to say `--protocol reference` "plays
+> and audits but files nothing — no artefacts, no report, no league row" and
+> that "a counted match still runs on the native path". That was true when the
+> bridge was written and stopped being true when the league path landed. Read
+> literally, it ruled out counted matches against most of the league.
 
 **Play a warm-up against them first if there is time.** Uncounted matches are
 explicitly permitted (M#52) and they are where protocol bugs surface, at no cost
