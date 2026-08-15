@@ -1,6 +1,6 @@
 {
   "schema_version": "1.2",
-  "agreed_between": ["bestteam", "sparring-bestteam"],
+  "agreed_between": ["bestteam", "imreeyal"],
   "version": "1.00",
   "board_and_agents": {
     "grid_size": 7,
@@ -11,7 +11,7 @@
     "axis_start_index": 0
   },
   "world": {
-    "map_area": "Haifa",
+    "map_area": "New York",
     "hint_max_words": 15
   },
   "movement_and_barriers": {

@@ -200,6 +200,7 @@ failing later on a missing file.
 | `--first` | `cop` | Negotiated. See above. |
 | `--role-split` | `3-3` | Blocks in order; `1-1-1-1-1-1` swaps every sub-game. |
 | `--wait` | 120 s | Keeps retrying the handshake while they start up. Only a transport failure is retried — a refusal on the merits is reported at once. |
+| `--turn-wait` | 900 s | **Reference protocol only.** How long to wait for the opponent to reach *our* sub-game. A non-contiguous split — alternating, `1-1-1-1-1-1` — leaves each of our two processes idle for whole sub-games at a time, which is minutes, not the handshake courtesy `--wait` is sized for. See `core/compat/turn_wait.py`. |
 | `--linger` | 20 s | Keeps serving after our last sub-game so **they** can finish auditing our log. Do not set this to 0. |
 | `--out` | none | Omit for a warm-up, so a rehearsal leaves nothing that looks like a league match. |
 | `--tunnel` | off | Required for league play (M#10); omit for a local rehearsal. |

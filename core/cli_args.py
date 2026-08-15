@@ -66,6 +66,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--wait", type=float, default=120.0, help="Seconds to keep retrying the handshake."
     )
     match.add_argument(
+        "--turn-wait",
+        type=float,
+        default=900.0,
+        help="Reference protocol only: seconds to wait for the opponent to "
+        "reach OUR sub-game. A non-contiguous split (alternating) leaves each "
+        "of our processes idle for whole sub-games at a time, which is minutes "
+        "— not the handshake courtesy --wait is sized for (C-011).",
+    )
+    match.add_argument(
         "--linger", type=float, default=20.0, help="Seconds to serve on, so they can audit us."
     )
     match.add_argument(

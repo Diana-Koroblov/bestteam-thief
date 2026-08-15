@@ -23,13 +23,13 @@ from __future__ import annotations
 import argparse
 import asyncio
 import contextlib
-import time
 from typing import Any
 
 from core.compat import reporting
 from core.compat.league_row import row_from_session
 from core.compat.mailbox import Inboxes, build_reference_tools
 from core.compat.session import HandshakeError, ReferenceSession, reconnect
+from core.compat.turn_wait import TURN_WAIT_SECONDS, await_agreement
 from core.infra.errors import PeerError
 from core.infra.llm.factory import model_name
 from core.protocol.schemas import Role
@@ -42,8 +42,6 @@ __all__ = ["play_reference"]
 # Matches `cli_play`: let the server bind before anyone is invited to call it.
 BIND_SECONDS = 1.0
 
-# How long to wait between handshake attempts while an opponent starts up.
-RETRY_SECONDS = 3.0
 
 def play_reference(sdk: PeerSDK, args: argparse.Namespace) -> int:
     """Serve the four mailbox tools, then play our share of the series."""
@@ -136,8 +134,14 @@ async def _series(
         message, _ = session.agreement_message()
         started = utc_now()
         try:
-            await _push(sdk.opponent, message, float(args.wait))
-            theirs = await session.collect_agreement(float(args.wait), message)
+            # Waits for an agreement stamped for THIS sub-game, re-sending ours
+            # meanwhile: under an alternating split our plan has gaps and the
+            # opponent is two sub-games away. See core/compat/turn_wait.py.
+            theirs = await await_agreement(
+                session, sdk.opponent, message,
+                total_wait=float(getattr(args, "turn_wait", TURN_WAIT_SECONDS)),
+                push_wait=float(args.wait),
+            )
         except (HandshakeError, PeerError) as error:
             print(f"  sub-game {number}  HANDSHAKE REFUSED\n    {error}")
             failures += 1
@@ -175,28 +179,6 @@ async def _series(
     else:
         print("not filed - pass --out to write the four artefacts (M#35 needs a real report)")
     return 1 if failures else 0
-
-
-async def _push(client: Any, message: dict, seconds: float) -> None:
-    """Send our agreement, retrying while the opponent is still starting up.
-
-    Only a **transport** failure is retried. Peers legitimately start seconds
-    apart, and the native path gives the same courtesy in `cli_handshake.greet`.
-    A refusal on the merits is not retryable and is not raised here at all — it
-    comes back later, as their agreement failing to verify.
-    """
-    from core.infra.errors import TransportError
-
-    deadline = time.monotonic() + seconds
-    while True:
-        try:
-            await client.call("negotiate", message, argument="message")
-            return
-        except TransportError:
-            if time.monotonic() >= deadline:
-                raise
-            print(f"  no answer yet; retrying for {deadline - time.monotonic():.0f}s more ...")
-            await asyncio.sleep(RETRY_SECONDS)
 
 
 def _identity(sdk: PeerSDK) -> dict:

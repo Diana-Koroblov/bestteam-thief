@@ -24,7 +24,8 @@ from typing import Any
 
 from core.compat import league_report, sealing
 from core.compat.mailbox import Inboxes
-from core.compat.pairing import HandshakeError, verify_agreement
+from core.compat.pairing import HandshakeError
+from core.compat.turn_wait import collect_our_agreement
 from core.compat.turns import read_turn, send_turn
 from core.compat.wire import (
     INFO_MODE_SHA256,
@@ -172,12 +173,12 @@ class ReferenceSession:
         symmetric and neither side is the server. A refusal is the correct
         outcome: two peers enforcing different physics produce an audit that
         reports forgery against two honest teams (M#11).
+
+        The skipping of agreements stamped for a **different** sub-game lives in
+        `core/compat/turn_wait.py`, with the waiting it exists to serve; see
+        that module for why an alternating split makes it necessary.
         """
-        theirs = await self._collect(self.inboxes.agreements, wait)
-        if theirs is None:
-            raise HandshakeError("the opponent never sent its agreement")
-        self.warnings.extend(verify_agreement(ours, theirs))
-        return theirs
+        return await collect_our_agreement(self, wait, ours)
 
     async def play_sub_game(self, on_turn: Callable[[str], None] | None = None) -> str:
         """Play to a verdict and return it. Never raises on their failure.
