@@ -73,12 +73,21 @@ def test_the_component_order_is_declared_even_though_no_flag_holds_it(ours: dict
     assert ours[COMPONENT_ORDER] == "row,col"
 
 
-def test_booleans_are_spelled_the_way_json_spells_them(ours: dict) -> None:
+def test_booleans_are_spelled_the_way_json_spells_them(minimal_config) -> None:
     """An opponent writing in any other language sends `true`. A comparison that
     only ever matched Python's `True` would report every honest peer as a
-    disagreement and refuse every match."""
-    assert ours["capture.swap_is_capture"] == "true"
-    assert ours["capture.stay_counts_as_move"] == "false"
+    disagreement and refuse every match.
+
+    Both spellings are forced onto the *same* flag rather than read off two
+    flags that happen to be signed opposite ways today. Reading them off the
+    shipped config tested the spelling only as long as nothing was negotiated:
+    signing `swap_is_capture: false` on 16/08 turned this red, when what it
+    exists to check — that a bool renders lowercase either way — had not
+    changed at all.
+    """
+    for value, spelling in ((True, "true"), (False, "false")):
+        flipped = reconfigured(minimal_config, "capture.swap_is_capture", value)
+        assert readings_of(flipped)["capture.swap_is_capture"] == spelling
 
 
 # --- comparing two peers -----------------------------------------------------
@@ -110,7 +119,8 @@ def test_silence_is_not_a_contradiction(ours: dict) -> None:
 def test_a_disagreement_names_the_contradiction_it_belongs_to(ours: dict) -> None:
     """With no referee, the citation is the entire remedy: we have to be able to
     say *which* clause they are on the other side of."""
-    theirs = dict(ours, **{"capture.swap_is_capture": "false"})
+    mine = ours["capture.swap_is_capture"]
+    theirs = dict(ours, **{"capture.swap_is_capture": "false" if mine == "true" else "true"})
     assert "C-006c" in disagreements(ours, theirs)[0]
 
 

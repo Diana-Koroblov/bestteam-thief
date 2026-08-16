@@ -41,11 +41,11 @@
   "capture": {
     "resolution": "after_moves",
     "stay_counts_as_move": false,
-    "swap_is_capture": true
+    "swap_is_capture": false
   },
   "network_and_league": {
     "response_timeout_sec": 30,
-    "watchdog_timeout_sec": 240,
+    "watchdog_timeout_sec": 60,
     "num_games": 6,
     "diversity_reward": 10,
     "min_games_to_pass": 2,

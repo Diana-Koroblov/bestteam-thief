@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
 import sys
 from contextlib import suppress
 from pathlib import Path
@@ -128,7 +129,17 @@ async def _run(args: argparse.Namespace) -> int:
             print(f"  sub-game {number}  {verdict}\n")
             verdicts.append((number, door, verdict))
     finally:
+        # The same deliberate-shutdown noise `cli_play` and `cli_compat` silence
+        # (uvicorn's `_serve()` has no try/finally around its main loop, so a
+        # cancelled server never reaches its own shutdown and asyncio force-
+        # cancels the lifespan task and every open SSE stream instead). It
+        # matters more here than there: this output is pasted to an opponent as
+        # evidence, and three CancelledError tracebacks above a PASSED line read
+        # like a drill that crashed on its way to claiming success.
+        logging.getLogger("uvicorn.error").setLevel(logging.CRITICAL)
         serving.cancel()
+        with suppress(asyncio.CancelledError):
+            await serving
 
     print("=" * 62)
     failed = [(n, d, v) for n, d, v in verdicts if not v.startswith("engaged")]

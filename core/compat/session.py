@@ -193,7 +193,16 @@ class ReferenceSession:
             await send_turn(self, None)
             if self._survived():
                 return self._end("survival", Role.THIEF.value)
-        patience = float(self.config.get("network_and_league.watchdog_timeout_sec", 60))
+        # Private, and it has to be. How long WE are willing to wait for their
+        # first turn is a fact about our patience, not a term either side
+        # agreed: raising the signed `watchdog_timeout_sec` to buy it edited the
+        # negotiated constitution and moved `config_sha256` out from under an
+        # opponent who had pinned it — caught by imreeyal on 16/08, and rightly.
+        # Waiting longer than the signed watchdog only ever costs us time, so
+        # the local key may exceed it; it may never shorten it below what the
+        # agreement allows, which is why the signed value is the floor here.
+        signed = float(self.config.get("network_and_league.watchdog_timeout_sec", 60))
+        patience = max(signed, float(self.config.get("network.sub_game_patience_sec", 0) or 0))
         while not self.result:
             arrived = await self._collect(self.inboxes.turns, patience)
             if arrived is None:

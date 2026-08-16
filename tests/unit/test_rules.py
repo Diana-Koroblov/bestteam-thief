@@ -84,10 +84,19 @@ def test_a_raised_threshold_is_honoured() -> None:
 # --- C-006c, the swap -------------------------------------------------------
 
 
-def test_swapping_cells_is_a_capture_by_default(rules: Rules) -> None:
+def test_swapping_cells_is_a_capture_by_default() -> None:
+    """Built explicitly, not from the `rules` fixture.
+
+    Reading it off the shipped config asserted *which match we last played*
+    rather than that the strict reading works at all: imreeyal signed the
+    opposite one on 16/08 and this went red without a line of engine code
+    changing. Both settings are exercised here and in the test below, so
+    whichever we sign next, the one we did not sign stays covered.
+    """
+    strict = Rules(board=BOARD, survival_threshold=35, swap_is_capture=True)
     before = GameState(cop=(3, 3), thief=(3, 4))
     after = GameState(cop=(3, 4), thief=(3, 3), step=1)
-    outcome = rules.turn_verdict(before, after)
+    outcome = strict.turn_verdict(before, after)
     assert outcome.verdict is Verdict.CAPTURE
     assert "swapped" in outcome.reason
 
@@ -167,13 +176,26 @@ def test_outcome_is_immutable() -> None:
 
 
 def test_rules_are_built_from_the_negotiated_config(minimal_config, board_7x7: Board) -> None:
-    """Every terminal condition traces to a signed value, not to a literal."""
+    """Every terminal condition traces to a signed value, not to a literal.
+
+    Compared against the configuration rather than against numbers typed in
+    here, which is what the docstring always claimed and the assertions did not
+    do: they matched the shipped values, so they were only ever testing that
+    nobody had negotiated anything. That is not the failure worth catching —
+    `from_config` reading the wrong *key* is, and a wrong key answers None
+    against every one of these.
+
+    Not tautological while any flag disagrees with its dataclass default: since
+    16/08 `swap_is_capture` is signed `false` against a default of `True`, so a
+    `from_config` that quietly fell back to the defaults fails this line.
+    """
     built = Rules.from_config(minimal_config, board_7x7)
-    assert built.survival_threshold == 35
-    assert built.resolution == "after_moves"
-    assert built.stay_counts_as_move is False
-    assert built.swap_is_capture is True
-    assert built.board.grid_size == minimal_config.require("board_and_agents.grid_size")
+    require = minimal_config.require
+    assert built.survival_threshold == require("movement_and_barriers.survival_threshold")
+    assert built.resolution == require("capture.resolution")
+    assert built.stay_counts_as_move == require("capture.stay_counts_as_move")
+    assert built.swap_is_capture == require("capture.swap_is_capture")
+    assert built.board.grid_size == require("board_and_agents.grid_size")
 
 
 def test_the_configured_start_positions_are_not_already_terminal(

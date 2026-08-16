@@ -152,7 +152,12 @@ def test_flipping_the_transmission_rule_changes_the_digest() -> None:
 
 
 def test_a_stated_reading_mismatch_refuses(ours, mirror) -> None:
-    theirs = replace(mirror, readings=dict(mirror.readings, **{"capture.swap_is_capture": "false"}))
+    # The opposite of whatever we signed, not a literal. Pinning "false" made
+    # this test pass by *agreeing* with us the day we signed C-006c off (16/08),
+    # which is the one outcome it exists to rule out.
+    mine = mirror.readings["capture.swap_is_capture"]
+    flipped = "false" if mine == "true" else "true"
+    theirs = replace(mirror, readings=dict(mirror.readings, **{"capture.swap_is_capture": flipped}))
     locked = settle(ours, theirs)
     assert locked.result == REFUSED_READING_MISMATCH
     assert "C-006c" in locked.reasons[0]

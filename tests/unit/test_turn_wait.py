@@ -24,9 +24,10 @@ from core.compat.turn_wait import (
 
 @dataclass
 class _Inboxes:
-    """Just the one queue the waiter reads."""
+    """The one queue the waiter reads, and the shelf it puts the rest on."""
 
     agreements: queue.Queue = field(default_factory=queue.Queue)
+    held: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -80,6 +81,35 @@ async def test_an_agreement_for_another_sub_game_is_skipped_not_refused() -> Non
     session.inboxes.agreements.put(_agreement(3))
 
     assert (await collect_our_agreement(session, 1.0, {}))["sub_game_number"] == 3
+
+
+async def test_an_agreement_we_are_not_ready_for_is_kept_not_thrown_away() -> None:
+    """🐛 **Skipping it was only half the fix**, and the half that was missing is
+    the one that cost two match windows.
+
+    The message was taken off the queue and dropped. Against our own peers that
+    is survivable, because `await_agreement` re-sends every 30 s — so every test
+    above passed and the drill passed too, as long as both sides were ours. An
+    opponent that pushes its agreement **once**, which the reference runner
+    does, is deadlocked outright: it sends the sub-game 2 agreement while we are
+    still playing 1, we bin it, and then both sides wait forever for a message
+    that was already delivered.
+
+    Caught by `scripts/drill_answering_path.py` on 16/08, not by this file —
+    which is the argument for the drill existing.
+    """
+    inboxes = _Inboxes()
+    early = _Session(sub_game_number=1, inboxes=inboxes)
+    early.inboxes.agreements.put(_agreement(2))
+    with pytest.raises(AgreementTimeoutError):
+        await collect_our_agreement(early, 0.15, {})
+
+    assert inboxes.held == {2: _agreement(2)}, "an early agreement must survive the wait"
+
+    # ...and is found when we get there, with nothing further arriving.
+    later = _Session(sub_game_number=2, inboxes=inboxes)
+    assert (await collect_our_agreement(later, 0.0, {}))["sub_game_number"] == 2
+    assert inboxes.held == {}, "taken off the shelf, not left to be re-read"
 
 
 async def test_silence_raises_the_timeout_type_not_a_bare_refusal() -> None:

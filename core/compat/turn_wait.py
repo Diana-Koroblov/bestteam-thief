@@ -17,12 +17,20 @@ played wrong is a technical loss worth 0 to both teams (M#35).
 
 Two rules follow, and both are here:
 
-* **An agreement stamped for a sub-game that is not ours is skipped, never
-  refused.** It is the opponent being somewhere else in the series, which is
-  normal in an alternating split, not a disagreement about the game. Refusing
-  it is how the deadlock above starts. This mirrors `session.collect_audit`,
-  which already skips an audit stamped with an earlier sub-game for exactly the
-  same reason.
+* **An agreement stamped for a sub-game that is not ours is held, never refused
+  and never discarded.** It is the opponent being somewhere else in the series,
+  which is normal in an alternating split, not a disagreement about the game.
+  Refusing it is how the deadlock above starts.
+
+  🐛 *Skipping* it was only half a fix, and the drill on 16/08 caught the other
+  half: the message was taken off the queue and dropped on the floor. A peer
+  ahead of us pushes its sub-game 2 agreement while we are still playing
+  sub-game 1 — that push is not noise, it is precisely the message we will need
+  forty seconds later — and we threw it away, then waited for a repeat. Our own
+  peers survive it because `await_agreement` re-sends every 30 s; an opponent
+  that pushes **once**, which the reference runner does, is deadlocked by it.
+  So it goes into `Inboxes.held`, keyed by the sub-game it names, and is the
+  first thing looked at when we reach that sub-game.
 * **Our own agreement is re-sent while we wait.** One push is not enough when
   the peer may legitimately drop it for being early: the message that mattered
   is the one they were ready to receive, and only a repeat gets it there.
@@ -110,7 +118,12 @@ async def push_agreement(client: Any, message: dict, seconds: float) -> None:
 
 
 async def collect_our_agreement(session: Any, wait: float, ours: dict) -> dict:
-    """Return the opponent's agreement **for this sub-game**, skipping others.
+    """Return the opponent's agreement **for this sub-game**, holding others.
+
+    Looks in `Inboxes.held` before the queue: under an alternating split their
+    agreement for our sub-game routinely arrives while we are still playing the
+    previous one, so by the time we ask for it the queue is the wrong place to
+    look — see the module docstring for the deadlock that caused.
 
     Args:
         session: The `ReferenceSession` whose `sub_game_number` decides which
@@ -129,6 +142,10 @@ async def collect_our_agreement(session: Any, wait: float, ours: dict) -> dict:
             different physics produce an audit that reports forgery against two
             honest teams (M#11).
     """
+    held = session.inboxes.held.pop(session.sub_game_number, None)
+    if held is not None:
+        session.warnings.extend(verify_agreement(ours, held))
+        return held
     deadline = time.monotonic() + wait
     while time.monotonic() < deadline:
         try:
@@ -141,6 +158,7 @@ async def collect_our_agreement(session: Any, wait: float, ours: dict) -> dict:
             stamped != session.sub_game_number
         ):
             # Them, elsewhere in the series. Normal under an alternating split.
+            session.inboxes.held[stamped] = theirs
             continue
         session.warnings.extend(verify_agreement(ours, theirs))
         return theirs

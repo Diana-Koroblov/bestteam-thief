@@ -145,6 +145,16 @@ def test_draining_clears_turns_but_leaves_agreements() -> None:
     assert not inboxes.agreements.empty()
 
 
+def test_draining_between_sub_games_does_not_clear_the_held_agreements() -> None:
+    """`drain` runs at every sub-game boundary, which is exactly when a held
+    agreement is one boundary away from being needed. Clearing it there would
+    undo the fix in `turn_wait` without touching that file."""
+    inboxes = Inboxes()
+    inboxes.held[2] = {"terms": {}}
+    inboxes.drain()
+    assert inboxes.held == {2: {"terms": {}}}
+
+
 def test_our_terms_carry_the_values_we_actually_signed() -> None:
     config = load_config(role_dir(PRESENT_ROLES[0]))
     terms = terms_from_config(config)

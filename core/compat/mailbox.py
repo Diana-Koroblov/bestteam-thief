@@ -40,22 +40,28 @@ class Inboxes:
         controls: Advisory signals. Accepted and drained so a peer that sends
             them is not met with an error, and never acted on — our series is
             driven by our own plan, not by an opponent's restart request.
+        held: Agreements that arrived stamped for a sub-game we had not reached
+            yet, kept by that number until we do. **This object outlives the
+            individual `ReferenceSession`s** — one is built per sub-game — which
+            is exactly why the holding lives here and not on the session.
     """
 
     def __init__(self) -> None:
-        """Start with four empty inboxes."""
+        """Start with four empty inboxes and nothing held."""
         self.agreements: queue.Queue = queue.Queue()
         self.turns: queue.Queue = queue.Queue()
         self.audits: queue.Queue = queue.Queue()
         self.controls: queue.Queue = queue.Queue()
+        self.held: dict[int, dict] = {}
 
     def drain(self) -> None:
-        """Discard everything pending except agreements.
+        """Discard everything pending except agreements — held or queued.
 
         Called between sub-games. A turn left over from the sub-game just
         finished would be consumed as the opening move of the next one, and the
         board it describes no longer exists. Agreements are left alone because
-        the opponent may legitimately have re-negotiated already.
+        the opponent may legitimately have re-negotiated already, and `held` is
+        left alone because its whole purpose is to survive this call.
         """
         for inbox in (self.turns, self.audits, self.controls):
             while True:
