@@ -16,7 +16,7 @@ settle the model and which implementation we are facing.
 from __future__ import annotations
 
 from core.crypto.canonical import digest
-from core.domain.scent import EMISSION, decay
+from core.domain.scent import decay, intensity
 
 __all__ = [
     "scent_model_payload",
@@ -40,6 +40,23 @@ WORKED_EXAMPLE_INPUT = 0.90
 SAMPLING_MODE = "end_of_previous_full_turn"
 
 
+def _emission_table(model: str) -> dict[str, float]:
+    """Return ``{"d²": intensity}`` for the kernel *model* actually emits.
+
+    Keyed by squared distance for both models, because that is the shape this
+    document has always published and an opponent's parser expects. It stays
+    unambiguous under the subtractive rings too: every offset with the same d²
+    sits on the same Chebyshev ring, so no key is ever assigned two values.
+    """
+    from core.domain.scent import RADIUS
+
+    table: dict[str, float] = {}
+    for d_row in range(-RADIUS, RADIUS + 1):
+        for d_col in range(-RADIUS, RADIUS + 1):
+            table[str(d_row * d_row + d_col * d_col)] = intensity(d_row, d_col, model)
+    return dict(sorted(table.items(), key=lambda item: int(item[0])))
+
+
 def scent_model_payload(
     rate: float, model: str, grid_size: int, includes_current_turn: bool = True
 ) -> dict:
@@ -58,10 +75,17 @@ def scent_model_payload(
     25-cell grid: it is the same information, half the payload, and it makes a
     disagreement about *one* radius obvious instead of hiding it among 25
     numbers that differ in one place.
+
+    🐛 **The table used to be `EMISSION` whatever the model said**, so this
+    document declared the book's Euclidean kernel even for a match negotiated
+    onto the reference's subtractive rings — the digest asserted physics we
+    were not playing, which is worse than a disagreement because it is a
+    disagreement that verifies. Derived from `intensity` now, so the document
+    and the field are read from one definition.
     """
     after = decay({(0, 0): WORKED_EXAMPLE_INPUT}, rate, model).get((0, 0), 0.0)
     return {
-        "emission_by_squared_distance": {str(d): v for d, v in sorted(EMISSION.items())},
+        "emission_by_squared_distance": _emission_table(model),
         "grid_size": grid_size,
         "decay_rate": rate,
         "decay_model": model,

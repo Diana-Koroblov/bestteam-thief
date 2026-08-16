@@ -73,8 +73,9 @@ def _send(
         game_uid_value=uid,
         timezone=str(sdk.runtime.orchestrator.config.get("network.timezone", "Asia/Jerusalem")),
         repos={our_group: our_identity.get("repos", {}), their_group: their_identity.get("repos", {})},
-        games_played=_games_played(our_group, their_group),
+        games_played=_games_played(our_group, their_group, their_identity),
         first_meeting=_first_meeting(their_group),
+        tie_score=int(sdk.runtime.orchestrator.config.require("scoring.tie_score")),
     )
     write(result, out, f"result_{gid}.json")
 
@@ -84,15 +85,42 @@ def _send(
             f"{LABEL}held back - {path.name} covers {len(merged)} of {expected} sub-games\n"
             "  the other role process files the rest (M#35)\n" + MANUAL
         )
+    # 🐛 **Row count is not the same question as "did six sub-games happen".**
+    # A window nobody played still produces a row — a `technical_loss` — so this
+    # gate passed on 16/08 with three of six sub-games never having exchanged a
+    # turn, and mailed a lecturer-shaped artefact for a series that measured
+    # nothing. Filing it is right; the file is the evidence. SENDING it is not.
+    unplayed = [
+        row["sub_game_number"] for row in merged if not league_report.settled(row)
+    ]
+    if unplayed:
+        return (
+            f"{LABEL}FILED but NOT SENT - {path.name}\n"
+            f"  sub-game(s) {unplayed} never completed a mutual reveal, so this series\n"
+            "  is not a measurement of anything and no report should be filed by either\n"
+            "  side (imreeyal Stage 7). Re-run, or send by hand if you disagree.\n" + MANUAL
+        )
     if not counted:
         return _send_friendly(sdk, args, path)
     return _send_counted(sdk, path)
 
 
-def _games_played(our_group: str, their_group: str) -> dict[str, int | None]:
-    """Ours is always known; theirs is null unless they declared it (SPEC §6.2:
-    a count is each team's own unverifiable claim, so null is *unclaimed*, not 0)."""
-    return {our_group: counted_matches(), their_group: None}
+def _games_played(
+    our_group: str, their_group: str, their_identity: dict[str, Any] | None = None
+) -> dict[str, int | None]:
+    """Ours is always known; theirs is whatever they declared, else null.
+
+    SPEC §6.2: a count is each team's own unverifiable claim, so null means
+    *unclaimed* rather than 0 — but it must only mean that when they really did
+    not claim. 🐛 We hard-coded None and so filed `imreeyal: null` through a
+    series in which every one of their greetings declared 6. Reading it back is
+    not endorsing it; it is reporting their claim as theirs.
+    """
+    declared = (their_identity or {}).get("counted_games_played")
+    return {
+        our_group: counted_matches(),
+        their_group: declared if isinstance(declared, int) else None,
+    }
 
 
 def _first_meeting(their_group: str) -> bool:

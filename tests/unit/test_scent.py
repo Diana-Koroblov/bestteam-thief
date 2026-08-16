@@ -183,3 +183,78 @@ def test_the_digest_is_stable_across_calls() -> None:
     from core.crypto.scent_model import scent_model_digest
 
     assert len({scent_model_digest(0.10, "multiplicative", 5) for _ in range(10)}) == 1
+
+
+# --- the emission kernel belongs to the model (imreeyal, 16/08) --------------
+
+
+def test_the_subtractive_model_emits_flat_chebyshev_rings() -> None:
+    """🐛 **We emitted the book's kernel under a subtractive agreement.**
+
+    The registered subtractive document (81ebee59...) specifies three flat
+    rings by Chebyshev distance, 0.9 / 0.6 / 0.3 — not the book's Euclidean
+    falloff. Emitting one while declaring the other is declared-and-differ: it
+    plays a legal, verifiable game and then two teams' records disagree about
+    physics in front of a grader. imreeyal's check refused 105 of 105 frames.
+    """
+    field = emit((3, 3), Board(grid_size=7), "subtractive")
+
+    assert sorted({round(v, 3) for v in field.values()}, reverse=True) == [0.9, 0.6, 0.3]
+    assert field[(3, 3)] == 0.90
+    assert field[(3, 4)] == 0.60, "orthogonal neighbour is ring 1"
+    assert field[(2, 2)] == 0.60, "so is the DIAGONAL - Chebyshev, not Euclidean"
+    assert field[(1, 1)] == 0.30, "and the diagonal corner is ring 2, not dropped"
+
+
+def test_the_book_model_still_emits_the_euclidean_kernel() -> None:
+    """The other half of the same guard: fixing one model must not move the other."""
+    field = emit((3, 3), Board(grid_size=7), "multiplicative")
+
+    assert field[(3, 3)] == 0.90
+    assert field[(3, 4)] == 0.62
+    assert field[(2, 2)] == 0.42, "diagonal falls off faster than orthogonal here"
+    assert field[(1, 1)] == 0.04
+
+
+def test_one_subtractive_decay_reproduces_the_values_the_opponent_expects() -> None:
+    """The exact frame imreeyal's physics check wants to see at step 1.
+
+    They reconstructed our old hybrid from its values: {0.8, 0.52, 0.32, 0.1,
+    0.04} on 21 cells was the book kernel minus 0.1 with the sub-zero corners
+    gone. The registered model gives three rings on all 25.
+    """
+    aged = decay(emit((3, 3), Board(grid_size=7), "subtractive"), 0.10, "subtractive")
+
+    assert sorted({round(v, 3) for v in aged.values()}, reverse=True) == [0.8, 0.5, 0.2]
+    assert len(aged) == 25, "no cell decays below zero, so none drops out"
+
+
+def test_our_merge_order_transmits_what_the_reference_order_would() -> None:
+    """The reference is emit -> merge-by-max -> decay; we decay -> merge.
+
+    imreeyal raised this as a possible divergence (16/08) after finding the kit
+    registers no vector for the subtractive merge at all. The two orders give
+    genuinely different INTERNAL trails — ours is one decay younger at every
+    cell — but the field that reaches the wire is identical, because
+    `core/compat/turns.py` decays once more on the way out and subtracting a
+    constant commutes with `max`:
+
+        decay(merge(decay(t), e)) == decay(merge(t, e))  when decay(t) == the
+        reference's own previous field, which holds by induction from empty.
+
+    Asserted rather than argued, because the algebra stops holding the moment
+    anyone reorders those calls — and nothing else in the suite would notice.
+    """
+    board = Board(grid_size=7)
+    ours: dict = {}
+    reference: dict = {}
+    for cell in [(3, 3), (3, 4), (2, 4), (2, 4), (2, 3), (2, 3), (1, 3)]:
+        ours = merge(decay(ours, 0.10, "subtractive"), emit(cell, board, "subtractive"))
+        reference = decay(
+            merge(reference, emit(cell, board, "subtractive")), 0.10, "subtractive"
+        )
+        transmitted = {c: round(v, 3) for c, v in decay(ours, 0.10, "subtractive").items() if v > 0}
+        expected = {c: round(v, 3) for c, v in reference.items() if v > 0}
+        assert transmitted == expected, f"diverged after arriving at {cell}"
+
+    assert ours != reference, "the internal trails really are different objects"

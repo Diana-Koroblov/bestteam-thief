@@ -18,7 +18,6 @@ from pathlib import Path
 import pytest
 
 from core.infra.gmail_sender import (
-    BODY_TEXT,
     SEND_SCOPE,
     GmailError,
     GmailSender,
@@ -43,9 +42,15 @@ class StubConfig:
 
 
 def report_file(directory: Path) -> Path:
-    """Write a result artefact and return its path."""
+    """Write a result artefact and return its path.
+
+    Terminated with a newline because `core.report.artefacts.write` emits one —
+    a MIME text part must end with a line break, and the body can only equal
+    the file byte-for-byte if the file already has it. A fixture without it
+    would be testing a document this project never produces.
+    """
     target = directory / "result_2026-08-12_a-vs-b_abc.json"
-    target.write_bytes(json.dumps(REPORT, ensure_ascii=False).encode("utf-8"))
+    target.write_bytes(json.dumps(REPORT, ensure_ascii=False).encode("utf-8") + b"\n")
     return target
 
 
@@ -94,17 +99,48 @@ def test_the_report_travels_as_a_json_attachment(tmp_path: Path) -> None:
     assert json.loads(attachments[0].get_payload(decode=True).decode("utf-8")) == REPORT
 
 
-def test_the_body_carries_no_report_data(tmp_path: Path) -> None:
-    """**M#33.** A grader parsing the attachment must not find a second, possibly
-    disagreeing, copy in the prose."""
+def test_the_body_is_the_attachment_byte_for_byte(tmp_path: Path) -> None:
+    """**M#33, read for what it actually forbids.**
+
+    The rule guards against a grader finding a second, *possibly disagreeing*,
+    copy of the result in the prose. This asserted the old answer to that — a
+    fixed sentence carrying no match data — which is one way to be safe and not
+    the league's way: the convention is body == attached bytes, so two teams'
+    mails can be diffed without opening anything. A body generated from the
+    attachment's own bytes cannot disagree with it, which satisfies M#33 by
+    construction rather than by omission.
+
+    We had confirmed that convention three times in writing while shipping the
+    contradiction (imreeyal 16/08, item 6c).
+    """
+    sender, sent, path = build(tmp_path)
+    sender.send_result(path)
+
+    parts = list(decoded(sent[0]).walk())
+    body = next(p for p in parts if p.get_content_type() == "text/plain")
+    attachment = next(p for p in parts if p.get_filename())
+    # STRICT equality, no tolerance for a trailing byte: `write` emits the
+    # newline a MIME text part requires, so the file, the body and the
+    # attachment are one byte-string. imreeyal's differ is strict and has
+    # failed a pairing's report over ten bytes.
+    assert body.get_payload(decode=True) == path.read_bytes()
+    assert body.get_payload(decode=True) == attachment.get_payload(decode=True)
+    assert json.loads(body.get_payload(decode=True)) == REPORT
+
+
+def test_the_body_is_base64_so_transit_cannot_rewrap_it(tmp_path: Path) -> None:
+    """The byte-equality above is worthless if the bytes change in flight.
+
+    A text part with no explicit content-transfer-encoding gets re-wrapped at
+    column 72 by mail infrastructure, which rewrites exactly what a strict
+    differ compares. That is not hypothetical: it is how another pairing's
+    report failed, and the difference was ten bytes.
+    """
     sender, sent, path = build(tmp_path)
     sender.send_result(path)
 
     body = next(p for p in decoded(sent[0]).walk() if p.get_content_type() == "text/plain")
-    text = body.get_payload(decode=True).decode("utf-8")
-    assert text.strip() == BODY_TEXT.strip()
-    for leaked in ("game_id", "totals", "2026-08-12_a-vs-b_abc", "30"):
-        assert leaked not in text
+    assert body["Content-Transfer-Encoding"] == "base64"
 
 
 def test_a_non_ascii_report_survives_the_attachment(tmp_path: Path) -> None:

@@ -88,6 +88,10 @@ async def send_turn(session: Any, owed: dict | None) -> None:
         decision.move.value,
         decision.intent.value,
         reveal.hint,
+        # Our first record of this sub-game only — the step-0 record their
+        # artefact reads the commit column from (M#53). Repeating it on all 35
+        # turns would seal the same string 35 times to say one thing once.
+        github_commit=str(session.identity.get("github_commit", "")) if not session.sent else "",
     )
     record = {"payload": payload, **sealing.seal(payload)}
     session.records.append(record)

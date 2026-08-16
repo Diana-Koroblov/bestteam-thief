@@ -80,7 +80,7 @@ class TrailTracker:
         then merge the fresh 5x5. Emitting before decaying would fade the
         deposit we just laid and make every reconstructed reading one turn old.
         """
-        self.emitted = merge(decay(self.emitted, self.rate, self.model), emit(position, board))
+        self.emitted = merge(decay(self.emitted, self.rate, self.model), emit(position, board, self.model))
         self.visits.append(position)
 
     def reset(self) -> None:

@@ -23,7 +23,7 @@ into it deliberately.
 from __future__ import annotations
 
 from core.domain.board import Board, Position
-from core.domain.scent import EMISSION, RADIUS
+from core.domain.scent import RADIUS, intensity
 
 __all__ = ["uniform", "predict", "update_from_scent", "mask", "normalise", "entropy", "peak"]
 
@@ -79,25 +79,34 @@ def predict(
     return normalise(spread)
 
 
-def _likelihood(reading: float, candidate: Position, source: Position) -> float:
+def _likelihood(
+    reading: float, candidate: Position, source: Position, model: str = "multiplicative"
+) -> float:
     """Return how well *candidate* explains a scent *reading* at *source*.
 
     If the opponent stood on *candidate*, the deposit at *source* would be the
     published value for that separation. The closer the reading is to it, the
     better the explanation.
+
+    *model* is the NEGOTIATED one, because this inverts the opponent's emission
+    kernel and the two models emit different shapes. Reading a subtractive
+    peer's flat Chebyshev rings against the book's Euclidean falloff scores the
+    true cell no better than its neighbours — the filter stays blurred and the
+    cop chases a smear. Ours did exactly that for every match played under
+    subtractive before 16/08.
     """
     d_row, d_col = source[0] - candidate[0], source[1] - candidate[1]
-    squared = d_row * d_row + d_col * d_col
     if max(abs(d_row), abs(d_col)) > RADIUS:
         # Out of emission range: this candidate predicts silence here.
         return 1.0 - min(reading, 1.0)
-    return max(0.0, 1.0 - abs(EMISSION[squared] - reading))
+    return max(0.0, 1.0 - abs(intensity(d_row, d_col, model) - reading))
 
 
 def update_from_scent(
     belief: dict[Position, float],
     field: dict[Position, float],
     board: Board,
+    model: str = "multiplicative",
 ) -> dict[Position, float]:
     """Reweight *belief* by how well each cell explains the opponent's field (4.2.1.c).
 
@@ -105,6 +114,8 @@ def update_from_scent(
         belief: The predicted prior.
         field: The scent the opponent transmitted this turn.
         board: Geometry.
+        model: The negotiated decay model, which also fixes the emission
+            geometry this inverts — see `_likelihood`.
 
     An empty field leaves the belief untouched. That is the "silence is not
     absence" rule at the top level: no reading is no evidence, and a filter that
@@ -117,7 +128,7 @@ def update_from_scent(
     for candidate, prior in belief.items():
         weight = 1.0
         for source, reading in field.items():
-            weight *= max(_likelihood(reading, candidate, source), SILENT_LIKELIHOOD)
+            weight *= max(_likelihood(reading, candidate, source, model), SILENT_LIKELIHOOD)
         updated[candidate] = prior * weight
     return normalise(updated)
 

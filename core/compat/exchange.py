@@ -98,7 +98,13 @@ def synthetic_reveal(message: Any, theirs: Role) -> Reveal:
 
 
 def sealed_payload(
-    state: Any, position: Position, grid_size: int, move: str, intent: str, hint: str
+    state: Any,
+    position: Position,
+    grid_size: int,
+    move: str,
+    intent: str,
+    hint: str,
+    github_commit: str = "",
 ) -> dict[str, Any]:
     """Return the record we seal for this turn.
 
@@ -107,9 +113,23 @@ def sealed_payload(
     exactly what we supply and neither side has to have agreed its shape. That
     is what makes this protocol auditable against a stranger — and it is the
     one place where the reference's design is plainly better than our own.
+
+    Args:
+        github_commit: Included only when non-empty, which the caller does for
+            our FIRST record of a sub-game. 🐛 It was in the handshake identity
+            block but never here, and imreeyal populate their artefact's commit
+            column from the sealed step-0 record — so their file recorded an
+            empty commit for us across all six sub-games of a clean series.
+            Sealing it also makes it *evidence* rather than a claim: it is
+            inside the commitment, so it cannot be revised after the fact.
+
+            Absent rather than empty when unknown. A key present with a blank
+            value is a declaration that we have no commit; an absent key hashes
+            exactly as it did before this argument existed, which keeps every
+            turn that does not carry one byte-identical to the old shape.
     """
     barriers = sorted([list(cell) for cell in state.barriers])
-    return {
+    payload = {
         "step": int(state.step),
         "state": f"grid={grid_size}x{grid_size};self={list(position)};barriers={barriers}",
         "position": list(position),
@@ -118,3 +138,6 @@ def sealed_payload(
         "verdict": intent,
         "hint": hint,
     }
+    if github_commit:
+        payload["github_commit"] = github_commit
+    return payload

@@ -16,10 +16,17 @@ BOARD = Board(grid_size=7)
 
 
 def engine_trail(path, rate=0.10, model="multiplicative") -> dict:
-    """Replay *path* the way `selfplay.Side.emit_and_age` does."""
+    """Replay *path* the way `selfplay.Side.emit_and_age` does.
+
+    *model* reaches `emit` as well as `decay`: the two models disagree about
+    the emission GEOMETRY, not only the falloff, so a helper that decayed
+    subtractively over the book's kernel would rebuild the exact hybrid this
+    project shipped by accident until 16/08 — and then assert the engine
+    matched it.
+    """
     field: dict = {}
     for cell in path:
-        field = merge(decay(field, rate, model), emit(cell, BOARD))
+        field = merge(decay(field, rate, model), emit(cell, BOARD, model))
     return field
 
 

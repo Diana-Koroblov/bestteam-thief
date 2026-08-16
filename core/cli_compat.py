@@ -32,6 +32,7 @@ from core.compat.mailbox import Inboxes, build_reference_tools
 from core.compat.session import HandshakeError, ReferenceSession, reconnect
 from core.compat.turn_wait import TURN_WAIT_SECONDS, await_agreement
 from core.infra.errors import PeerError
+from core.infra.mcp_client import quieten_expected_disconnects
 from core.protocol.schemas import Role
 from core.reference_identity import identity_of
 from core.report.artefacts import utc_now
@@ -54,6 +55,11 @@ def play_reference(sdk: PeerSDK, args: argparse.Namespace) -> int:
             f"the {sdk.role.value} repository no sub-games to play (C-011)"
         )
 
+    # Once, before anything dials. This path talks to a peer that restarts per
+    # sub-game, so the SDK's disconnect chatter is guaranteed rather than
+    # exceptional — and it prints at the boundary, next to whatever else is
+    # going on, which is how it got blamed for four different things on 16/08.
+    quieten_expected_disconnects()
     inboxes = Inboxes()
     spec = sdk.server_spec(args.port, tools=build_reference_tools(inboxes))
     manager = sdk.tunnel(port=spec.port) if args.tunnel else None
@@ -148,10 +154,20 @@ async def _series(
             # Waits for an agreement stamped for THIS sub-game, re-sending ours
             # meanwhile: under an alternating split our plan has gaps and the
             # opponent is two sub-games away. See core/compat/turn_wait.py.
+            # `redial` is how the waiter gets a live socket back. It has to come
+            # from here: `turn_wait` may not import the transport (M#3), and the
+            # wait itself runs for minutes across however many times the peer
+            # restarts, so the client it began with is routinely a corpse long
+            # before their agreement arrives.
+            async def redial() -> Any:
+                await reconnect(sdk, args.opponent)
+                return sdk.opponent
+
             theirs = await await_agreement(
                 session, sdk.opponent, message,
                 total_wait=float(getattr(args, "turn_wait", TURN_WAIT_SECONDS)),
                 push_wait=float(args.wait),
+                redial=redial,
             )
             # Redial before the first turn. The wait above legitimately runs for
             # minutes while they play a sub-game that is not ours and restart

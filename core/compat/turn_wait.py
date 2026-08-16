@@ -47,6 +47,7 @@ from __future__ import annotations
 import asyncio
 import queue
 import time
+from contextlib import suppress
 from typing import Any
 
 from core.compat.pairing import HandshakeError, verify_agreement
@@ -95,13 +96,27 @@ class AgreementTimeoutError(HandshakeError):
     """
 
 
-async def push_agreement(client: Any, message: dict, seconds: float) -> None:
+async def push_agreement(
+    client: Any, message: dict, seconds: float, redial: Any = None
+) -> Any:
     """Send our agreement, retrying while the opponent is still starting up.
+
+    Returns the client the push finally succeeded on — which is **not** always
+    the one passed in, and callers must keep it.
 
     Only a **transport** failure is retried. Peers legitimately start seconds
     apart, and the native path gives the same courtesy in `cli_handshake.greet`.
     A refusal on the merits is not retryable and is not raised here at all — it
     comes back later, as their agreement failing to verify.
+
+    🐛 **Every retry used to reuse the dead socket.** Against a peer that starts
+    a fresh process per sub-game — the reference runner does — the session dies
+    the instant they rebind, so every retry failed for the one reason retrying
+    could never fix, and the loop ran its whole budget out before raising. Live
+    against imreeyal on 16/08: sub-game 1 settled clean, then our thief printed
+    `no answer yet; retrying` until the window died. *Their door was healthy the
+    whole time.* So `redial` is called between attempts, and a redial that fails
+    is itself just another thing to retry — the peer may still be down.
     """
     from core.infra.errors import TransportError
 
@@ -109,12 +124,15 @@ async def push_agreement(client: Any, message: dict, seconds: float) -> None:
     while True:
         try:
             await client.call("negotiate", message, argument="message")
-            return
+            return client
         except TransportError:
             if time.monotonic() >= deadline:
                 raise
             print(f"  no answer yet; retrying for {deadline - time.monotonic():.0f}s more ...")
             await asyncio.sleep(PUSH_RETRY_SECONDS)
+            if redial is not None:
+                with suppress(Exception):
+                    client = await redial()
 
 
 async def collect_our_agreement(session: Any, wait: float, ours: dict) -> dict:
@@ -173,24 +191,54 @@ async def await_agreement(
     push_wait: float = 120.0,
     repush_every: float = REPUSH_SECONDS,
     announce: Any = print,
+    redial: Any = None,
 ) -> dict:
     """Push our agreement and wait for theirs, re-sending until our turn comes.
 
-    Returns their agreement. Raises `AgreementTimeoutError` if *total_wait* passes
-    with nothing for this sub-game, or `HandshakeError` the moment something
-    arrives for this sub-game that does not verify — the second is fatal at
-    once rather than retried, because repeating an exchange cannot make two
-    different contracts agree.
+    Args:
+        redial: Awaited to get a fresh client when the current one stops
+            answering, and passed on to every retry inside `push_agreement`.
+            **Required in practice against a peer that restarts per sub-game**:
+            this loop legitimately runs for minutes, and the socket it started
+            with does not survive that. Optional only so the unit tests can
+            drive the loop without a transport (M#3 — this module must not
+            import one).
+
+    Returns their agreement. Raises `AgreementTimeoutError` if *total_wait*
+    passes with nothing for this sub-game, or `HandshakeError` the moment
+    something arrives for this sub-game that does not verify — the second is
+    fatal at once rather than retried, because repeating an exchange cannot
+    make two different contracts agree.
     """
     deadline = time.monotonic() + total_wait
     waited = False
     while True:
-        await push_agreement(client, message, push_wait)
+        client = await push_agreement(client, message, push_wait, redial=redial)
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise AgreementTimeoutError("the opponent never sent its agreement")
         try:
-            return await collect_our_agreement(session, min(repush_every, remaining), message)
+            theirs = await collect_our_agreement(session, min(repush_every, remaining), message)
+            # 🐛 **A push that succeeded is not a push that arrived anywhere
+            # useful.** Against a peer that runs one process per sub-game, ours
+            # routinely lands in the PREDECESSOR — the process still finishing
+            # the previous sub-game against our other role — moments before it
+            # exits, taking our agreement with it. Nothing looks wrong from
+            # here: the call returned, so we stop re-sending, and their next
+            # process starts with an empty inbox and waits for a message it
+            # will never get. Their agreement is the first hard evidence that
+            # the process which will actually PLAY our sub-game is alive, so
+            # that is the moment to send ours — once more, on a fresh socket.
+            #
+            # Best-effort: they may already hold ours, and a duplicate is
+            # harmless (their mailbox queues it and the handshake takes one).
+            # A failure here must not lose a sub-game we have just agreed.
+            if redial is not None:
+                with suppress(Exception):
+                    client = await redial()
+            with suppress(Exception):
+                await push_agreement(client, message, 0.0)
+            return theirs
         except AgreementTimeoutError:
             if time.monotonic() >= deadline:
                 raise

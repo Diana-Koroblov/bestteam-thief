@@ -184,13 +184,20 @@ def test_the_filter_runs_once_per_turn_however_often_we_look(
 
 
 def test_a_reveal_transmits_this_turns_field_even_if_nobody_observed(
-    runtime: PeerRuntime,
+    runtime: PeerRuntime, minimal_config
 ) -> None:
     """Sending a stale trail would be a lie about the one channel that cannot
     lie — and under C-008 a *sealed* one. So the reveal advances the filter
-    itself rather than trusting a caller to have done it."""
+    itself rather than trusting a caller to have done it.
+
+    The expectation reads the model from the same config the runtime does.
+    Defaulting it here asserted the book's kernel against a peer playing the
+    shipped subtractive agreement, which is the hybrid we shipped by accident
+    until 16/08 — a test that pins the wrong physics is how it survived.
+    """
+    model = str(minimal_config.get("pheromones.decay_model", "multiplicative"))
     reveal = runtime.reveal_for(_north())
-    assert decode(reveal.scent) == emit(runtime.orchestrator.own_position, BOARD)
+    assert decode(reveal.scent) == emit(runtime.orchestrator.own_position, BOARD, model)
 
 
 def test_a_step_that_goes_backwards_is_a_new_sub_game(runtime: PeerRuntime) -> None:

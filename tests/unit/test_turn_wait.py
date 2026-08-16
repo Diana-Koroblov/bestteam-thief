@@ -148,9 +148,10 @@ async def test_our_agreement_is_re_sent_while_we_wait() -> None:
 
     original = module.push_agreement
 
-    async def counting_push(cl: Any, msg: dict, seconds: float) -> None:
-        await original(cl, msg, seconds)
+    async def counting_push(cl: Any, msg: dict, seconds: float, **kwargs: Any) -> Any:
+        live = await original(cl, msg, seconds, **kwargs)
         await arrive_late()
+        return live
 
     module.push_agreement = counting_push
     try:
@@ -163,6 +164,40 @@ async def test_our_agreement_is_re_sent_while_we_wait() -> None:
 
     assert theirs["sub_game_number"] == 5
     assert len(client.pushes) >= 2, "we must re-send, not push once and hope"
+
+
+async def test_a_dead_socket_is_redialled_rather_than_retried_forever() -> None:
+    """🐛 **The retry that could never work**, live against imreeyal on 16/08.
+
+    Their runner starts a fresh process per sub-game, so the session we hold
+    dies the moment they rebind — and every retry reused that same dead client.
+    The loop printed `no answer yet; retrying` for its entire budget and then
+    raised, while their door was healthy throughout. Sub-game 1 settled clean
+    and sub-game 2 never engaged, twice over.
+
+    Here the first client refuses everything, as a dead session does, and the
+    exchange can only complete if the waiter asks for a new one.
+    """
+    from core.infra.errors import TransportError
+
+    class _Dead:
+        async def call(self, *_args: Any, **_kwargs: Any) -> dict:
+            raise TransportError("session terminated")
+
+    session = _Session(sub_game_number=2)
+    live = _Client()
+
+    async def redial() -> Any:
+        session.inboxes.agreements.put(_agreement(2))
+        return live
+
+    theirs = await await_agreement(
+        session, _Dead(), {"sub_game_number": 2}, total_wait=5.0, push_wait=2.0,
+        repush_every=0.1, announce=lambda _line: None, redial=redial,
+    )
+
+    assert theirs["sub_game_number"] == 2
+    assert live.pushes, "the fresh client must be the one we go on to push with"
 
 
 async def test_the_total_budget_is_honoured_when_nobody_answers() -> None:

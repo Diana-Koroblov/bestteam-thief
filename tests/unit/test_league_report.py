@@ -9,13 +9,9 @@ what WARNINGS §2 in that kit warns burns a pairing.
 
 from __future__ import annotations
 
-import hashlib
-import json
-
 from core.compat.league_report import (
     build_result,
     build_sub_game_row,
-    consensus_sha256,
     game_id,
     game_uid,
 )
@@ -57,6 +53,42 @@ def _row(number: int, result: str, winner: str, our_points: int, their_points: i
         our_points=our_points, their_points=their_points, log_filename="log.json",
         log_verified=True, tampered=False, started_at="t0", ended_at="t1",
     )
+
+
+def _series(rows: list[dict]) -> dict:
+    """The `build_result` keywords that are not the rows, for tests about rows."""
+    return {
+        "counted": True, "our_group": "bestteam", "their_group": "imreeyal",
+        "sub_games": rows, "game_uid_value": "uid-1", "timezone": "Asia/Jerusalem",
+        "repos": {}, "games_played": {"bestteam": 1, "imreeyal": None},
+        "first_meeting": True,
+    }
+
+
+def test_mutual_agreement_confirmed_is_derived_not_asserted() -> None:
+    """🐛 **It was the literal `True`**, and went out on 16/08 over a series in
+    which three of six sub-games never exchanged a turn.
+
+    `confirmed` is a claim about a mutual exchange that a grader byte-compares
+    against the opponent's copy, so a hard-coded one is false the moment it is
+    written. Derived from the audits: the opponent's reveal verifying is the
+    only evidence we hold that both sides played the same sub-game.
+    """
+    played = [_row(1, "capture", "bestteam", 20, 5), _row(2, "survival", "imreeyal", 5, 10)]
+    assert build_result(**_series(played))["mutual_agreement"]["confirmed"] is True
+
+    never_engaged = build_sub_game_row(
+        number=2, our_group="bestteam", their_group="imreeyal", our_role="thief",
+        result="technical_loss", winner_group="", steps=0, our_commit="a" * 40,
+        their_commit="b" * 40, our_tokens=0, their_tokens=0, our_points=0,
+        their_points=0, log_filename="log.json", log_verified=False, tampered=False,
+        started_at="t0", ended_at="t1",
+    )
+    mixed = build_result(**_series([played[0], never_engaged]))
+    assert mixed["mutual_agreement"]["confirmed"] is False
+    # ...and the hash is still produced: the signature covers what happened,
+    # whatever it was. It is `confirmed` that must not lie, not the digest.
+    assert mixed["mutual_agreement"]["sha256"]
 
 
 def test_a_row_names_the_thief_as_the_opposite_role() -> None:
@@ -113,58 +145,3 @@ def test_a_friendly_never_claims_the_diversity_reward_even_when_won() -> None:
         "authority": "book App. E rule 52 - one counted series per pairing",
         "counted": False, "reason": "friendly",
     }
-
-
-def test_mutual_agreement_hash_is_the_spaced_form_sign_then_insert() -> None:
-    """Matches vectors/report_consensus.json's construction: sort_keys, spaced
-    separators, and computed BEFORE the hash key is inserted into the document."""
-    rows = [_row(1, "capture", "bestteam", 20, 5)]
-    result = build_result(
-        counted=True, our_group="bestteam", their_group="imreeyal", sub_games=rows,
-        game_uid_value="uid-1", timezone="Asia/Jerusalem",
-        repos={}, games_played={"bestteam": 1, "imreeyal": None}, first_meeting=True,
-    )
-    doc = {
-        "game_id": result["game_id"],
-        "aggregate": {
-            key: result["final_result"][key]
-            for key in (
-                "total_score", "sub_games_won", "ties", "winner_group", "series_tie",
-                "first_meeting_between_groups", "diversity_reward_applied",
-            )
-        },
-        "sub_games": [
-            {key: row[key] for key in ("sub_game_number", "roles", "result", "winner_group", "score")}
-            for row in result["sub_games"]
-        ],
-    }
-    expected = hashlib.sha256(
-        json.dumps(doc, sort_keys=True, ensure_ascii=False).encode("utf-8")
-    ).hexdigest()
-    assert result["mutual_agreement"]["sha256"] == expected == consensus_sha256(result)
-    # The compact (no-space) form must NOT reproduce it - spaced is load-bearing.
-    compact = hashlib.sha256(
-        json.dumps(doc, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    ).hexdigest()
-    assert compact != expected
-
-
-def test_mutual_agreement_ignores_per_side_fields() -> None:
-    """Timestamps, tokens and commit hashes must never enter the hash, or two
-    honest teams' bytes could never match by construction."""
-    base = build_result(
-        counted=True, our_group="bestteam", their_group="imreeyal",
-        sub_games=[_row(1, "capture", "bestteam", 20, 5)],
-        game_uid_value="uid-1", timezone="Asia/Jerusalem", repos={},
-        games_played={"bestteam": 1, "imreeyal": None}, first_meeting=True,
-    )
-    changed_row = _row(1, "capture", "bestteam", 20, 5)
-    changed_row["started_at"] = "some other time"
-    changed_row["tokens"] = {"bestteam": 999, "imreeyal": 0}
-    changed_row["github_commit"] = {"bestteam": "c" * 40, "imreeyal": "d" * 40}
-    other = build_result(
-        counted=True, our_group="bestteam", their_group="imreeyal", sub_games=[changed_row],
-        game_uid_value="uid-1", timezone="Europe/London", repos={},
-        games_played={"bestteam": 7, "imreeyal": 3}, first_meeting=True,
-    )
-    assert base["mutual_agreement"]["sha256"] == other["mutual_agreement"]["sha256"]

@@ -252,3 +252,33 @@ async def test_the_in_process_transport_is_not_paced() -> None:
     await client._pace()
     await client._pace()
     assert time.monotonic() - started < 0.1
+
+
+# --- log hygiene at a sub-game boundary -------------------------------------
+
+
+def test_only_the_expected_disconnects_are_silenced() -> None:
+    """The two benign records go; anything else on that logger stays.
+
+    A blanket `setLevel` was tried twice and was wrong twice: ERROR does not
+    suppress `logger.exception` at all, and CRITICAL would hide every genuine
+    client error along with the noise. Both lines print at the exact moment a
+    sub-game changes hands, so they land beside whatever else is happening —
+    they were blamed for four separate faults on 16/08, two of them mid-window.
+    """
+    import logging
+
+    from core.infra.mcp_client import quieten_expected_disconnects
+
+    quieten_expected_disconnects()
+    quieten_expected_disconnects()  # installing twice must not double the filter
+    logger = logging.getLogger("mcp.client.streamable_http")
+    assert len(logger.filters) == 1
+
+    def kept(message: str) -> bool:
+        record = logging.LogRecord(logger.name, logging.ERROR, "x.py", 1, message, None, None)
+        return all(item.filter(record) for item in logger.filters)
+
+    assert not kept("Error in post_writer")
+    assert not kept("Session termination failed: 404")
+    assert kept("Failed to send message"), "a real client failure must still surface"

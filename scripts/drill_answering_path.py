@@ -36,8 +36,9 @@ import argparse
 import asyncio
 import logging
 import sys
-from contextlib import suppress
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -104,42 +105,66 @@ async def _one(number: int, role: Role, url: str, inboxes: Inboxes, wait: float)
     return f"engaged, result {result!r}"
 
 
-async def _run(args: argparse.Namespace) -> int:
-    """Serve our mailbox, walk the plan, and report."""
+@asynccontextmanager
+async def _door(port: int, inboxes: Inboxes) -> Any:
+    """Stand the drill's mailbox up, and take it down again on the way out."""
     from core.infra.mcp_server import create_server
 
-    inboxes = Inboxes()
     sdk = PeerSDK(_config_dir(Role.COP), Role.COP)
-    spec = sdk.server_spec(args.port, tools=build_reference_tools(inboxes))
+    spec = sdk.server_spec(port, tools=build_reference_tools(inboxes))
     server = create_server(spec)
     serving = asyncio.create_task(
         server.run_async(transport="http", host=spec.host, port=spec.port,
                          uvicorn_config={"access_log": False})
     )
-    doors = {"cop": args.cop_url, "thief": args.thief_url}
-    verdicts: list[tuple[int, str, str]] = []
+    await asyncio.sleep(BIND_SECONDS)
     try:
-        await asyncio.sleep(BIND_SECONDS)
-        print(f"drill door      : http://127.0.0.1:{args.port}/mcp")
-        print(f"their cop       : {args.cop_url}")
-        print(f"their thief     : {args.thief_url}\n")
-        for number, role, door in PLAN:
-            print(f"  sub-game {number}  driver plays {role.value:5} -> their {door} door ...")
-            verdict = await _one(number, role, doors[door], inboxes, float(args.wait))
-            print(f"  sub-game {number}  {verdict}\n")
-            verdicts.append((number, door, verdict))
+        yield
     finally:
-        # The same deliberate-shutdown noise `cli_play` and `cli_compat` silence
-        # (uvicorn's `_serve()` has no try/finally around its main loop, so a
-        # cancelled server never reaches its own shutdown and asyncio force-
-        # cancels the lifespan task and every open SSE stream instead). It
-        # matters more here than there: this output is pasted to an opponent as
-        # evidence, and three CancelledError tracebacks above a PASSED line read
-        # like a drill that crashed on its way to claiming success.
-        logging.getLogger("uvicorn.error").setLevel(logging.CRITICAL)
         serving.cancel()
         with suppress(asyncio.CancelledError):
             await serving
+
+
+async def _walk(args: argparse.Namespace, inboxes: Inboxes) -> list[tuple[int, str, str]]:
+    """Play the plan, standing the door up once or once per sub-game."""
+    doors = {"cop": args.cop_url, "thief": args.thief_url}
+    verdicts: list[tuple[int, str, str]] = []
+
+    async def one(number: int, role: Role, door: str) -> None:
+        print(f"  sub-game {number}  driver plays {role.value:5} -> their {door} door ...")
+        verdict = await _one(number, role, doors[door], inboxes, float(args.wait))
+        print(f"  sub-game {number}  {verdict}\n")
+        verdicts.append((number, door, verdict))
+
+    plan = [entry for entry in PLAN if args.only in (None, entry[0])]
+    async with _door(args.port, inboxes):
+        for number, role, door in plan:
+            await one(number, role, door)
+    return verdicts
+
+
+
+
+async def _run(args: argparse.Namespace) -> int:
+    """Serve our mailbox, walk the plan, and report."""
+    inboxes = Inboxes()
+    # Silenced before the first bind rather than in a `finally`: uvicorn's
+    # `_serve()` has no try/finally around its main loop, so cancelling it never
+    # reaches uvicorn's own shutdown and asyncio force-cancels the ASGI lifespan
+    # task and any open SSE stream instead — logged at ERROR with a full
+    # traceback on every clean exit. With --restart that repeats once per
+    # sub-game, and this output is pasted to an opponent as evidence.
+    logging.getLogger("uvicorn.error").setLevel(logging.CRITICAL)
+    if args.only is None:
+        print(f"drill door      : http://127.0.0.1:{args.port}/mcp")
+        print(f"their cop       : {args.cop_url}")
+        print(f"their thief     : {args.thief_url}\n")
+    verdicts = await _walk(args, inboxes)
+    if args.only is not None:
+        # A child of `drill_restart.py`: it parses our one verdict line out of
+        # stdout and prints the summary itself.
+        return 1 if any(not v.startswith("engaged") for _n, _d, v in verdicts) else 0
 
     print("=" * 62)
     failed = [(n, d, v) for n, d, v in verdicts if not v.startswith("engaged")]
@@ -161,6 +186,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--thief-url", default="http://127.0.0.1:8082/mcp")
     parser.add_argument("--port", type=int, default=8090, help="The drill's own door.")
     parser.add_argument("--wait", type=float, default=120.0)
+    parser.add_argument(
+        "--only", type=int, default=None,
+        help="Play just this one sub-game and exit. This is how "
+        "scripts/drill_restart.py gives each sub-game its own process; run that "
+        "instead of passing this by hand.",
+    )
     return asyncio.run(_run(parser.parse_args(argv)))
 
 

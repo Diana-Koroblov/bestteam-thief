@@ -31,6 +31,7 @@ protocol used as designed and roughly a tenfold cut in connections.
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from contextlib import suppress
 from dataclasses import dataclass, field
@@ -46,7 +47,46 @@ from core.infra.errors import (
     TransportError,
 )
 
-__all__ = ["OpponentClient", "DEFAULT_CALLS_PER_MINUTE"]
+# What the MCP client says when the peer restarted underneath us — the normal
+# state at every sub-game boundary against a runner that starts a fresh process
+# per sub-game, not a fault. `Session termination failed` is our own `aclose`
+# posting a DELETE to a session that is already gone; `Error in post_writer` is
+# the SDK's background writer noticing a 502 mid-flight while the opponent
+# rebinds, catching it, logging a full traceback and closing the streams.
+#
+# Both are already handled: the failure reaches us as a `TransportError` on the
+# next call and the retry loop redials. Neither log line changes what we do.
+_EXPECTED_DISCONNECTS = ("Error in post_writer", "Session termination failed")
+
+
+class _QuietExpectedDisconnects(logging.Filter):
+    """Drop only the two known-benign records, never the rest of the logger.
+
+    A blanket `setLevel` here would be the wrong tool twice over: the first
+    attempt set ERROR, which did not suppress `logger.exception` at all, and
+    raising it to CRITICAL would have hidden every genuine client error along
+    with the noise. A filter matched on the message is narrow enough to keep
+    real failures visible.
+
+    Why bother silencing at all: these tracebacks print at exactly the moment a
+    sub-game changes hands, so they land next to whatever else is happening and
+    get blamed for it. That cost four separate misdiagnoses on 16/08, including
+    two during live windows.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Return False — drop it — for the expected boundary chatter."""
+        return not record.getMessage().startswith(_EXPECTED_DISCONNECTS)
+
+
+def quieten_expected_disconnects() -> None:
+    """Install the filter once. Safe to call repeatedly."""
+    logger = logging.getLogger("mcp.client.streamable_http")
+    if not any(isinstance(item, _QuietExpectedDisconnects) for item in logger.filters):
+        logger.addFilter(_QuietExpectedDisconnects())
+
+
+__all__ = ["quieten_expected_disconnects", "OpponentClient", "DEFAULT_CALLS_PER_MINUTE"]
 
 # Outbound messages per minute, when the config names no figure. A free ngrok
 # endpoint stops completing the TLS handshake at about 120 requests a minute —

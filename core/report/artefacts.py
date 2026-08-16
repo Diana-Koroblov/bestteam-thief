@@ -242,7 +242,13 @@ def write(payload: dict[str, Any], directory: Path, filename: str) -> Path:
     """
     directory.mkdir(parents=True, exist_ok=True)
     target = directory / filename
-    body = json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False)
+    # Terminating newline, deliberately. A MIME text part must end with one, so
+    # the mailer would otherwise append a byte the file on disk does not have —
+    # and the league's convention is artefact bytes == body bytes == attachment
+    # bytes, compared with strict equality (imreeyal have failed a pairing's
+    # mail over ten bytes). Emitting it here makes the three identical at the
+    # source rather than asking every reader to tolerate a difference.
+    body = json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
     staged = target.with_name(f"{target.name}.{os.getpid()}.{uuid4().hex[:8]}.tmp")
     staged.write_bytes(body.encode("utf-8"))
     _replace_when_windows_lets_go(staged, target)

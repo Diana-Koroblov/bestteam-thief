@@ -19,16 +19,27 @@ from typing import Any
 
 from core.crypto.canonical import canonical_json
 
-__all__ = ["game_id", "game_uid", "build_sub_game_row", "build_result", "consensus_sha256"]
+__all__ = [
+    "game_id", "game_uid", "build_sub_game_row", "build_result", "consensus_sha256",
+    "all_settled", "settled",
+]
 
 # The symmetric hash scope (imreeyal §6; vectors/report_consensus.json in the
 # kit pins the same spaced-form construction). Anything outside these keys is
 # per-side and must never enter the hash, or two honest teams' bytes can never
 # match by construction.
-_AGGREGATE_KEYS = (
-    "total_score", "sub_games_won", "ties", "winner_group", "series_tie",
-    "first_meeting_between_groups", "diversity_reward_applied",
-)
+# **Five keys, and not ours to choose.** This is the reference implementation's
+# own construction (`report/emit.py`), independently re-derived from that source
+# by another pairing and cross-diffed byte-equal across five completed pairings'
+# filed reports — so it is discovered, not negotiated.
+#
+# 🐛 We carried seven until 16/08, adding `first_meeting_between_groups` and
+# `diversity_reward_applied`. Both are FILING facts — what this artefact claims
+# about the league around the series — rather than the symmetric OUTCOME two
+# engines compute independently from the same six sub-games, which is the only
+# thing this signature can mean. Our hash was self-consistent and reproduced
+# from our own document every time; it simply could never equal an opponent's.
+_AGGREGATE_KEYS = ("total_score", "sub_games_won", "ties", "winner_group", "series_tie")
 _ROW_KEYS = ("sub_game_number", "roles", "result", "winner_group", "score")
 
 
@@ -110,8 +121,14 @@ def build_result(
     repos: dict[str, dict[str, str]],
     games_played: dict[str, int | None],
     first_meeting: bool,
+    tie_score: int = 0,
 ) -> dict[str, Any]:
-    """Assemble ``result_<game_id>.json`` in the league's schema, hash included."""
+    """Assemble ``result_<game_id>.json`` in the league's schema, hash included.
+
+    Args:
+        tie_score: The signed ``scoring.tie_score``, added to BOTH totals when
+            the series ends level. Zero leaves the raw sums untouched.
+    """
     gid = game_id(our_group, their_group)
     total_score: dict[str, int] = {}
     tokens_total: dict[str, int] = {}
@@ -124,6 +141,21 @@ def build_result(
         if row["winner_group"] in wins:
             wins[row["winner_group"]] += 1
     series_tie = total_score.get(our_group, 0) == total_score.get(their_group, 0)
+    # **The tie bonus lands INSIDE `total_score`, because this schema has
+    # nowhere else to put it.** Our native report keeps raw points and league
+    # points in separate fields (`core/report/merge.py`), which is the better
+    # shape and not available here — the reference's `final_result` carries one
+    # number, so the number has to be the one both engines agree on. imreeyal
+    # have a counted series already filed at 47-47 under this derivation and
+    # cross-diffed byte-equal with a third team; a counted filing cannot be
+    # re-filed, and the kit does not pin the tie shape, so the convention wins.
+    #
+    # Only on a real tie: `aggregate` in `core/domain/scoring.py` refuses to pay
+    # a bonus for a series of nothing but technical losses (C-013), and the same
+    # reasoning applies here — but that case cannot reach this line, because the
+    # send gate refuses to file a series with an unplayed sub-game at all.
+    if series_tie and tie_score:
+        total_score = {group: points + tie_score for group, points in total_score.items()}
     winner = None if series_tie else max(total_score, key=lambda g: total_score[g])
     diversity = {
         our_group: bool(counted and first_meeting and winner == our_group),
@@ -134,11 +166,6 @@ def build_result(
         "canonical bytes, not this pretty-print.",
         "schema_version": "1.2",
         "report_type": "final_game_result",
-        "league": {
-            "authority": "book App. E rule 52 - one counted series per pairing",
-            "counted": counted,
-            "reason": "counted" if counted else "friendly",
-        },
         "game_id": gid,
         "game_uid": game_uid_value,
         "links": {
@@ -164,8 +191,51 @@ def build_result(
             "diversity_reward_applied": diversity,
         },
     }
-    result["mutual_agreement"] = {"sha256": consensus_sha256(result), "confirmed": True}
+    result["mutual_agreement"] = {
+        "sha256": consensus_sha256(result),
+        "confirmed": all_settled(sub_games),
+    }
+    if not counted:
+        # **Friendly only.** A counted file goes to the lecturer template-pure,
+        # and a top-level key of our own invention there is an unexplained diff
+        # against every other team's artefact for a grader to puzzle over
+        # (imreeyal, 16/08). On a friendly it earns its place: it is the record
+        # of *why* this series does not count, which is the one thing an
+        # uncounted artefact most needs to say about itself.
+        result["league"] = {
+            "authority": "book App. E rule 52 - one counted series per pairing",
+            "counted": False,
+            "reason": "friendly",
+        }
     return result
+
+
+def all_settled(sub_games: list[dict[str, Any]]) -> bool:
+    """Whether every sub-game here was actually played out by both peers.
+
+    🐛 **`confirmed` was the literal `True`**, asserted rather than derived, and
+    it went out on 16/08 over a series in which three of six sub-games never
+    exchanged a single turn. imreeyal caught it: the field was false the moment
+    it was written, under anyone's reading. A claim about a mutual exchange that
+    is hard-coded to say the exchange happened is worse than no field at all,
+    because a grader byte-compares it against the opponent's.
+
+    The criterion is the opponent's audit verifying. That is the only evidence
+    we ever hold that BOTH sides played and revealed the same sub-game — a
+    result keyword is our own account of it, and `technical_loss` covers both
+    "we played and it broke" and "nothing ever happened here", which is exactly
+    the distinction being claimed.
+
+    Read from ``row["audit"]["log_verified"]``, which is where `build_sub_game_row`
+    puts it — a top-level `row.get("log_verified")` is `None` for every row ever
+    built and would make this unanimously false.
+    """
+    return bool(sub_games) and all(settled(row) for row in sub_games)
+
+
+def settled(row: dict[str, Any]) -> bool:
+    """Whether one sub-game row records a mutually revealed, verified game."""
+    return bool((row.get("audit") or {}).get("log_verified"))
 
 
 def consensus_sha256(result: dict[str, Any]) -> str:

@@ -24,17 +24,53 @@ from __future__ import annotations
 
 from core.domain.board import Board, Position
 
-__all__ = ["EMISSION", "RADIUS", "emit", "decay", "merge", "sample", "encode", "decode"]
+__all__ = [
+    "EMISSION", "RINGS", "RADIUS", "intensity", "emit", "decay", "merge",
+    "sample", "encode", "decode",
+]
 
 # Intensity by **squared Euclidean distance** from the emitting cell.
 # d² = 0, 1, 2, 4, 5, 8 — the only distances a 5×5 window can produce.
+# The book's figure, Ch. 4, and the shape the MULTIPLICATIVE model emits.
 EMISSION: dict[int, float] = {0: 0.90, 1: 0.62, 2: 0.42, 4: 0.20, 5: 0.14, 8: 0.04}
+
+# Intensity by **Chebyshev ring** — the shape the registered SUBTRACTIVE model
+# emits (kit doc 81ebee59…): three flat rings, 0.9 / 0.6 / 0.3.
+#
+# 🐛 **The emission kernel is part of the model, not a constant beside it.**
+# Until 16/08 there was only `EMISSION`, applied whichever model was signed, so
+# a match negotiated onto subtractive emitted the book's Euclidean kernel and
+# then decayed it subtractively — a hybrid belonging to no declared document.
+# imreeyal's physics check refused 105 of 105 frames and reconstructed it from
+# our step-1 values exactly: {0.8, 0.52, 0.32, 0.1, 0.04} on 21 cells is this
+# EMISSION minus 0.1 with the four sub-zero corners dropped. We declared
+# 81ebee59 and emitted something else, which is the declared-and-differ case we
+# had ourselves called the worst kind — it plays fine, and then two teams'
+# records disagree about physics in front of a grader.
+RINGS: tuple[float, ...] = (0.90, 0.60, 0.30)
 
 # A 5×5 window reaches two cells in each direction.
 RADIUS = 2
 
 
-def emit(centre: Position, board: Board) -> dict[Position, float]:
+def intensity(d_row: int, d_col: int, model: str = "multiplicative") -> float:
+    """Return the deposit *(d_row, d_col)* away from the emitting cell.
+
+    The two models disagree about geometry, not merely about decay:
+    ``multiplicative`` falls off with squared Euclidean distance (the book's
+    figure), ``subtractive`` with the Chebyshev ring (the registered doc). A
+    peer that gets this wrong still plays a legal game and still produces
+    verifiable commits, which is precisely why it survives undetected until an
+    opponent checks the physics.
+    """
+    if model == "subtractive":
+        return RINGS[max(abs(d_row), abs(d_col))]
+    return EMISSION[d_row * d_row + d_col * d_col]
+
+
+def emit(
+    centre: Position, board: Board, model: str = "multiplicative"
+) -> dict[Position, float]:
     """Return the field an agent standing on *centre* deposits this turn.
 
     Cells outside the board are dropped rather than clamped: an agent in a
@@ -47,7 +83,7 @@ def emit(centre: Position, board: Board) -> dict[Position, float]:
         for d_col in range(-RADIUS, RADIUS + 1):
             cell = (row + d_row, col + d_col)
             if board.in_bounds(cell):
-                field[cell] = EMISSION[d_row * d_row + d_col * d_col]
+                field[cell] = intensity(d_row, d_col, model)
     return field
 
 

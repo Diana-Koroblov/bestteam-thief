@@ -59,3 +59,8 @@ outbox/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Debugging screenshots. They capture whole terminals, which means opponent
+# contact addresses and endpoints from the command line - and both role repos
+# are public (imreeyal 16/08 window).
+docs/evidence/

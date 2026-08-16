@@ -44,20 +44,21 @@ __all__ = [
     "SEND_SCOPE",
     "build_message",
     "build_transport",
-    "BODY_TEXT",
 ]
 
 # Send-only. Deliberately not `gmail.compose` or `gmail.modify`, both of which
 # would also grant read access to the mailbox (M#30).
 SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send"
 
-# The entire body. It says where to look and carries **no report data** — no
-# scores, no game id, no team names. A grader parsing the attachment must never
-# find a second, possibly disagreeing, copy in the prose (M#33, M#34).
-BODY_TEXT = (
-    "Automated league report. The result is attached as JSON.\n"
-    "This message body deliberately contains no match data.\n"
-)
+# **The body is the attachment.** It used to be a fixed sentence carrying no
+# match data, on the reading that M#33/M#34 forbid a second copy of the result
+# in the prose — but the rule guards against a copy that could *disagree*, and
+# a body generated from the attachment's own bytes cannot. The league's
+# convention is that the two are identical so a grader can diff two teams'
+# mails without opening anything, and we had confirmed that convention three
+# times in writing while shipping code that contradicted it (imreeyal 16/08,
+# item 6c). `BODY_TEXT` is gone rather than kept unused: a constant nobody
+# sends is the next person's wrong answer about what we send.
 
 
 class GmailError(RuntimeError):
@@ -84,13 +85,28 @@ def build_message(sender: str, recipient: str, subject: str, attachment: Path) -
     if not attachment.is_file():
         raise GmailError(f"no report to send: {attachment} does not exist")
 
+    raw = attachment.read_bytes()
     message = EmailMessage()
     message["To"] = recipient
     message["From"] = sender
     message["Subject"] = subject
-    message.set_content(BODY_TEXT)
+    # Decoded explicitly as UTF-8, never with the platform default: `write` in
+    # `core/report/artefacts.py` emits UTF-8, and letting the body go through
+    # cp1252 on Windows would make it differ from the attachment in exactly the
+    # bytes a Hebrew team name occupies — the one case the diff exists to catch.
+    #
+    # **base64, and it is load-bearing.** A text part with no explicit
+    # content-transfer-encoding is re-wrapped at column 72 by mail
+    # infrastructure in transit, which silently rewrites the bytes a strict
+    # differ compares — imreeyal failed another pairing's report over exactly
+    # this, ten bytes, and were right to. base64 survives transport unaltered.
+    #
+    # `write` in `core/report/artefacts.py` now emits the terminating newline a
+    # MIME text part requires, so `set_content` adds nothing and the three
+    # byte-strings — file, body, attachment — are identical.
+    message.set_content(raw.decode("utf-8"), cte="base64")
     message.add_attachment(
-        attachment.read_bytes(),
+        raw,
         maintype="application",
         subtype="json",
         filename=attachment.name,

@@ -75,7 +75,7 @@ class BeliefFilter:
         send, and uncertainty survives regardless because both peers move again
         afterwards.
         """
-        self.trail = merge(decay(self.trail, self.rate, self.model), emit(at, self.board))
+        self.trail = merge(decay(self.trail, self.rate, self.model), emit(at, self.board, self.model))
         return self.trail
 
     def observe(
@@ -101,7 +101,7 @@ class BeliefFilter:
         sharpened on nothing would be manufacturing confidence.
         """
         self.belief = predict(self.belief, self.board, barriers)
-        self.belief = update_from_scent(self.belief, opponent_field, self.board)
+        self.belief = update_from_scent(self.belief, opponent_field, self.board, self.model)
         self.belief = mask(self.belief, barriers, own)
         return self.belief
 
