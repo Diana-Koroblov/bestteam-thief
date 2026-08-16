@@ -182,7 +182,10 @@ def test_the_sealed_payload_describes_itself() -> None:
     payload = sealed_payload(_State(), (2, 3), 7, "N", "truth", "hello")
     assert payload["position"] == [2, 3]
     assert payload["step"] == 5
-    assert payload["move"] == "N"
+    # `MOVE:N`, not `N` — the reference's own spelling, read off imreeyal's
+    # artefact. A bare direction is what we sent for four match attempts while
+    # their audit failed us; see `sealed_payload`.
+    assert payload["move"] == "MOVE:N"
     assert "grid=7x7" in payload["state"]
     # Everything needed to re-verify travels together, so an opponent that has
     # never seen our schema can still check it.

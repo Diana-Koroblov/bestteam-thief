@@ -14,6 +14,7 @@ from typing import Any
 from core.compat import sealing
 from core.compat.exchange import Incoming, grid_of, now_iso, sealed_payload, synthetic_reveal
 from core.compat.wire import TurnMessage, wire_role
+from core.domain.actions import Direction
 from core.domain.movement import IllegalMoveError, resolve_move
 from core.domain.scent import decay, decode
 from core.protocol.schemas import Role
@@ -70,17 +71,43 @@ def read_turn(session: Any, message: TurnMessage) -> Incoming:
     return outcome
 
 
-async def send_turn(session: Any, owed: dict | None) -> None:
+async def send_turn(session: Any, owed: dict | None, stand: bool = False) -> None:
     """Decide, move, seal and push one turn — carrying any answer we owe.
 
     The move is applied **before** the hint and the scent are produced, so the
     field we transmit is deposited at the cell we actually ended on. Sealing one
     position and advertising a trail from another is the C-008 hole reintroduced
     from the other end, and here it would also make our own claim inconsistent.
+
+    Args:
+        stand: Send without deciding or moving — a concession. Set only when
+            they have just caught us, and load-bearing for two reasons that pull
+            in opposite directions.
+
+            **We must answer.** M#21 makes it a duty, and their peer waits for
+            our turn before pushing the closing audit; falling silent leaves
+            both sides with `no audit received` and no result at all.
+
+            **We must not move.** Their verifier re-checks the capture
+            structurally — `sparring/audit.py`, the `answered_at` branch — by
+            comparing the cell they claim it on against the last position our own
+            reveal carries. One more step walks the trail off that cell and reads
+            as "a capture the thief's own reveal says never happened":
+            `tamper_forfeit`, 0 to BOTH teams (App. E rule 35).
+
+            So the concession is a real turn that goes nowhere: STAY, at the cell
+            where we were caught.
     """
-    decision = session.runtime.decide()
-    position = apply_move(session, decision)
+    if stand:
+        decision = replace(session.runtime.decide(), move=Direction.STAY, barrier=None)
+        position = session.orchestrator.own_position
+    else:
+        decision = session.runtime.decide()
+        position = apply_move(session, decision)
     reveal = session.runtime.reveal_for(decision, session.state.step)
+    # Incremented before the seal: the record must carry the same step it will
+    # travel under, or the binding check above cannot match the two.
+    session.sent += 1
     payload = sealed_payload(
         session.state,
         position,
@@ -88,14 +115,12 @@ async def send_turn(session: Any, owed: dict | None) -> None:
         decision.move.value,
         decision.intent.value,
         reveal.hint,
+        wire_role(session.role.value),
+        session.sub_game_number,
+        session.sent,
     )
     record = {"payload": payload, **sealing.seal(payload)}
     session.records.append(record)
-    # Per-sender, starting at 1 — not the shared game-progress counter
-    # `state.step` advances on either side's move. A single interleaved
-    # sequence (ours: 0,2,4...) looks like a reordered stream to a receiver
-    # expecting its own counterpart's steps to run 1,2,3... (imreeyal §3.6).
-    session.sent += 1
     trail = session.runtime.truth.filter
     wire_field = decay(decode(reveal.scent), trail.rate, trail.model)
     await session.client.call(

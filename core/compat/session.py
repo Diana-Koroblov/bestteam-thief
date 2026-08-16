@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from core.compat import league_report, sealing
+from core.compat.exchange import system_spec_record
 from core.compat.mailbox import Inboxes
 from core.compat.pairing import HandshakeError
 from core.compat.turn_wait import collect_our_agreement
@@ -218,13 +219,33 @@ class ReferenceSession:
                 return self._end("capture", Role.COP.value)
             if outcome.they_won:
                 return self._end(outcome.win_type or "survival", Role.THIEF.value)
-            # The answer we owe rides out on our own next turn, even when it is
-            # the admission that they caught us: M#21 makes it a duty, and a
-            # peer that fell silent on being caught would look like one that
-            # dropped rather than one that lost.
-            await send_turn(self, outcome.claim_response)
             if outcome.we_are_caught:
+                # **Caught means caught: we take no further move.**
+                #
+                # Their verifier re-checks a capture structurally rather than
+                # trusting either peer — `sparring/audit.py`, the `answered_at`
+                # branch: the cell they claim to have caught us on must equal
+                # the last position our own reveal carries. Answering with a
+                # fresh turn walks our revealed trail one cell past that, and
+                # they read it as "a capture the thief's own reveal says never
+                # happened": `tamper_forfeit`, 0 to BOTH teams (App. E rule 35).
+                #
+                # They check it structurally, as their note says, because a
+                # false answer pays the thief 5 AND the cop 20 — so neither peer
+                # has any incentive to look. Ours certainly did not: every
+                # record hashed correctly, our own audit reported "passed", and
+                # the only thing wrong was that the trail ended one cell late.
+                #
+                # The M#21 duty to answer is discharged by the reveal itself:
+                # the whole record set, our concession included, goes out in the
+                # closing audit. Silence here is not a peer that dropped — it is
+                # a peer with nowhere left to move.
+                await send_turn(self, outcome.claim_response, stand=True)
                 return self._end("capture", Role.COP.value)
+            # The answer we owe rides out on our own next turn: M#21 makes it a
+            # duty, and a peer that fell silent would look like one that dropped
+            # rather than one that lost.
+            await send_turn(self, outcome.claim_response)
             if self._survived():
                 # Our own claim just rode out on that turn (`turns._win`). A
                 # claimant that kept waiting for an answer watchdogs into
@@ -247,9 +268,30 @@ class ReferenceSession:
         and every conformant peer drops unknown keys. It is what lets a
         receiver tell a late audit from the right one; see `collect_audit`.
         """
+        # **Only what actually crossed the wire.** `self.sent` counts transmitted
+        # turns; `self.records` can hold one more. A sub-game that ends on the
+        # opponent's move — a capture against us as thief — leaves our own turn
+        # already decided and sealed, and it never goes out.
+        #
+        # Submitting it is a tamper_forfeit. The opponent verifies each revealed
+        # record against `live = {step: commit}` built from the turns they really
+        # received; a record absent from that map is tolerated only for the step-0
+        # spec record, and an orphaned final turn is not that. Measured against
+        # imreeyal's reference peer: 23 records for a 22-step sub-game, all
+        # self-consistent (`commit_of(payload, nonce) == commit` for every one),
+        # their audit `verified_steps: 22, failed_steps: [23]` — 0 to BOTH teams
+        # under App. E rule 35, while our own side cheerfully reported
+        # "audit passed".
+        #
+        # As cop the bug is invisible: we move first, the capture lands on our
+        # move, and there is no orphan. It only bites in the role where the
+        # sub-game can end after we have sealed.
         payload = AuditPayload(
             sender=self.role.value,
-            records=self.records,
+            records=[
+                system_spec_record(self.identity, self.sub_game_number),
+                *self.records,
+            ],
             result_claim=self.result or "timeout",
         ).to_dict()
         payload["sub_game_number"] = self.sub_game_number

@@ -77,13 +77,6 @@ max_calls_per_minute = 100
 # Its argument form in core/infra/tunnel.py is unverified against a live
 # account — confirm it before a graded match, not during one.
 tunnel_provider = "ngrok"
-# How long to wait for the opponent's FIRST turn after a sub-game's handshake
-# settles. Private on purpose: a peer that restarts a process per sub-game needs
-# ~2 minutes to rebind, and the 60 s signed watchdog cannot span that — but
-# raising the SIGNED value to buy the wait edits the negotiated constitution and
-# moves config_sha256 under an opponent who pinned it (imreeyal, 16/08). Waiting
-# longer than the watchdog only ever costs us time, so it belongs here.
-sub_game_patience_sec = 240
 
 [strategy]
 # See docs/PRD_strategy_advanced.md. These are ours alone; the opponent must
