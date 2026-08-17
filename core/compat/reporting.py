@@ -61,10 +61,17 @@ def _send(
     out = Path(args.out)
     gid = league_report.game_id(our_group, their_group)
     path = out / f"result_{gid}.json"
-    merged = league_merge.merge_rows(league_merge.load_rows(path), rows)
     counted = bool(getattr(args, "counted", False)) and their_group != our_group
     terms = terms_from_config(sdk.runtime.orchestrator.config)
+    # Derived before the merge, not after: an earlier series against this
+    # opponent claims the same filename, and these are what tell it apart from
+    # ours. See `league_merge.load_rows` for why the date carries the weight and
+    # the uid does not.
     uid = league_report.game_uid(terms, our_group, their_group)
+    today = str(rows[0].get("started_at", ""))[:10] if rows else ""
+    merged = league_merge.merge_rows(
+        league_merge.load_rows(path, uid, today), rows
+    )
     result = league_report.build_result(
         counted=counted,
         our_group=our_group,

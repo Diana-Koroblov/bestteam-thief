@@ -210,11 +210,20 @@ async def _series(
         if not verdict["passed"]:
             print(f"    their failed steps: {verdict['failed_steps']}")
         if args.out:
-            their_commit = str(getattr(args, "their_commit", "") or "")
+            # Both commits come from the blocks the two peers actually
+            # exchanged, so a filed row can never name code a declaration did
+            # not. `--their-commit` still wins when given: it is the operator
+            # correcting a peer whose own block was wrong or absent.
+            their_commit = str(
+                getattr(args, "their_commit", "")
+                or their_identity.get("github_commit", "")
+                or ""
+            )
             rows.append(row_from_session(
                 sdk=sdk, session=session, number=number, raw_result=result, verdict=verdict,
                 started=started, ended=utc_now(), their_group=their_group,
                 their_commit=their_commit,
+                our_commit=str(identity.get("github_commit", "") or ""),
             ))
     print()
     if args.out:

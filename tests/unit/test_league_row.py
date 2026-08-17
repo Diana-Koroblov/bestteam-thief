@@ -40,7 +40,7 @@ def test_a_clean_capture_is_scored_and_marks_the_winner_group() -> None:
     row = row_from_session(
         sdk=_SDK(), session=session, number=1, raw_result="capture",
         verdict={"passed": True, "received": True}, started="t0", ended="t1",
-        their_group="imreeyal", their_commit="b" * 40,
+        their_group="imreeyal", their_commit="b" * 40, our_commit="a" * 40,
     )
     assert row["result"] == "capture"
     assert row["winner_group"] == "bestteam"
@@ -53,7 +53,7 @@ def test_our_thief_survival_credits_the_thief_score_to_our_group() -> None:
     row = row_from_session(
         sdk=_SDK(), session=session, number=2, raw_result="survival",
         verdict={"passed": True, "received": True}, started="t0", ended="t1",
-        their_group="imreeyal", their_commit="b" * 40,
+        their_group="imreeyal", their_commit="b" * 40, our_commit="a" * 40,
     )
     assert row["roles"] == {"bestteam": "thief", "imreeyal": "police"}
     assert row["score"] == {"bestteam": 10, "imreeyal": 5}
@@ -66,7 +66,7 @@ def test_a_win_credited_to_the_other_role_names_the_opponent_group() -> None:
     row = row_from_session(
         sdk=_SDK(), session=session, number=1, raw_result="survival",
         verdict={"passed": True, "received": True}, started="t0", ended="t1",
-        their_group="imreeyal", their_commit="b" * 40,
+        their_group="imreeyal", their_commit="b" * 40, our_commit="a" * 40,
     )
     assert row["winner_group"] == "imreeyal"
     assert row["score"] == {"bestteam": 5, "imreeyal": 10}
@@ -78,7 +78,7 @@ def test_a_plain_timeout_is_a_technical_loss_scored_zero_zero_and_not_tampered()
     row = row_from_session(
         sdk=_SDK(), session=session, number=3, raw_result="timeout (no reply)",
         verdict={"passed": False, "received": False, "failed_steps": []},
-        started="t0", ended="t1", their_group="imreeyal", their_commit="",
+        started="t0", ended="t1", their_group="imreeyal", their_commit="", our_commit="a" * 40,
     )
     assert row["result"] == "technical_loss"
     assert row["winner_group"] == ""
@@ -93,7 +93,7 @@ def test_a_received_but_failed_audit_is_reported_as_genuinely_tampered() -> None
     row = row_from_session(
         sdk=_SDK(), session=session, number=1, raw_result="capture",
         verdict={"passed": False, "received": True, "failed_steps": [5]},
-        started="t0", ended="t1", their_group="imreeyal", their_commit="b" * 40,
+        started="t0", ended="t1", their_group="imreeyal", their_commit="b" * 40, our_commit="a" * 40,
     )
     assert row["audit"] == {"log_verified": False, "tampered": True}
 
@@ -105,7 +105,37 @@ def test_an_unknown_opponent_group_falls_back_to_a_labelled_placeholder() -> Non
     row = row_from_session(
         sdk=_SDK(), session=session, number=1, raw_result="capture",
         verdict={"passed": True, "received": True}, started="t0", ended="t1",
-        their_group="", their_commit="",
+        their_group="", their_commit="", our_commit="a" * 40,
     )
     assert "opponent" in row["roles"]
     assert row["winner_group"] == "bestteam"
+
+
+def test_the_row_files_the_commit_it_was_given_and_never_reads_one_itself() -> None:
+    """M#53. The declared head and the filed head must be the same value.
+
+    This used to call `commit_hash(Path.cwd())` while the declaration read
+    `REPO_ROOT`, so a process launched from the wrong directory declared the
+    published head and filed a tree with no remote against itself. The row now
+    takes the declared value, and taking it is the whole guarantee.
+    """
+    session = _Session(Role.COP, winner="cop")
+    row = row_from_session(
+        sdk=_SDK(), session=session, number=1, raw_result="capture",
+        verdict={"passed": True, "received": True}, started="t0", ended="t1",
+        their_group="imreeyal", their_commit="b" * 40, our_commit="c" * 40,
+    )
+    assert row["github_commit"] == {"bestteam": "c" * 40, "imreeyal": "b" * 40}
+
+
+def test_a_dirty_declared_head_is_filed_dirty_rather_than_quietly_cleaned() -> None:
+    """The suffix was stripped here, so the row claimed a clean commit over a
+    tree the declaration had just told the opponent was dirty — our own two
+    artefacts contradicting each other about which code ran."""
+    session = _Session(Role.THIEF, winner="thief")
+    row = row_from_session(
+        sdk=_SDK(), session=session, number=3, raw_result="survival",
+        verdict={"passed": True, "received": True}, started="t0", ended="t1",
+        their_group="imreeyal", their_commit="b" * 40, our_commit="c" * 40 + "-dirty",
+    )
+    assert row["github_commit"]["bestteam"] == "c" * 40 + "-dirty"

@@ -6,7 +6,6 @@ cycle — the same reason `core/compat/turns.py` types its session `Any`).
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from core.compat.league_report import build_sub_game_row, game_id
@@ -14,7 +13,6 @@ from core.compat.wire import wire_role
 from core.domain.rules import Outcome, Verdict
 from core.domain.scoring import score
 from core.protocol.schemas import Role
-from core.protocol.step_zero import commit_hash
 
 __all__ = ["row_from_session"]
 
@@ -30,12 +28,29 @@ def row_from_session(
     ended: str,
     their_group: str,
     their_commit: str,
+    our_commit: str,
 ) -> dict[str, Any]:
-    """Return one finished sub-game's row, scored and dated, from a live session."""
+    """Return one finished sub-game's row, scored and dated, from a live session.
+
+    Args:
+        our_commit: The head we **declared**, passed in rather than read here.
+
+    🐛 **This file used to call `commit_hash(Path.cwd())`.** The declaration
+    reads `REPO_ROOT` (`core/reference_identity.py`), so the same series could
+    declare one commit to the opponent and file another against itself — and it
+    did: launched from `p2p-chase`, the identity block named the published head
+    while every row named `55ddff06…`, a tree with no remote that resolves for
+    nobody (M#53). Two sources for one value is the bug; taking the declared one
+    as a parameter is the fix, because there is then only one.
+
+    The value is filed **verbatim**, `-dirty` suffix included. Stripping it made
+    a row claim a clean commit over a tree the declaration had just told the
+    opponent was dirty — our own two artefacts contradicting each other about
+    the one field that says which code ran.
+    """
     our_group = sdk.team_name
     gid = game_id(our_group, their_group or "opponent")
     log_name = f"log_{gid}_g{number:02d}.json"
-    our_commit = commit_hash(Path.cwd()).removesuffix("-dirty")
     keyword = raw_result.split(" (", 1)[0].strip().lower()
     # Three states, not two: a clean audit, a genuinely mismatched record, and
     # "nothing ever arrived" (a technical loss — nobody's forgery). Collapsing
