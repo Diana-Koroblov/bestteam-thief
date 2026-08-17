@@ -111,8 +111,8 @@ Our two repositories now carry two lines of work. Our teammate Diana pushed a ch
 force one line over the other, today's work sits on a branch named `itay` in **both**
 repositories, and that is what plays:
 
-    cop    e5268bb70ecc336854d6354c77f518cad97fd62f   (bestteam-cop,   origin/itay)
-    thief  81c009568ecafcf14dfbd262f09fb6a7bb7eb885   (bestteam-thief, origin/itay)
+    cop    105d66172a77987276f3a9afb3fe7c2105a74302   (bestteam-cop,   origin/itay)
+    thief  526d00f2cab410d4d24cf4bc31f5f53bcd32b24a   (bestteam-thief, origin/itay)
 
 Both resolve, both are pushed, and our runner's pre-flight confirms each as *published on
 origin/itay* — it refuses to arm on a head that is dirty, has no remote, or sits on no

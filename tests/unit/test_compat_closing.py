@@ -143,7 +143,7 @@ class TestTheRowStillGoes:
             their_identity={"github_commit": "d" * 40},
         )
         assert rows[0]["github_commit"]["yanell11"] == "c" * 40
-        assert "two channels disagree" in note
+        assert "sealed step-0" in note and "handshake" in note
 
     def test_agreeing_channels_produce_no_finding(self, tmp_path: Path) -> None:
         """A conformant peer sources its plaintext from its seal, so they match."""
@@ -159,9 +159,27 @@ class TestTheRowStillGoes:
         assert rows[0]["github_commit"]["yanell11"] == "d" * 40
         assert note == ""
 
-    def test_the_operator_override_still_wins(self, tmp_path: Path) -> None:
-        """`--their-commit` is the correction for a peer whose own blocks are wrong."""
-        rows, _written, _note = _close(tmp_path, their_commit="e" * 40)
+    def test_the_seal_outranks_the_operator_flag(self, tmp_path: Path) -> None:
+        """🐛 The override used to win, and it cost the 17/08 verification window.
+
+        The reader was correct — imreeyal sealed one head in all six sub-games
+        and our logs prove it — but both terminals still carried the old
+        `--their-commit` flags, which outranked the evidence and filed the
+        pre-fix per-role guess. A value somebody types must never beat one that
+        was signed, so the flag now loses and the disagreement is reported.
+        """
+        rows, _written, note = _close(
+            tmp_path, session=_Session(their_sealed_commit="c" * 40), their_commit="e" * 40
+        )
+        assert rows[0]["github_commit"]["yanell11"] == "c" * 40
+        assert "--their-commit" in note
+
+    def test_the_flag_is_used_when_nothing_was_sealed(self, tmp_path: Path) -> None:
+        """It stays a fallback: a peer that sealed nothing leaves nothing to outrank."""
+        rows, _written, _note = _close(
+            tmp_path, session=_Session(their_sealed_commit=""),
+            their_identity={}, their_commit="e" * 40,
+        )
         assert rows[0]["github_commit"]["yanell11"] == "e" * 40
 
     def test_an_unwritable_directory_costs_the_files_and_not_the_row(self, tmp_path: Path) -> None:

@@ -75,29 +75,41 @@ def close_sub_game(
 def _their_commit(args: Any, session: Any, their_identity: dict[str, Any]) -> tuple[str, str]:
     """Return the opponent's head to file, and any note about how they declared it.
 
-    Precedence is strongest-source-first: the operator's ``--their-commit``
-    override, then the head they **sealed** into their step-0 record, then the
-    plaintext handshake identity block. Settled with imreeyal on 17/08 — a
-    sealed commit is inside the commitment and unrevisable, a handshake block
-    is neither.
+    Precedence is **evidence first**: the head they sealed into their step-0
+    record, then the plaintext handshake identity block, and only then the
+    operator's ``--their-commit``. A sealed commit is inside the commitment and
+    unrevisable; the other two are typed by somebody.
+
+    🐛 **The override used to win, and it cost the 17/08 verification window.**
+    The reader worked perfectly — our logs prove imreeyal sealed
+    `bdbce8a2…` in all six sub-games — and we filed `662d2866`/`5bf3cfc`
+    anyway, because both terminals still carried the old `--their-commit` flags
+    from the pre-fix runbook. imreeyal asked for *"no operator flag anywhere in
+    the derivation"* and we gave them a derivation where the flag outranked the
+    evidence. A value that can be typed must never outrank one that was signed.
 
     **A peer's two channels disagreeing is a finding, not a tie to break
     quietly.** A conformant peer sources its plaintext declaration *from* the
     sealed record, so the two agree by construction and a divergence means one
     of them is wrong. We file the sealed one either way and say so, because a
     silent pick would destroy the only evidence that the disagreement existed.
+    The same is now true of the override: if it contradicts the seal, the seal
+    is filed and the contradiction is reported.
     """
-    override = str(getattr(args, "their_commit", "") or "")
-    if override:
-        return override, ""
     sealed = sealed_commit(getattr(session, "their_records", []) or [])
     declared = str(their_identity.get("github_commit", "") or "")
-    if sealed and declared and sealed != declared:
-        return sealed, (
-            f"their two channels disagree: sealed step-0 {sealed[:12]}... but handshake "
-            f"declared {declared[:12]}... - filing the sealed one"
-        )
-    return sealed or declared, ""
+    override = str(getattr(args, "their_commit", "") or "")
+    if sealed:
+        for label, typed in (("--their-commit", override), ("handshake", declared)):
+            if typed and typed != sealed:
+                return sealed, (
+                    f"their sealed step-0 says {sealed[:12]}... but {label} says "
+                    f"{typed[:12]}... - filing the sealed one"
+                )
+        return sealed, ""
+    # Nothing sealed: a peer that seals no commit is not a peer that declared
+    # none, so fall back rather than filing a blank.
+    return declared or override, ""
 
 
 def close_series(

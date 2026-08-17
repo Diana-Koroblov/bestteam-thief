@@ -32,12 +32,11 @@ def test_load_rows_refuses_an_unreadable_file_rather_than_treating_it_as_absent(
         load_rows(path)
 
 
-def _filed(uid: str, date: str) -> str:
+def _filed(uid: str, began: str) -> str:
+    """A filed result whose one row began at *began* (ISO-8601, or bare date)."""
+    stamp = f"{began}T17:13:42+00:00" if len(began) == 10 else began
     return json.dumps(
-        {
-            "game_uid": uid,
-            "sub_games": [{"sub_game_number": 1, "started_at": f"{date}T17:13:42+00:00"}],
-        }
+        {"game_uid": uid, "sub_games": [{"sub_game_number": 1, "started_at": stamp}]}
     )
 
 
@@ -47,12 +46,28 @@ def test_load_rows_refuses_a_second_series_played_under_the_same_terms(
     """The real case. `result_<game_id>.json` is only the team pair, so the
     17/08 imreeyal series claims the 16/08 one's filename — and because the
     config never changed between them, both carry game_uid ffad01a2… too. Only
-    the date separates them, which is why the date is checked."""
+    when they began separates them, which is why that is checked."""
     path = tmp_path / "result_bestteam-vs-imreeyal.json"
     same_uid = "ffad01a2-4965-be0b-c708-3cdbedd7373a"
     path.write_text(_filed(same_uid, "2026-08-16"), encoding="utf-8")
     with pytest.raises(ArtefactError, match="2026-08-16"):
-        load_rows(path, same_uid, "2026-08-17")
+        load_rows(path, same_uid, "2026-08-17T17:00:04+00:00")
+
+
+def test_load_rows_refuses_a_re_match_on_the_same_day(tmp_path: Path) -> None:
+    """The one a calendar date cannot catch, and it cost a verification window.
+
+    17/08 was played twice against imreeyal — 11:14 and 17:00 — into one
+    `--out`. Same terms so the uid matched, same day so the date matched, and
+    the morning's six rows merged in as ours. The first process to file then saw
+    six rows, passed the completeness gate that exists to hold a half-series
+    back, and mailed imreeyal a report whose other half was the morning's.
+    """
+    path = tmp_path / "result_bestteam-vs-imreeyal.json"
+    uid = "ffad01a2-4965-be0b-c708-3cdbedd7373a"
+    path.write_text(_filed(uid, "2026-08-17T11:14:43+00:00"), encoding="utf-8")
+    with pytest.raises(ArtefactError, match="11:14"):
+        load_rows(path, uid, "2026-08-17T17:00:04+00:00")
 
 
 def test_load_rows_refuses_a_series_played_under_renegotiated_terms(
@@ -68,11 +83,15 @@ def test_load_rows_refuses_a_series_played_under_renegotiated_terms(
 def test_load_rows_merges_the_other_role_process_half_of_the_same_series(
     tmp_path: Path,
 ) -> None:
-    """The case that must still merge (M#35): one series, two role processes,
-    same terms and same day."""
+    """The case that must still merge (M#35): one series, two role processes.
+
+    They start minutes apart, not hours — our cop and thief opened tonight's
+    series at 17:00:03 and 17:00:04 — so the window has to admit this while
+    still refusing the re-match above.
+    """
     path = tmp_path / "result.json"
-    path.write_text(_filed("same-uid", "2026-08-17"), encoding="utf-8")
-    assert load_rows(path, "same-uid", "2026-08-17")[0]["sub_game_number"] == 1
+    path.write_text(_filed("same-uid", "2026-08-17T17:00:03+00:00"), encoding="utf-8")
+    assert load_rows(path, "same-uid", "2026-08-17T17:00:04+00:00")[0]["sub_game_number"] == 1
 
 
 def test_load_rows_still_merges_a_file_that_recorded_neither_uid_nor_date(
