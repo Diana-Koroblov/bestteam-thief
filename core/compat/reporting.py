@@ -37,9 +37,16 @@ def send_league_report(
 ) -> str:
     """Merge, file, and — if the series is complete — send our own report.
 
-    Never raises: the series is over and its logs are on disk regardless of
-    whether the report can be built or mailed, so every failure is described
-    rather than propagated (matching ``core.runtime.reporting``).
+    Never raises: every failure is described rather than propagated (matching
+    ``core.runtime.reporting``). The sub-games are already played, and the
+    evidence is filed separately by `core/compat/closing.py` before this runs,
+    so a report that cannot be built or mailed costs the summary and not the
+    record underneath it.
+
+    🐛 **This used to say "its logs are on disk regardless".** They were not:
+    until 17/08 nothing on this path wrote a log at all, and this sentence —
+    inside the very function that files — was one of the two places asserting
+    otherwise. See `core/compat/match_log.py`.
     """
     if not their_group:
         return f"{LABEL}NOT FILED - no opponent group_id was ever learned (no sub-game agreed)"

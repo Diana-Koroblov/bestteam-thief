@@ -236,17 +236,27 @@ and answers it for you.
 
 **`--protocol reference` is a full league path, not a rehearsal-only one.** It
 files the four artefacts in the league's own schema (`core/compat/
-league_report.py`) and mails the closing report, gated exactly as the native
-path is: `--out` to file, `--report-to` for an uncounted friendly send to the
-two teams' own inboxes, `--counted` for a league one to the lecturer. Since
-most of the league built on the example repository (C-019), this is the path a
-counted match against them runs on.
+league_report.py`, `core/compat/filing.py`) and mails the closing report, gated
+exactly as the native path is: `--out` to file, `--report-to` for an uncounted
+friendly send to the two teams' own inboxes, `--counted` for a league one to the
+lecturer. Since most of the league built on the example repository (C-019), this
+is the path a counted match against them runs on.
 
 > **Corrected 15/08.** This section used to say `--protocol reference` "plays
 > and audits but files nothing — no artefacts, no report, no league row" and
 > that "a counted match still runs on the native path". That was true when the
 > bridge was written and stopped being true when the league path landed. Read
 > literally, it ruled out counted matches against most of the league.
+>
+> **Corrected again 17/08, and the 15/08 correction was the bug.** It replaced
+> "files nothing" with "files the four artefacts" when the truth was in
+> between: this path filed `result_<game_id>.json` and *only* that. No log, no
+> config snapshot, no declaration. Both imreeyal series were played and filed
+> under that gap and neither can be replayed (M#20) — their filed `log_files`
+> name files that were never written. The log, config snapshot and declaration
+> are now written by `core/compat/closing.py`; the sentence above is true as of
+> this correction, and `tests/unit/test_compat_match_log.py` is what keeps it
+> true, because it re-audits a written log off disk rather than trusting one.
 
 **Play a warm-up against them first if there is time.** Uncounted matches are
 explicitly permitted (M#52) and they are where protocol bugs surface, at no cost

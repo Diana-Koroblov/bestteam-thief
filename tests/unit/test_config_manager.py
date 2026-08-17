@@ -69,10 +69,20 @@ def test_each_role_declares_itself(role: str) -> None:
 
 
 def test_shared_overrides_private(tmp_path: Path) -> None:
-    """A local edit must never be able to change agreed physics."""
-    role = _write(tmp_path / "role", SHIPPED, 'version = "1.00"\n[world]\nmap_area = "Haifa"\n')
-    config = load_config(role)
-    assert config.get("world.map_area") == "New York"
+    """A local edit must never be able to change agreed physics.
+
+    Both values are derived from the shipped contract rather than written as
+    literals. `map_area` is the negotiated `setting` term, so it changes with
+    the opponent — and the literal pair here ("Haifa" private, "New York"
+    shared) silently became the *same* string when we agreed Haifa with
+    yanell11, leaving the assertion true no matter which layer had won.
+    """
+    agreed = SHIPPED["world"]["map_area"]
+    private = f"{agreed} (private override attempt)"
+    role = _write(
+        tmp_path / "role", SHIPPED, f'version = "1.00"\n[world]\nmap_area = "{private}"\n'
+    )
+    assert load_config(role).get("world.map_area") == agreed
 
 
 def test_private_fills_gaps(tmp_path: Path) -> None:

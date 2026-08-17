@@ -95,6 +95,12 @@ class ReferenceSession:
     # What actually arrived, keyed by their step number — for binding a
     # closing audit record to the commit that was really sent (imreeyal §3.10).
     received: dict[int, str] = field(default_factory=dict)
+    # Their revealed records, kept rather than consumed. `collect_audit` used to
+    # compute a verdict from these and drop them, which left the pass/fail
+    # boolean as the only surviving trace of the reveal — a claim about evidence
+    # with the evidence discarded. The log artefact has to carry what the
+    # verdict was computed from, or M#20's replay has nothing to re-hash.
+    their_records: list[dict] = field(default_factory=list)
     # Our own per-sender step counter (imreeyal §3.6): incremented once per
     # outbound turn, independent of the shared game-progress counter.
     sent: int = 0
@@ -279,9 +285,9 @@ class ReferenceSession:
             stamped = theirs.get("sub_game_number")
             if isinstance(stamped, int) and self.sub_game_number and stamped != self.sub_game_number:
                 continue
-            verdict = sealing.audit_records(
-                AuditPayload.from_dict(theirs).records, live=self.received
-            )
+            revealed = AuditPayload.from_dict(theirs).records
+            verdict = sealing.audit_records(revealed, live=self.received)
+            self.their_records = list(revealed)
             return {**verdict, "received": True}
 
     async def _collect(self, inbox: queue.Queue, seconds: float) -> dict | None:

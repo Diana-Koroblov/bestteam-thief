@@ -24,10 +24,10 @@ import argparse
 import asyncio
 import contextlib
 import logging
+from pathlib import Path
 from typing import Any
 
-from core.compat import reporting
-from core.compat.league_row import row_from_session
+from core.compat import closing
 from core.compat.mailbox import Inboxes, build_reference_tools
 from core.compat.session import HandshakeError, ReferenceSession, reconnect
 from core.compat.turn_wait import TURN_WAIT_SECONDS, await_agreement
@@ -139,8 +139,10 @@ async def _series(
     identity = identity_of(sdk)
     failures = 0
     rows: list[dict[str, Any]] = []
+    written: list[Path] = []
     their_group = ""
     their_identity: dict[str, Any] = {}
+    opened = utc_now()
     for number, _role in plan:
         sdk.runtime.start_sub_game(number)
         inboxes.drain()
@@ -210,24 +212,23 @@ async def _series(
         if not verdict["passed"]:
             print(f"    their failed steps: {verdict['failed_steps']}")
         if args.out:
-            # Both commits come from the blocks the two peers actually
-            # exchanged, so a filed row can never name code a declaration did
-            # not. `--their-commit` still wins when given: it is the operator
-            # correcting a peer whose own block was wrong or absent.
-            their_commit = str(
-                getattr(args, "their_commit", "")
-                or their_identity.get("github_commit", "")
-                or ""
+            # The row and the evidence beside it, together — see
+            # `core/compat/filing.py` for why neither is the CLI's own business.
+            note = closing.close_sub_game(
+                sdk=sdk, args=args, session=session, number=number, result=result,
+                verdict=verdict, started=started, ended=utc_now(),
+                their_group=their_group, their_identity=their_identity,
+                our_identity=identity, rows=rows, written=written,
             )
-            rows.append(row_from_session(
-                sdk=sdk, session=session, number=number, raw_result=result, verdict=verdict,
-                started=started, ended=utc_now(), their_group=their_group,
-                their_commit=their_commit,
-                our_commit=str(identity.get("github_commit", "") or ""),
-            ))
+            if note:
+                print(f"    ! {note}")
     print()
     if args.out:
-        print(reporting.send_league_report(sdk, args, rows, identity, their_identity, their_group))
+        for line in closing.close_series(
+            sdk=sdk, args=args, rows=rows, written=written, our_identity=identity,
+            their_identity=their_identity, their_group=their_group, opened=opened,
+        ):
+            print(line)
     else:
         print("not filed - pass --out to write the four artefacts (M#35 needs a real report)")
     return 1 if failures else 0
