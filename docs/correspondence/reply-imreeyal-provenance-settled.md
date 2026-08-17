@@ -139,8 +139,8 @@ needed.
 
 Both published and clean before this message went out:
 
-    cop    376676889d276091e879748513f0e317abb6095c   (bestteam-cop,   origin/main)
-    thief  635182d4fa3a3ca4f815e90161b5aa6535b954ae   (bestteam-thief, origin/main)
+    cop    c05619122c14b081b15172c7157ddd119951838d   (bestteam-cop,   origin/main)
+    thief  9e977a47cf6c28c2645a49abd2e4b06d1b376976   (bestteam-thief, origin/main)
 
 Each resolves to `published on origin/main` — our runner refuses to arm on a head that is
 dirty, has no remote, or sits on no remote branch, so these are the same hashes our

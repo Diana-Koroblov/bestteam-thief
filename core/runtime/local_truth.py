@@ -124,7 +124,30 @@ class LocalTruth:
             return
         self._filtered_step = step
         state = self.orchestrator.state
-        self.filter.deposit(self.orchestrator.own_position)
+        # 🐛 **Step 0 observed AND emitted, so the first frame carried two
+        # emission cycles.** This runs twice on the opening turn and only the
+        # opening turn — once from `belief()` at the pre-move step 0, once from
+        # `reveal_for` at the post-move step 1 — because `_filtered_step` starts
+        # at -1 and every later turn finds its pre-move step already claimed.
+        # Two deposits one decay apart put a *second-generation* value on the
+        # wire: at rho=0.1 subtractive, 0.9 -> 0.8 -> 0.7, and a peer replaying
+        # our field from an empty board cannot explain a 0.7 in a game one step
+        # old. imreeyal's checker withheld our cop's step-1 frame in all three
+        # police sub-games of both series on 16/08 and 17/08, and diagnosed it
+        # exactly: a spawn deposit laid before the first move.
+        #
+        # Ch. 4.3 ties emission to an action — *"every time an agent moves or
+        # stays in place"* — and at step 0 no action has been taken, so the book
+        # asks for no emission here either. Nothing is concealed by removing it:
+        # both start cells are public signed terms (`cop_start`, `thief_start`).
+        #
+        # The guard is on the deposit alone, deliberately. `observe` must still
+        # run at step 0 — our Cop has already read the Thief's opening field by
+        # then, and skipping it would drop that evidence from the first
+        # decision. It is `reset`'s -1 that guarantees this, which is why the
+        # fix could not simply be to start the counter at 0.
+        if step > 0:
+            self.filter.deposit(self.orchestrator.own_position)
         self.filter.observe(
             self.latest_opponent_scent(), state.barriers, self.orchestrator.own_position
         )

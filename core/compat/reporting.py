@@ -158,12 +158,13 @@ def series_subject(result: dict[str, Any], our_role: str) -> str:
     line would be the retired `league` block wearing a different hat.
 
     A drawn series has no winner, and ``winner_group`` is then ``None``. It
-    travels as ``none`` rather than as an empty space, so the subject still
-    parses into the same four fields for anyone matching two teams' mails.
+    travels as ``tie`` — the reference form's own degradation, as imreeyal have
+    already filed one under this week. We sent ``none`` for a day; it parses
+    identically and twins with nobody, which is the whole point of the form.
     """
     winner = (result.get("final_result") or {}).get("winner_group")
     return (
-        f"Police-Thief series result: winner {winner or 'none'} "
+        f"Police-Thief series result: winner {winner or 'tie'} "
         f"(reported by {our_role})"
     )
 
