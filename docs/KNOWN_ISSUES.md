@@ -20,41 +20,49 @@ or forget something real is still open.
   fix (`seal_exits`/`weight_reach` in `game.toml`) and an earlier scent-timing
   fix (TODO 4.1.6). Re-measured and documented rather than silently bumped —
   see those files' own dated comments for the numbers.
+- **The advanced Cop self-separated from the advanced Thief, 6/48 openings
+  (18/08).** Traced to a specific mechanism, not guessed: the Cop's belief
+  stayed 98%+ confident about a cell the Thief had already left (opening
+  cop=(2,1)/thief=(4,5), full trace below), and stepping into that
+  now-sealed-behind-us pocket blended to a near-certain-capture value on
+  belief's confidence alone — `separation_mass` reported nothing stranded,
+  because almost all believed mass sat *inside* the trap. Two false starts
+  before the real fix: (1) a barrier-placement guard in
+  `barrier_policy.rejection_for` — reverted, the wall itself doesn't
+  geometrically trap the Cop at the moment it's placed, an escape cell is
+  still open; (2) an isolation term inside `evaluate()` alone — barely moved
+  the number, because `search._value_of` blends `caught * CAPTURE_VALUE` with
+  `(1 - caught) * ahead`, and at `caught = 0.97` the isolation-aware `ahead`
+  term is scaled to noise. **Real fix**: a new `CopWeights.isolation` term
+  applied to the full blended value in `_value_of` (`police/search.py`), not
+  just the leaf evaluation — belief-independent, so a wrong filter cannot buy
+  its way past it. Default `weight_isolation = 100.0`
+  (`config/police/game.toml`). Confirmed on the full 48-opening benchmark:
+  6/48 separations to 0/48, zero regression on every matchup that already
+  worked (`test_advanced_league_benchmark.py -m slow`, all re-run clean).
+  Unit tests: `test_isolation_*` in `test_cop_evaluation.py`,
+  `test_isolation_discounts_a_wall_that_would_leave_a_tiny_pocket` in
+  `test_cop_barrier_policy.py`.
+
+  **What this did NOT fix, so nobody assumes otherwise.** Advanced-cop-vs-
+  advanced-thief is still 0/48 captures — self-separation was never the main
+  cause of that number, something deeper in the pursuit itself is. Still
+  open, see below.
 
 ## Open — does NOT block a match from running, affects whether we win
 
-- **The advanced Cop self-separates from the advanced Thief 6/48 times**
-  (`test_the_cop_never_walls_itself_away_from_the_thief`, in
-  `test_advanced_league_benchmark.py`, the 192-sub-game slow suite —
-  `uv run pytest tests/integration/test_advanced_league_benchmark.py -m slow`).
-  Same run: advanced-cop-vs-advanced-thief is currently 48/48 survivals — the
-  advanced Cop never catches a Thief that plays like ours does. A
-  self-separated or lost sub-game still completes and audits cleanly, so it
-  does not stop a match from running or block the count of matches played —
-  it costs points, not participation. Deliberately parked, not chased, on
-  2026-08-18 to prioritize getting tomorrow's match running first.
-
-  **Root cause, actually traced 18/08 (opening cop=(2,1)/thief=(4,5)), and it
-  is narrower than it first looked.** It is NOT the barrier-placement guard in
-  `barrier_policy.rejection_for` — tried adding a geometric self-trap check
-  there (refuse a wall that shrinks the Cop's own reachable region below a
-  floor), reverted it after re-running the exact reproduction: the trace was
-  byte-identical, because the wall in question (`(2,6)`) does not geometrically
-  trap the Cop at the moment it is placed — cell `(3,6)` is still open. **The
-  actual mistake is one turn later, in ordinary movement, not in barrier
-  placement**: from `(2,6)`, the Cop's expectimax search chose to step to
-  `(1,6)` — a dead end, since `(2,6)` is now barriered and cannot be
-  re-entered — over `(3,6)`, which stays connected to the rest of the board.
-  Almost certainly stale belief: the Thief had already slipped out of the area
-  the Cop was still weighting heavily, so the move toward `(1,6)` scored well
-  against a belief that was one step behind reality, and by the next scent
-  reading the mistake was already irreversible. A real fix would need to touch
-  move evaluation under a just-placed wall (e.g. penalise a move that cannot
-  be undone if it is not corroborated by *current* observation), not the
-  barrier guard — more involved and riskier to get right before tomorrow than
-  time allows to also re-verify on the full 48-opening benchmark. Still
-  parked; this entry replaces the guess in the previous version with what was
-  actually confirmed.
+- **The advanced Cop still never captures the advanced Thief, 0/48 openings**
+  (`test_the_competitive_cell_is_reported_and_not_gated` and
+  `test_a_better_cop_is_still_a_harder_cop`, same slow benchmark). Confirmed
+  this is a separate, deeper issue from the self-separation bug above — fixing
+  that changed 0 of these 48 outcomes. Not investigated further yet. A lost
+  sub-game still completes and audits cleanly, so this costs points, not
+  participation in tomorrow's match.
+- **The advanced Cop is now slower than the baseline Cop against the baseline
+  Thief** (`test_the_advanced_cop_captures_faster_than_the_baseline_one`),
+  the accepted trade-off from the 15/08 barrier-deadlock fix — see that
+  commit and `test_advanced_selfplay.py`'s module docstring. Not a new
+  finding, not re-chased today.
 
 ## Operational gotchas learned the hard way tonight (not code bugs)
 

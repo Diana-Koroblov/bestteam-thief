@@ -24,7 +24,10 @@ def only(term: str) -> CopWeights:
     return CopWeights(**{field: (1.0 if field == term else 0.0) for field in _FIELDS})
 
 
-_FIELDS = ("separation", "shared_region", "proximity", "endgame", "cycle", "reach", "diagonal")
+_FIELDS = (
+    "separation", "shared_region", "proximity", "endgame", "cycle", "reach", "diagonal",
+    "isolation",
+)
 
 
 # --- 8.1.2 connectivity, not mobility --------------------------------------
@@ -72,6 +75,40 @@ def test_shrinking_a_region_the_thief_is_not_in_earns_nothing() -> None:
     weights = only("shared_region")
     elsewhere = {(6, 6): 1.0}
     assert evaluate((0, 1), elsewhere, POCKET_WALLS, BOARD, weights) == 0.0
+
+
+# --- 18/08 a belief-independent hedge against a wrong filter ----------------
+
+
+def test_isolation_penalises_a_small_component_regardless_of_belief() -> None:
+    """The point of the term: it must not need the belief's cooperation.
+    Every other guard here is priced in believed mass, so a filter that is
+    simply wrong pays nothing through them — this one is pure geometry."""
+    weights = only("isolation")
+    open_board = evaluate((0, 1), IN_POCKET, frozenset(), BOARD, weights)
+    trapped = evaluate((0, 1), IN_POCKET, POCKET_WALLS, BOARD, weights)
+    assert trapped < open_board
+
+
+def test_isolation_does_not_fire_above_its_floor() -> None:
+    """A component at or above `ISOLATION_FLOOR` is not a dead end, and
+    ordinary late-game sealing must not be taxed for it."""
+    weights = only("isolation")
+    assert evaluate((0, 1), IN_POCKET, frozenset(), BOARD, weights) == 0.0
+
+
+def test_isolation_fires_even_when_belief_agrees_with_the_trap() -> None:
+    """🐛 18/08, the actual bug, live against the advanced Thief: belief
+    concentrated *inside* the pocket makes `separation_mass` report nothing
+    stranded, so the confidence that made the trap attractive is exactly what
+    hid it from that guard. Isolation must not need belief's agreement to
+    fire — it is priced the same whether belief is right or wrong."""
+    weights = CopWeights()
+    belief_agrees = {(0, 0): 1.0}
+    assert separation_mass((0, 1), belief_agrees, POCKET_WALLS, BOARD) == 0.0
+    trapped = evaluate((0, 1), belief_agrees, POCKET_WALLS, BOARD, weights)
+    open_board = evaluate((0, 1), belief_agrees, frozenset(), BOARD, weights)
+    assert trapped < open_board
 
 
 # --- 8.1.8 the win condition, targeted explicitly ---------------------------

@@ -8,6 +8,8 @@ reached the position where it loses the sub-game.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from core.domain.board import Board
 from core.domain.brain_base import Observation
 from core.domain.cuts import region_has_cycle
@@ -119,6 +121,23 @@ def test_sealing_ourselves_in_with_the_thief_is_allowed() -> None:
     go. A mobility guard would have refused the winning move."""
     view = observe((1, 1), {(0, 0): 1.0}, frozenset({(0, 2), (2, 0), (2, 2)}))
     assert rejection_for((1, 2), view, SETTINGS) == ""
+
+
+def test_isolation_discounts_a_wall_that_would_leave_a_tiny_pocket() -> None:
+    """🐛 18/08, live against the advanced Thief: this exact shape — three
+    walls along a column, the Cop standing at the one remaining door to a
+    2-cell pocket the belief says the Thief is almost certainly through —
+    is what the Cop built while chasing it into (0,6)/(1,6). `rejection_for`
+    does not refuse the fourth wall: almost all believed mass sits inside the
+    pocket it seals, so nothing reads as *stranded* by A1.5's own test. Only
+    the placement's VALUE should reflect that the Cop is one wall from a dead
+    end if that 97% turns out to be wrong — which is exactly what it was."""
+    neck = frozenset({(0, 5), (1, 5), (2, 5)})
+    view = observe((2, 6), {(1, 6): 0.97, (6, 6): 0.03}, neck)
+    assert rejection_for((2, 6), view, SETTINGS) == ""
+    isolation_aware = placement_value((2, 6), view, WEIGHTS, 2)
+    blind = placement_value((2, 6), view, replace(WEIGHTS, isolation=0.0), 2)
+    assert isolation_aware < blind
 
 
 # --- futile and unfinishable walls ------------------------------------------
