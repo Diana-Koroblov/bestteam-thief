@@ -21,7 +21,6 @@ from core.compat import reporting
 from core.compat.filing import file_declaration, file_sub_game
 from core.compat.league_report import game_id
 from core.compat.league_row import row_from_session
-from core.compat.match_log import sealed_commit
 from core.report.artefacts import ArtefactError, utc_now
 
 __all__ = ["close_series", "close_sub_game"]
@@ -49,16 +48,18 @@ def close_sub_game(
     caller keeps one list of each for the whole series and this decides what
     goes in them.
 
-    Their commit comes from what they **sealed**, not from what they typed —
-    see :func:`_their_commit` for the precedence and why a disagreement between
-    their two channels is reported rather than resolved silently.
+    Both commits come from the blocks the two peers actually exchanged, so a
+    filed row can never name code a declaration did not. ``--their-commit``
+    still wins when given: it is the operator correcting a peer whose own block
+    was wrong or absent.
     """
     group = their_group or "opponent"
-    their_commit, finding = _their_commit(args, session, their_identity)
     rows.append(row_from_session(
         sdk=sdk, session=session, number=number, raw_result=result, verdict=verdict,
         started=started, ended=ended, their_group=group,
-        their_commit=their_commit,
+        their_commit=str(
+            getattr(args, "their_commit", "") or their_identity.get("github_commit", "") or ""
+        ),
         our_commit=str(our_identity.get("github_commit", "") or ""),
     ))
     try:
@@ -69,35 +70,7 @@ def close_sub_game(
         ))
     except (OSError, ArtefactError) as error:
         return f"sub-game {number} artefacts NOT filed: {type(error).__name__}: {error}"
-    return finding
-
-
-def _their_commit(args: Any, session: Any, their_identity: dict[str, Any]) -> tuple[str, str]:
-    """Return the opponent's head to file, and any note about how they declared it.
-
-    Precedence is strongest-source-first: the operator's ``--their-commit``
-    override, then the head they **sealed** into their step-0 record, then the
-    plaintext handshake identity block. Settled with imreeyal on 17/08 — a
-    sealed commit is inside the commitment and unrevisable, a handshake block
-    is neither.
-
-    **A peer's two channels disagreeing is a finding, not a tie to break
-    quietly.** A conformant peer sources its plaintext declaration *from* the
-    sealed record, so the two agree by construction and a divergence means one
-    of them is wrong. We file the sealed one either way and say so, because a
-    silent pick would destroy the only evidence that the disagreement existed.
-    """
-    override = str(getattr(args, "their_commit", "") or "")
-    if override:
-        return override, ""
-    sealed = sealed_commit(getattr(session, "their_records", []) or [])
-    declared = str(their_identity.get("github_commit", "") or "")
-    if sealed and declared and sealed != declared:
-        return sealed, (
-            f"their two channels disagree: sealed step-0 {sealed[:12]}... but handshake "
-            f"declared {declared[:12]}... - filing the sealed one"
-        )
-    return sealed or declared, ""
+    return ""
 
 
 def close_series(

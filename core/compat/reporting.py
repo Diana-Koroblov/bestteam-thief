@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from core.compat import league_merge, league_report
-from core.compat.wire import terms_from_config, wire_role
+from core.compat.wire import terms_from_config
 from core.infra.gmail_sender import GmailSender, build_transport
 from core.report.artefacts import write
 from core.sdk.peer_sdk import PeerSDK
@@ -91,9 +91,7 @@ def _send(
         first_meeting=_first_meeting(their_group),
         tie_score=int(sdk.runtime.orchestrator.config.require("scoring.tie_score")),
     )
-    # Insertion order, not sorted: this is the file the two teams diff against
-    # each other, and the league's shape is an ordered one. See `write`.
-    write(result, out, f"result_{gid}.json", sort_keys=False)
+    write(result, out, f"result_{gid}.json")
 
     expected = sdk.num_games
     if len(merged) < expected:
@@ -117,8 +115,8 @@ def _send(
             "  side (imreeyal Stage 7). Re-run, or send by hand if you disagree.\n" + MANUAL
         )
     if not counted:
-        return _send_friendly(sdk, args, path, result)
-    return _send_counted(sdk, path, result)
+        return _send_friendly(sdk, args, path)
+    return _send_counted(sdk, path)
 
 
 def _games_played(
@@ -147,36 +145,7 @@ def _first_meeting(their_group: str) -> bool:
     return their_group.lower() not in played
 
 
-def series_subject(result: dict[str, Any], our_role: str) -> str:
-    """Return the league's own mail subject for a filed series.
-
-    ``Police-Thief series result: winner <group_id> (reported by <role>)`` — the
-    reference form six pairings already send under, and the same string whether
-    the series is counted or friendly. There is deliberately no "(friendly)"
-    suffix: what marks a friendly is the recipient, exactly as it is what marks
-    the file (see `league_report.build_result`), and a marker in the subject
-    line would be the retired `league` block wearing a different hat.
-
-    A drawn series has no winner, and ``winner_group`` is then ``None``. It
-    travels as ``none`` rather than as an empty space, so the subject still
-    parses into the same four fields for anyone matching two teams' mails.
-    """
-    winner = (result.get("final_result") or {}).get("winner_group")
-    return (
-        f"Police-Thief series result: winner {winner or 'none'} "
-        f"(reported by {our_role})"
-    )
-
-
-def _send_friendly(
-    sdk: PeerSDK, args: argparse.Namespace, path: Path, result: dict[str, Any] | None = None
-) -> str:
-    """Send to the two teams' own inboxes, never the lecturer.
-
-    The subject is built at the point of sending rather than by the caller: it
-    needs `sdk.role`, and computing it above the gates would make a peer that
-    cannot answer that question fail a path which never sends anything at all.
-    """
+def _send_friendly(sdk: PeerSDK, args: argparse.Namespace, path: Path) -> str:
     raw = str(getattr(args, "report_to", "") or "")
     recipients = [addr.strip() for addr in raw.split(",") if addr.strip()]
     if not recipients:
@@ -192,15 +161,15 @@ def _send_friendly(
         transport=lambda body: build_transport()(body),
         enabled=enabled,
     )
-    mailer.send_result(path, subject=series_subject(result or {}, wire_role(sdk.role.value)))
+    mailer.send_result(path, subject=f"{path.stem} (friendly)")
     return f"{LABEL}sent to {mailer.recipient}  ({path.name}, friendly, never the lecturer)"
 
 
-def _send_counted(sdk: PeerSDK, path: Path, result: dict[str, Any] | None = None) -> str:
+def _send_counted(sdk: PeerSDK, path: Path) -> str:
     mailer = sdk.mailer()
     if not mailer.enabled or not mailer.on_series_end:
         return f"{LABEL}NOT SENT - [email] enabled/send_on_series_end is off\n" + MANUAL
-    mailer.send_result(path, subject=series_subject(result or {}, wire_role(sdk.role.value)))
+    mailer.send_result(path)
     return (
         f"{LABEL}sent to {mailer.recipient}  ({path.name}, counted)\n"
         "  now confirm THEY sent theirs - a missing report is 0 for BOTH (M#35)"

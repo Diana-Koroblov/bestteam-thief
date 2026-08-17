@@ -32,33 +32,7 @@ from core.compat import sealing
 from core.report.artefacts import utc_now
 from core.shared.version import VERSION
 
-__all__ = ["build_sub_game_log", "verify_sub_game_log", "sealed_commit"]
-
-
-def sealed_commit(records: list[dict[str, Any]]) -> str:
-    """Return the ``github_commit`` a peer SEALED, or ``""`` if it sealed none.
-
-    The strongest of the two channels a peer declares its head on, and the one
-    to file. The handshake identity block is plaintext and can be revised
-    between sub-games; this is inside the commitment, bound to a nonce the
-    opponent already holds, and cannot be changed after the fact without failing
-    the audit that reads it.
-
-    Only the first record carrying the key is consulted, because that is the
-    only one that has it: `core/compat/exchange.sealed_payload` seals the commit
-    on a sub-game's **first** turn and omits the key thereafter, so repeating
-    the scan past the first hit would find nothing and cost a pass over 35
-    records to prove it.
-
-    🐛 **We filed neither channel until 17/08** — the column came from the
-    `--their-commit` flag, typed in by hand from the mail thread, so a filed row
-    named whatever the operator believed rather than anything the peer said.
-    """
-    for record in records:
-        payload = record.get("payload")
-        if isinstance(payload, dict) and payload.get("github_commit"):
-            return str(payload["github_commit"])
-    return ""
+__all__ = ["build_sub_game_log", "verify_sub_game_log"]
 
 
 def build_sub_game_log(

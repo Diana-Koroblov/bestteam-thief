@@ -1,6 +1,6 @@
 {
   "schema_version": "1.2",
-  "agreed_between": ["bestteam", "imreeyal"],
+  "agreed_between": ["bestteam", "najamjad"],
   "version": "1.00",
   "board_and_agents": {
     "grid_size": 7,
@@ -45,7 +45,7 @@
   },
   "network_and_league": {
     "response_timeout_sec": 30,
-    "watchdog_timeout_sec": 60,
+    "watchdog_timeout_sec": 400,
     "num_games": 6,
     "diversity_reward": 10,
     "min_games_to_pass": 2,

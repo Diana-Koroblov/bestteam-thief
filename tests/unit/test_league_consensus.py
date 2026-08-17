@@ -23,7 +23,7 @@ def _row(number: int, result: str, winner: str, our_points: int, their_points: i
     """One clean, mutually-audited sub-game row."""
     return build_sub_game_row(
         number=number, our_group="bestteam", their_group="imreeyal",
-        our_role="police", result=result, winner_group=winner,
+        our_role="police", result=result, winner_group=winner, steps=20,
         our_commit="a" * 40, their_commit="b" * 40, our_tokens=0, their_tokens=0,
         our_points=our_points, their_points=their_points, log_filename="log.json",
         log_verified=True, tampered=False, started_at="t0", ended_at="t1",

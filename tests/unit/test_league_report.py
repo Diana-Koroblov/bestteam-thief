@@ -48,7 +48,7 @@ def test_game_uid_changes_when_the_terms_do() -> None:
 def _row(number: int, result: str, winner: str, our_points: int, their_points: int) -> dict:
     return build_sub_game_row(
         number=number, our_group="bestteam", their_group="imreeyal",
-        our_role="police", result=result, winner_group=winner,
+        our_role="police", result=result, winner_group=winner, steps=20,
         our_commit="a" * 40, their_commit="b" * 40, our_tokens=0, their_tokens=0,
         our_points=our_points, their_points=their_points, log_filename="log.json",
         log_verified=True, tampered=False, started_at="t0", ended_at="t1",
@@ -79,7 +79,7 @@ def test_mutual_agreement_confirmed_is_derived_not_asserted() -> None:
 
     never_engaged = build_sub_game_row(
         number=2, our_group="bestteam", their_group="imreeyal", our_role="thief",
-        result="technical_loss", winner_group="", our_commit="a" * 40,
+        result="technical_loss", winner_group="", steps=0, our_commit="a" * 40,
         their_commit="b" * 40, our_tokens=0, their_tokens=0, our_points=0,
         their_points=0, log_filename="log.json", log_verified=False, tampered=False,
         started_at="t0", ended_at="t1",
@@ -141,29 +141,7 @@ def test_a_friendly_never_claims_the_diversity_reward_even_when_won() -> None:
     assert result["final_result"]["diversity_reward_applied"] == {
         "bestteam": False, "imreeyal": False,
     }
-    # No `league` block, here or anywhere. It used to be added on a friendly to
-    # record why the file did not count; retired 17/08 at imreeyal's ask, since
-    # what marks a series friendly is the recipient channel and a file that
-    # never reaches the grader needs no marker inside it for one.
-    assert "league" not in result
-
-
-def test_the_result_carries_the_leagues_own_key_order() -> None:
-    """The one artefact two teams byte-diff against each other, so order is not free.
-
-    Asserted on the built dict rather than the written file because insertion
-    order is what `write(..., sort_keys=False)` then preserves — if this drifts,
-    the file drifts with it and the two copies stop skimming as twins.
-    """
-    result = build_result(
-        counted=False, our_group="bestteam", their_group="imreeyal",
-        sub_games=[_row(1, "capture", "bestteam", 20, 5)],
-        game_uid_value="uid-1", timezone="Asia/Jerusalem",
-        repos={}, games_played={"bestteam": 1, "imreeyal": None}, first_meeting=True,
-    )
-    assert list(result) == [
-        "_schema", "schema_version", "report_type", "game_id", "game_uid", "links",
-        "timezone", "groups", "num_sub_games", "sub_games", "final_result",
-        "mutual_agreement",
-    ]
-    assert result["schema_version"] == "1.1"
+    assert result["league"] == {
+        "authority": "book App. E rule 52 - one counted series per pairing",
+        "counted": False, "reason": "friendly",
+    }

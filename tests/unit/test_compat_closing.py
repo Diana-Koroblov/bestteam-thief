@@ -67,31 +67,27 @@ class _Session:
     state = _State()
     winner = "cop"
 
-    def __init__(self, their_sealed_commit: str = "s" * 40) -> None:
+    def __init__(self) -> None:
         self.records = [self._sealed(1)]
-        self.their_records = [self._sealed(1, their_sealed_commit)]
+        self.their_records = [self._sealed(1)]
         self.received = {1: self.their_records[0]["commit"]}
 
     @staticmethod
-    def _sealed(step: int, github_commit: str = "") -> dict:
+    def _sealed(step: int) -> dict:
         payload = {"step": step, "state": "grid=7x7;self=[1,0];barriers=[]",
                    "move": "S", "intent": "truth", "hint": "moving", "verdict": "truth"}
-        if github_commit:
-            payload["github_commit"] = github_commit
         return {"payload": payload, **sealing.seal(payload)}
 
 
-def _close(tmp_path: Path, session=None, their_commit="", their_identity=None, **overrides):
+def _close(tmp_path: Path, **overrides):
     rows: list[dict] = []
     written: list[Path] = []
     note = close_sub_game(
-        sdk=_SDK(), args=argparse.Namespace(out=str(tmp_path), their_commit=their_commit),
-        session=session or _Session(), number=1, result="capture",
+        sdk=_SDK(), args=argparse.Namespace(out=str(tmp_path), their_commit=""),
+        session=_Session(), number=1, result="capture",
         verdict={"passed": True, "received": True}, started="2026-08-17T12:00:00+00:00",
         ended="2026-08-17T12:05:00+00:00", their_group="yanell11",
-        their_identity=their_identity if their_identity is not None
-        else {"github_commit": "s" * 40},
-        our_identity={"github_commit": "a" * 40},
+        their_identity={"github_commit": "b" * 40}, our_identity={"github_commit": "a" * 40},
         rows=rows, written=written, **overrides,
     )
     return rows, written, note
@@ -126,43 +122,10 @@ class TestTheRowStillGoes:
     def test_the_row_is_recorded_alongside(self, tmp_path: Path) -> None:
         rows, _written, _note = _close(tmp_path)
         assert len(rows) == 1
-        assert rows[0]["github_commit"] == {"bestteam": "a" * 40, "yanell11": "s" * 40}
+        assert rows[0]["github_commit"] == {"bestteam": "a" * 40, "yanell11": "b" * 40}
         # We played cop and captured, so Appendix F pays us 20 and them 5.
         assert rows[0]["score"] == {"bestteam": 20, "yanell11": 5}
         assert rows[0]["audit"] == {"log_verified": True, "tampered": False}
-
-    def test_their_commit_is_read_from_what_they_sealed(self, tmp_path: Path) -> None:
-        """The sealed record outranks the handshake block (imreeyal, 17/08).
-
-        Their plaintext block says one thing and their commitment says another;
-        the commitment is the one that cannot be revised after the fact, so it
-        is the one filed.
-        """
-        rows, _written, note = _close(
-            tmp_path, session=_Session(their_sealed_commit="c" * 40),
-            their_identity={"github_commit": "d" * 40},
-        )
-        assert rows[0]["github_commit"]["yanell11"] == "c" * 40
-        assert "two channels disagree" in note
-
-    def test_agreeing_channels_produce_no_finding(self, tmp_path: Path) -> None:
-        """A conformant peer sources its plaintext from its seal, so they match."""
-        _rows, _written, note = _close(tmp_path)
-        assert note == ""
-
-    def test_the_handshake_block_is_used_when_nothing_was_sealed(self, tmp_path: Path) -> None:
-        """A peer that seals no commit is not a peer that declared none."""
-        rows, _written, note = _close(
-            tmp_path, session=_Session(their_sealed_commit=""),
-            their_identity={"github_commit": "d" * 40},
-        )
-        assert rows[0]["github_commit"]["yanell11"] == "d" * 40
-        assert note == ""
-
-    def test_the_operator_override_still_wins(self, tmp_path: Path) -> None:
-        """`--their-commit` is the correction for a peer whose own blocks are wrong."""
-        rows, _written, _note = _close(tmp_path, their_commit="e" * 40)
-        assert rows[0]["github_commit"]["yanell11"] == "e" * 40
 
     def test_an_unwritable_directory_costs_the_files_and_not_the_row(self, tmp_path: Path) -> None:
         """The result is what must survive; a lost log is reported, never raised."""

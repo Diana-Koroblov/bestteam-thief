@@ -64,7 +64,7 @@ def row_from_session(
         return build_sub_game_row(
             number=number, our_group=our_group, their_group=their_group or "opponent",
             our_role=wire_role(session.role.value), result="technical_loss", winner_group="",
-            our_commit=our_commit, their_commit=their_commit,
+            steps=int(session.state.step), our_commit=our_commit, their_commit=their_commit,
             our_tokens=0, their_tokens=0, our_points=0, their_points=0,
             log_filename=log_name, log_verified=False, tampered=tampered,
             started_at=started, ended_at=ended,
@@ -78,7 +78,7 @@ def row_from_session(
     return build_sub_game_row(
         number=number, our_group=our_group, their_group=their_group or "opponent",
         our_role=wire_role(session.role.value), result=keyword, winner_group=winner_group,
-        our_commit=our_commit, their_commit=their_commit,
+        steps=int(session.state.step), our_commit=our_commit, their_commit=their_commit,
         our_tokens=0, their_tokens=0, our_points=our_points, their_points=their_points,
         log_filename=log_name, log_verified=log_verified, tampered=tampered,
         started_at=started, ended_at=ended,

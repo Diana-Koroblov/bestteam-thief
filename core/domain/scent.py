@@ -49,6 +49,12 @@ EMISSION: dict[int, float] = {0: 0.90, 1: 0.62, 2: 0.42, 4: 0.20, 5: 0.14, 8: 0.
 # records disagree about physics in front of a grader.
 RINGS: tuple[float, ...] = (0.90, 0.60, 0.30)
 
+# The clamp `merge` applies after summing: the centre intensity, so no amount of
+# accumulated history can exceed a single fresh deposit. `RINGS[0]` rather than a
+# second literal — one number, one place, and a config that moved the centre
+# would otherwise leave the ceiling behind.
+CEILING: float = RINGS[0]
+
 # A 5×5 window reaches two cells in each direction.
 RADIUS = 2
 
@@ -116,17 +122,36 @@ def decay(
 def merge(
     existing: dict[Position, float],
     fresh: dict[Position, float],
+    ceiling: float = CEILING,
 ) -> dict[Position, float]:
-    """Combine an aged field with this turn's deposit, keeping the stronger.
+    """Combine an aged field with this turn's deposit: **sum, then clamp**.
 
-    Maximum rather than sum. A sum would let an agent that lingered on one cell
-    accumulate an intensity no single deposit can produce, which would read as
-    "several agents" rather than "one agent, twice" — and there are only two
-    agents on the board.
+    ``min(ceiling, aged + fresh)`` — the construction `multiplicative_book_v1`
+    pins, and the one yanell11 run:
+
+        value = max(0.0, survive * tau.get(cell, 0.0) + fresh)
+        if ceiling is not None:
+            value = min(ceiling, value)
+
+    **This was `max` until 17/08, and it was our divergence to fix.** The
+    argument for it was not silly — a sum lets an agent that lingers accumulate
+    an intensity no single deposit produces, which reads as "several agents"
+    rather than "one agent, twice". The clamp is what answers that: capped at the
+    centre intensity, no history can exceed one fresh deposit, so the objection
+    disappears and the sum stays faithful to the document.
+
+    What settled it is that both peers now declare
+    ``934c220d…`` — the registry hash *for that document*. A hash naming a model
+    neither side runs exactly is worth less than the same hash naming one both
+    do, and we had offered to match theirs if they preferred it. They did.
+
+    Identical to `max` for a single emission and wherever two fields do not
+    overlap; different where they do — which on a 7x7 with an agent re-emitting
+    near itself is most turns near the trail head, not a corner case.
     """
     combined = dict(existing)
     for cell, value in fresh.items():
-        combined[cell] = max(combined.get(cell, 0.0), value)
+        combined[cell] = min(ceiling, combined.get(cell, 0.0) + value)
     return combined
 
 

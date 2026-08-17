@@ -79,20 +79,38 @@ def test_a_fresh_cell_is_silent() -> None:
     assert tracker.cost_at((6, 6), BOARD) == 0.0
 
 
-def test_standing_still_does_not_build_a_bigger_trail() -> None:
-    """🔬 **The finding that killed the false anchor** (PRD advanced §4.4).
+def test_standing_still_cannot_push_a_cell_past_the_ceiling() -> None:
+    """🔬 **The finding that killed the false anchor, re-derived under the clamp.**
 
     §4.4 assumes a trail can be *fed* — stand somewhere, build a plateau, then
-    break away. It cannot. `merge` keeps the **maximum**, so re-emitting on a
-    cell we already occupy restores exactly the values already there. Five turns
-    of standing still is byte-for-byte one turn of standing still.
+    break away. The plateau it imagines cannot exist, but the reason changed on
+    17/08 and the test had to change with it.
+
+    Under `max` the answer was flat identity: five turns of standing still was
+    byte-for-byte one turn, because re-emitting restored the values already
+    there. `merge` now **sums and clamps** (the construction
+    `multiplicative_book_v1` pins, and the one both peers declare), so the rings
+    around a lingering agent genuinely do accumulate.
+
+    What survives, and is what §4.4 actually needed, is the **ceiling**: no cell
+    can exceed one fresh deposit however long we stand on it. So an opponent
+    reading a peak still cannot tell "stood here five turns" from "passed
+    through once", and a false anchor built by loitering is still unavailable.
+    The rings say *something* now; the peak says no more than it ever did.
     """
+    from core.domain.scent import CEILING
+
     once = TrailTracker()
     once.observe((3, 3), BOARD)
     lingered = TrailTracker()
     for _ in range(5):
         lingered.observe((3, 3), BOARD)
-    assert lingered.emitted == once.emitted
+
+    assert max(lingered.emitted.values()) <= CEILING
+    assert max(lingered.emitted.values()) == max(once.emitted.values())
+    # And the rings DO differ now — asserted rather than left implicit, so a
+    # revert to `max` fails here loudly instead of passing quietly.
+    assert lingered.emitted != once.emitted
 
 
 def test_moving_accumulates_more_scent_than_repeating() -> None:
