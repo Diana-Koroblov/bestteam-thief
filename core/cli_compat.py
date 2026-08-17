@@ -30,7 +30,7 @@ from typing import Any
 from core.compat import closing
 from core.compat.mailbox import Inboxes, build_reference_tools
 from core.compat.session import HandshakeError, ReferenceSession, reconnect
-from core.compat.turn_wait import TURN_WAIT_SECONDS, await_agreement
+from core.compat.turn_wait import TURN_WAIT_SECONDS, await_agreement, push_audit
 from core.infra.errors import PeerError
 from core.infra.mcp_client import quieten_expected_disconnects
 from core.protocol.schemas import Role
@@ -196,13 +196,9 @@ async def _series(
             print(f"  sub-game {number}  ABANDONED\n    {error}")
             failures += 1
             continue
-        # Best effort: the peer that just won may exit the moment it has read
-        # its inbox, killing its server mid-response — while our payload landed
-        # anyway and theirs may already be waiting for us.
-        with contextlib.suppress(PeerError):
-            await sdk.opponent.call(
-                "submit_audit", session.audit_payload(), argument="payload"
-            )
+        _landed, notes = await push_audit(sdk.opponent, session.audit_payload(), redial)
+        for note in notes:
+            print(f"    ! {note}")
         verdict = await session.collect_audit(float(args.linger) or 20.0)
         print(
             f"  sub-game {number}  {sdk.role.value:5} {result:24} "

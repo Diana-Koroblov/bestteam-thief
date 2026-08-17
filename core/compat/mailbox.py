@@ -82,6 +82,8 @@ def build_reference_tools(inboxes: Inboxes) -> dict[str, Callable[..., Any]]:
 
     def negotiate(message: dict) -> dict:
         """Receive the opponent's signed game agreement."""
+        print(f"    < inbound negotiate: sub_game_number={message.get('sub_game_number')} "
+              f"role={message.get('role')}")
         inboxes.agreements.put(message)
         return {"ok": True}
 

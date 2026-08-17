@@ -61,6 +61,7 @@ __all__ = [
     "await_agreement",
     "collect_our_agreement",
     "push_agreement",
+    "push_audit",
 ]
 
 # How long to yield between inbox polls. Long enough not to spin a core, short
@@ -133,6 +134,32 @@ async def push_agreement(
             if redial is not None:
                 with suppress(Exception):
                     client = await redial()
+
+
+async def push_audit(opponent: Any, payload: dict, redial: Any) -> tuple[bool, list[str]]:
+    """Push our audit payload, retrying once after a redial. Returns (landed, notes).
+
+    The peer that just won may exit the moment it has read its inbox, killing
+    its server mid-response, so the client this sub-game's last turn left us
+    with can easily be a corpse by the time we reach this call — same as
+    `push_agreement` above, and for the same reason. A silently swallowed
+    failure here reads on their side as "AUDIT SKIPPED" while our own log
+    shows nothing wrong at all (najamjad, 17/08) — this is the fix and the
+    visibility both.
+    """
+    from core.infra.errors import PeerError
+
+    notes: list[str] = []
+    for attempt in range(2):
+        try:
+            if attempt:
+                opponent = await redial()
+            await opponent.call("submit_audit", payload, argument="payload")
+            return True, notes
+        except PeerError as error:
+            notes.append(f"outbound submit_audit attempt {attempt + 1} failed: {error}")
+    notes.append("outbound submit_audit never landed - their audit of us will read as skipped")
+    return False, notes
 
 
 async def collect_our_agreement(session: Any, wait: float, ours: dict) -> dict:
