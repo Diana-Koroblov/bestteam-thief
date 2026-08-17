@@ -30,6 +30,38 @@ def test_an_ordinary_position_is_not_terminal(rules: Rules) -> None:
     assert rules.verdict(GameState(cop=(0, 0), thief=(3, 3), step=10)) is None
 
 
+# --- capture by a barrier on the cell, M#46 (T1.10) ------------------------
+
+
+def test_a_barrier_on_the_thiefs_own_cell_is_a_capture(rules: Rules) -> None:
+    """🐛 **M#46 was unreachable from a state.**
+
+    It lived only in `BarrierManager._captures` — the Cop's *placement* path —
+    so `verdict()` returned None for a Thief standing on a barriered cell with
+    its four exits wide open, and any peer answering a capture claim from state
+    denied a capture that had already happened.
+    """
+    on_cell = GameState(cop=(0, 0), thief=(3, 3), barriers=frozenset({(3, 3)}), step=10)
+    outcome = rules.verdict(on_cell)
+    assert outcome is not None
+    assert outcome.verdict is Verdict.CAPTURE
+    assert "M#46" in outcome.reason
+
+
+def test_m46_is_not_disabled_by_stay_counts_as_move() -> None:
+    """C-006a settles how M#47 reads a legal STAY, and nothing else. A wall on
+    your own cell captures under either reading, so the flag must not reach it."""
+    lenient = Rules(board=BOARD, survival_threshold=35, stay_counts_as_move=True)
+    caged = GameState(cop=(0, 0), thief=(6, 0), barriers=frozenset({(5, 0), (6, 1)}))
+    assert lenient.verdict(caged) is None, "M#47 is off under this reading, as agreed"
+    on_cell = GameState(cop=(0, 0), thief=(3, 3), barriers=frozenset({(3, 3)}))
+    assert lenient.verdict(on_cell) is not None
+
+
+def test_a_barrier_on_a_cell_the_thief_does_not_occupy_is_not_a_capture(rules: Rules) -> None:
+    assert rules.verdict(GameState(cop=(0, 0), thief=(3, 3), barriers=frozenset({(3, 4)}))) is None
+
+
 # --- capture by sealing in, M#47 (T1.11, T1.12) ----------------------------
 
 

@@ -27,9 +27,11 @@ exactly what the opponent's runner does, and therefore what has to be modelled.
 Run it with both peers already up, exactly as they would be at T::
 
     uv run python -m core play --role cop   --protocol reference --first cop \\
-        --role-split 1-1-1-1-1-1 --port 8081 --opponent http://127.0.0.1:8090/mcp
+        --role-split 1-1-1-1-1-1 --port 8081 --opponent http://127.0.0.1:8090/mcp \\
+        --allow-local-head
     uv run python -m core play --role thief --protocol reference --first cop \\
-        --role-split 1-1-1-1-1-1 --port 8082 --opponent http://127.0.0.1:8090/mcp
+        --role-split 1-1-1-1-1-1 --port 8082 --opponent http://127.0.0.1:8090/mcp \\
+        --allow-local-head
 
 Exit code 0 means every sub-game engaged across a real restart.
 """

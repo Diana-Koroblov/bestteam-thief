@@ -62,11 +62,7 @@ def read_turn(session: Any, message: TurnMessage) -> Incoming:
     if message.win_claim:
         outcome.they_won = True
         outcome.win_type = str(message.win_claim.get("type") or "survival")
-    if message.capture_claim:
-        claim = (int(message.capture_claim[0]), int(message.capture_claim[1]))
-        caught = claim == session.orchestrator.own_position
-        outcome.claim_response = {"claim": list(claim), "caught": caught}
-        outcome.we_are_caught = caught
+    _answer_capture(session, message, outcome)
     return outcome
 
 
@@ -166,6 +162,58 @@ def _claim(session: Any, decision: Any, position: tuple[int, int]) -> list | Non
     if session.role is not Role.COP or decision.move.value == "STAY":
         return None
     return list(position)
+
+
+def _trapped(session: Any) -> Any:
+    """Return the barrier capture our own half of the board shows, or None.
+
+    Only the Thief can be trapped, and only the Thief's half of `state` is real
+    on this wire — but that is exactly the half this reads. `state.thief` is our
+    own cell, and `state.barriers` holds every wall either side has declared,
+    because `read_turn` folds theirs in before this runs. The Cop's position,
+    which is a fiction in a compat session, is never consulted.
+    """
+    if session.role is not Role.THIEF:
+        return None
+    return session.orchestrator.rules.thief_is_trapped(session.state)
+
+
+def _answer_capture(session: Any, message: Any, outcome: Incoming) -> None:
+    """Answer their claim, and concede a barrier capture whether or not they ask.
+
+    🐛 **This asked only `claim == own_position`** and never consulted the rules,
+    so the compat path conceded neither M#46 (a wall on our own cell) nor M#47
+    (every orthogonal exit blocked). The native path at least asked — it answers
+    `on_capture_claim` from `rules.verdict` — but that entry point did not know
+    M#46 either until `thief_is_trapped` existed, so wiring this one to it
+    unchanged would have fixed the rarer of the two. imreeyal's cop caged our thief in
+    the corner (6,0) on 16/08: walls at (5,0) and (6,1) by step 20, the other two
+    sides being board edge. We sat there for the final 15 turns and filed a
+    survival. Their settlement layer derived the capture from our own revealed
+    trail, and the series was 60-40 to them rather than the 47-47 both files say.
+
+    The concession rides on ``claim_response.caught`` because that is the only
+    channel this wire has for it — a reference peer reads that field as *"they
+    admit I won"*. So it is sent even when no claim arrived, which is the normal
+    case: placing a barrier costs the Cop its move, and `_claim` correctly stays
+    silent on a STAY, so nobody ever asks the turn the cage closes.
+    """
+    trapped = _trapped(session)
+    if not message.capture_claim and trapped is None:
+        return
+    claim = (
+        (int(message.capture_claim[0]), int(message.capture_claim[1]))
+        if message.capture_claim
+        else session.orchestrator.own_position
+    )
+    caught = claim == session.orchestrator.own_position or trapped is not None
+    outcome.claim_response = {"claim": list(claim), "caught": caught}
+    if caught:
+        # Which rule ended it. Additive, and a conformant peer drops what it
+        # does not know — but a capture we conceded without being asked is
+        # otherwise indistinguishable from one we mis-answered.
+        outcome.claim_response["rule"] = trapped.reason if trapped else "cop occupies our cell"
+    outcome.we_are_caught = caught
 
 
 def _win(session: Any) -> dict | None:

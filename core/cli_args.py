@@ -113,6 +113,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "exchanged in writing before the T (their pairing playbook Stage 6). "
         "Left blank until they send it.",
     )
+    match.add_argument(
+        "--allow-local-head",
+        action="store_true",
+        help="Play even though our own head is dirty, unpushed, or in a clone with no "
+        "remote. For drills against ourselves only: a match against a real opponent "
+        "files the hash into THEIR artefact too, where it has to resolve (M#53).",
+    )
 
     settle = sub.add_parser("negotiate", help="Run the pre-match protocol (TODO 9.1).")
     settle.add_argument("--role", required=True, choices=sorted(CONFIG_DIRS))

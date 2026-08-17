@@ -4,6 +4,8 @@ counter added to core/compat/turns.py (imreeyal §3.4, §3.6, §3.10).
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from core.compat.mailbox import Inboxes
@@ -54,6 +56,68 @@ def test_read_turn_accepts_police_as_the_reference_spelling_of_cop(
     session = _session(Role.THIEF, minimal_config)  # we are thief; cop/police must open
     read_turn(session, _turn(1, "police", "b" * 64))
     assert session.received[1] == "b" * 64
+
+
+def _barrier_turn(step: int, sender: str, cell: list[int]) -> TurnMessage:
+    """Their turn, carrying the wall they just placed."""
+    return TurnMessage(
+        step=step, sender=sender, hint="", smell_grid={}, commit="c" * 64,
+        timestamp="2026-01-01", barrier_placed=cell,
+    )
+
+
+def test_a_barrier_sealing_our_last_exit_concedes_the_capture(minimal_config: Config) -> None:
+    """🐛 **The sub-game we filed as a survival (imreeyal g02, 16/08).**
+
+    Their cop caged our thief at the corner (6,0): (5,0) walled at step 19,
+    (6,1) at step 20, the other two sides being board edge. This path judged
+    capture by bare positional equality, so we conceded nothing — nobody asked,
+    because placing the wall costs the cop its move and `_claim` stays silent on
+    a STAY — and played out the final 15 turns into a survival their settlement
+    layer derived, correctly, as a capture.
+    """
+    session = _session(Role.THIEF, minimal_config)
+    session.orchestrator.advance(
+        replace(session.state, thief=(6, 0), barriers=frozenset({(5, 0)}))
+    )
+    outcome = read_turn(session, _barrier_turn(1, "police", [6, 1]))
+    assert outcome.we_are_caught is True
+    assert outcome.claim_response == {
+        "claim": [6, 0], "caught": True, "rule": "thief sealed in at (6, 0) (M#47)"
+    }
+
+
+def test_a_barrier_on_our_own_cell_concedes_the_capture(minimal_config: Config) -> None:
+    """**M#46**, the more common wall form — and one no state-judging path
+    implemented at all until `Rules.thief_is_trapped` existed."""
+    session = _session(Role.THIEF, minimal_config)
+    session.orchestrator.advance(replace(session.state, thief=(3, 3)))
+    outcome = read_turn(session, _barrier_turn(1, "police", [3, 3]))
+    assert outcome.we_are_caught is True
+    assert "M#46" in outcome.claim_response["rule"]
+
+
+def test_a_wall_that_leaves_an_exit_open_concedes_nothing(minimal_config: Config) -> None:
+    """The concession is load-bearing only if ordinary pressure still plays on:
+    g04 and g06 of that same series were 8 and 9 walls and no cage."""
+    session = _session(Role.THIEF, minimal_config)
+    session.orchestrator.advance(replace(session.state, thief=(6, 0)))
+    outcome = read_turn(session, _barrier_turn(1, "police", [5, 0]))
+    assert outcome.we_are_caught is False
+    assert outcome.claim_response is None
+
+
+def test_the_cop_never_reads_a_cage_off_its_own_state(minimal_config: Config) -> None:
+    """Only the Thief can be trapped, and only the Thief's half of a compat
+    `state` is real — `state.thief` is a fiction in a cop session, so conceding
+    from it would hand away a sub-game nobody had won."""
+    session = _session(Role.COP, minimal_config)
+    session.orchestrator.advance(
+        replace(session.state, thief=(6, 0), barriers=frozenset({(5, 0), (6, 1)}))
+    )
+    outcome = read_turn(session, _turn(1, "thief"))
+    assert outcome.we_are_caught is False
+    assert outcome.claim_response is None
 
 
 class _RecordingClient:

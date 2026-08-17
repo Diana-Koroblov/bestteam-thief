@@ -20,13 +20,43 @@ not fraud — M#38 disqualifies the whole project for a wrong counted total.
 
 from __future__ import annotations
 
+import argparse
+
 from core.infra.llm.factory import model_name
 from core.protocol.step_zero import commit_hash
 from core.runtime.prematch import REPO_ROOT
 from core.sdk.peer_sdk import PeerSDK
+from core.shared.declared_head import UnpublishedHeadError, describe_declared_head
 from core.shared.league_log import counted_matches
 
-__all__ = ["identity_of"]
+__all__ = ["identity_of", "declared_head"]
+
+
+def declared_head(args: argparse.Namespace) -> str:
+    """Return the head this process will declare, refusing one nobody can fetch.
+
+    Printed by the caller rather than merely checked. imreeyal's counted bar is
+    that the head which plays is pushed before the T *and declared in the
+    thread*, and a value you have to go and derive after the fact is one that
+    gets typed from memory.
+
+    🐛 **Three windows of ours declared `55ddff06…`**, which is `p2p-chase`'s
+    HEAD — a tree with no remote at all, so the hash resolved for nobody and
+    could not be made to. The published code sat under two other heads the whole
+    time; the only fault was the directory each process was launched from, which
+    is the kind of mistake a pre-flight catches and a written procedure does not.
+    """
+    commit = commit_hash(REPO_ROOT)
+    try:
+        return describe_declared_head(REPO_ROOT, commit)
+    except UnpublishedHeadError as error:
+        if getattr(args, "allow_local_head", False):
+            return f"{commit}\n  ! LOCAL ONLY - {error}"
+        raise SystemExit(
+            f"refusing to arm: {error}\n\n"
+            "  Pass --allow-local-head for a drill against ourselves, where the artefact\n"
+            "  never leaves this machine and the hash is nobody's evidence."
+        ) from error
 
 
 def identity_of(sdk: PeerSDK) -> dict:

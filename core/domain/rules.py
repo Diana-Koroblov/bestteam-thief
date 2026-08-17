@@ -99,6 +99,34 @@ class Rules:
             return False
         return is_immobilised(state.thief, state.barriers, self.board)
 
+    def thief_is_trapped(self, state: GameState) -> Outcome | None:
+        """Return the barrier capture *state* shows, or None. **Cop-free.**
+
+        M#46 and M#47 share a property the share-a-cell capture does not: both
+        are decided by the Thief's own cell and the barriers alone, without
+        knowing where the Cop stands. That is what makes them answerable on the
+        reference wire, where a peer never learns the opponent's position — and
+        `core/compat/turns.py` is the caller that needs exactly this much and no
+        more.
+
+        🐛 **M#46 lived only in `BarrierManager._captures`**, which is the
+        *placement* path: it fires for the Cop laying the wall and is
+        unreachable by anything judging from a state. So `verdict()` — the entry
+        point a peer answers capture claims from — returned None for a Thief
+        standing on a barriered cell, and our thief would have denied a capture
+        that had already happened. Stated here as a property of the state, so
+        the placement path and the judging path read one definition.
+
+        M#46 is deliberately not gated on ``stay_counts_as_move``: that flag
+        settles how M#47 reads a legal STAY (C-006a), and a wall on your own
+        cell captures under either reading of it.
+        """
+        if state.thief in state.barriers:
+            return Outcome(Verdict.CAPTURE, f"barrier on the thief's cell {state.thief} (M#46)")
+        if self.sealed_in(state):
+            return Outcome(Verdict.CAPTURE, f"thief sealed in at {state.thief} (M#47)")
+        return None
+
     def verdict(self, state: GameState) -> Outcome | None:
         """Return the outcome of *state*, or None if the sub-game continues.
 
@@ -107,8 +135,9 @@ class Rules:
         """
         if state.agents_share_a_cell:
             return Outcome(Verdict.CAPTURE, f"cop and thief share cell {state.cop}")
-        if self.sealed_in(state):
-            return Outcome(Verdict.CAPTURE, f"thief sealed in at {state.thief} (M#47)")
+        trapped = self.thief_is_trapped(state)
+        if trapped is not None:
+            return trapped
         if state.step >= self.survival_threshold:
             return Outcome(
                 Verdict.SURVIVAL,

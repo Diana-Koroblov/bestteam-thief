@@ -34,7 +34,7 @@ from core.compat.turn_wait import TURN_WAIT_SECONDS, await_agreement
 from core.infra.errors import PeerError
 from core.infra.mcp_client import quieten_expected_disconnects
 from core.protocol.schemas import Role
-from core.reference_identity import identity_of
+from core.reference_identity import declared_head, identity_of
 from core.report.artefacts import utc_now
 from core.sdk.peer_sdk import PeerSDK
 
@@ -75,6 +75,7 @@ def play_reference(sdk: PeerSDK, args: argparse.Namespace) -> int:
         print("note            : --gui is not available on the reference protocol; "
               "run without --protocol reference to watch a match.")
     print(f"role            : {sdk.role.value}  ({sdk.brain_name})")
+    print(f"declared head   : {declared_head(args)}")
     print("protocol        : reference (negotiate / receive_turn / submit_audit)")
     print(f"our url         : {our_url}")
     print(f"give them       : --opponent {our_url}")

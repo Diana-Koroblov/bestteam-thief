@@ -8,7 +8,7 @@
     "first_meeting_between_groups": true,
     "games_played_including_this": {
       "bestteam": 0,
-      "imreeyal": null
+      "imreeyal": 6
     },
     "series_tie": true,
     "sub_games_won": {
@@ -21,8 +21,8 @@
       "imreeyal": 0
     },
     "total_score": {
-      "bestteam": 45,
-      "imreeyal": 45
+      "bestteam": 47,
+      "imreeyal": 47
     },
     "winner_group": null
   },
@@ -55,7 +55,7 @@
   },
   "mutual_agreement": {
     "confirmed": true,
-    "sha256": "cb0466fad430b100b1463dfb1039435be44ff69dcc9d4ade79cc38138700256c"
+    "sha256": "e87ce4381acfa4483b680114f95190e0bd5797b269b59ae4817ab0fac46ac854"
   },
   "num_sub_games": 6,
   "report_type": "final_game_result",
@@ -66,10 +66,10 @@
         "log_verified": true,
         "tampered": false
       },
-      "ended_at": "2026-08-16T14:56:59+00:00",
+      "ended_at": "2026-08-16T17:18:59+00:00",
       "github_commit": {
-        "bestteam": "f1e3095c46b76aa8c2c04b37df477cf8a45ff9b6",
-        "imreeyal": "d4e8d9f2785b46cd3a45179a32d4f1b1d8c8b96b"
+        "bestteam": "55ddff0686d2683a4bf6f4caa1be1b1a56c96520",
+        "imreeyal": "df0157c0"
       },
       "log_files": {
         "bestteam": "log_bestteam-vs-imreeyal_g01.json",
@@ -84,7 +84,7 @@
         "bestteam": 5,
         "imreeyal": 10
       },
-      "started_at": "2026-08-16T14:50:00+00:00",
+      "started_at": "2026-08-16T17:13:42+00:00",
       "steps": 34,
       "sub_game_number": 1,
       "tie": false,
@@ -99,10 +99,10 @@
         "log_verified": true,
         "tampered": false
       },
-      "ended_at": "2026-08-16T14:59:53+00:00",
+      "ended_at": "2026-08-16T17:21:55+00:00",
       "github_commit": {
-        "bestteam": "f1e3095c46b76aa8c2c04b37df477cf8a45ff9b6",
-        "imreeyal": "d4e8d9f2785b46cd3a45179a32d4f1b1d8c8b96b"
+        "bestteam": "55ddff0686d2683a4bf6f4caa1be1b1a56c96520",
+        "imreeyal": "2412bb4a"
       },
       "log_files": {
         "bestteam": "log_bestteam-vs-imreeyal_g02.json",
@@ -117,7 +117,7 @@
         "bestteam": 10,
         "imreeyal": 5
       },
-      "started_at": "2026-08-16T14:49:59+00:00",
+      "started_at": "2026-08-16T17:13:49+00:00",
       "steps": 35,
       "sub_game_number": 2,
       "tie": false,
@@ -132,10 +132,10 @@
         "log_verified": true,
         "tampered": false
       },
-      "ended_at": "2026-08-16T15:01:50+00:00",
+      "ended_at": "2026-08-16T17:23:51+00:00",
       "github_commit": {
-        "bestteam": "f1e3095c46b76aa8c2c04b37df477cf8a45ff9b6",
-        "imreeyal": "d4e8d9f2785b46cd3a45179a32d4f1b1d8c8b96b"
+        "bestteam": "55ddff0686d2683a4bf6f4caa1be1b1a56c96520",
+        "imreeyal": "df0157c0"
       },
       "log_files": {
         "bestteam": "log_bestteam-vs-imreeyal_g03.json",
@@ -150,7 +150,7 @@
         "bestteam": 5,
         "imreeyal": 10
       },
-      "started_at": "2026-08-16T14:57:00+00:00",
+      "started_at": "2026-08-16T17:18:59+00:00",
       "steps": 34,
       "sub_game_number": 3,
       "tie": false,
@@ -165,10 +165,10 @@
         "log_verified": true,
         "tampered": false
       },
-      "ended_at": "2026-08-16T15:04:44+00:00",
+      "ended_at": "2026-08-16T17:26:47+00:00",
       "github_commit": {
-        "bestteam": "f1e3095c46b76aa8c2c04b37df477cf8a45ff9b6",
-        "imreeyal": "d4e8d9f2785b46cd3a45179a32d4f1b1d8c8b96b"
+        "bestteam": "55ddff0686d2683a4bf6f4caa1be1b1a56c96520",
+        "imreeyal": "2412bb4a"
       },
       "log_files": {
         "bestteam": "log_bestteam-vs-imreeyal_g04.json",
@@ -183,7 +183,7 @@
         "bestteam": 10,
         "imreeyal": 5
       },
-      "started_at": "2026-08-16T14:59:54+00:00",
+      "started_at": "2026-08-16T17:21:55+00:00",
       "steps": 35,
       "sub_game_number": 4,
       "tie": false,
@@ -198,10 +198,10 @@
         "log_verified": true,
         "tampered": false
       },
-      "ended_at": "2026-08-16T15:06:40+00:00",
+      "ended_at": "2026-08-16T17:28:43+00:00",
       "github_commit": {
-        "bestteam": "f1e3095c46b76aa8c2c04b37df477cf8a45ff9b6",
-        "imreeyal": "d4e8d9f2785b46cd3a45179a32d4f1b1d8c8b96b"
+        "bestteam": "55ddff0686d2683a4bf6f4caa1be1b1a56c96520",
+        "imreeyal": "df0157c0"
       },
       "log_files": {
         "bestteam": "log_bestteam-vs-imreeyal_g05.json",
@@ -216,7 +216,7 @@
         "bestteam": 5,
         "imreeyal": 10
       },
-      "started_at": "2026-08-16T15:01:50+00:00",
+      "started_at": "2026-08-16T17:23:51+00:00",
       "steps": 34,
       "sub_game_number": 5,
       "tie": false,
@@ -231,10 +231,10 @@
         "log_verified": true,
         "tampered": false
       },
-      "ended_at": "2026-08-16T15:09:33+00:00",
+      "ended_at": "2026-08-16T17:31:42+00:00",
       "github_commit": {
-        "bestteam": "f1e3095c46b76aa8c2c04b37df477cf8a45ff9b6",
-        "imreeyal": "d4e8d9f2785b46cd3a45179a32d4f1b1d8c8b96b"
+        "bestteam": "55ddff0686d2683a4bf6f4caa1be1b1a56c96520",
+        "imreeyal": "2412bb4a"
       },
       "log_files": {
         "bestteam": "log_bestteam-vs-imreeyal_g06.json",
@@ -249,7 +249,7 @@
         "bestteam": 10,
         "imreeyal": 5
       },
-      "started_at": "2026-08-16T15:04:44+00:00",
+      "started_at": "2026-08-16T17:26:47+00:00",
       "steps": 35,
       "sub_game_number": 6,
       "tie": false,
