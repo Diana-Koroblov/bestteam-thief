@@ -69,7 +69,6 @@ def build_sub_game_row(
     our_role: str,
     result: str,
     winner_group: str,
-    steps: int,
     our_commit: str,
     their_commit: str,
     our_tokens: int,
@@ -101,7 +100,13 @@ def build_sub_game_row(
         "result": result,
         "winner_group": winner_group,
         "tie": False,
-        "steps": steps,
+        # **No `steps`.** The course template's row has none, and it is the one
+        # field where two honest counting conventions visibly disagree — our
+        # g02 read 21 against imreeyal's 20 on an identical capture, off by one
+        # on every row. In a log that is trivia; in two filed copies a grader
+        # byte-compares, it is a contradiction on every line. Declared, not
+        # filed: the count lives in `step_count` in our own sub-game log, which
+        # is where imreeyal put theirs and where the disagreement is harmless.
         "github_commit": {our_group: our_commit, their_group: their_commit},
         "tokens": {our_group: our_tokens, their_group: their_tokens},
         "score": {our_group: our_points, their_group: their_points},
@@ -164,7 +169,12 @@ def build_result(
     result: dict[str, Any] = {
         "_schema": "Final series result (book section 9.3.3). Email the compact "
         "canonical bytes, not this pretty-print.",
-        "schema_version": "1.2",
+        # 1.1, not our own 1.2. §9.3.3 mandates the report's *structure* and
+        # pins no version string for it — the "1.2" in Appendix B.3 belongs to
+        # the shared `game.json`, which is a different file with a different
+        # schema. So this is a convention question, and the convention is the
+        # one six completed pairings already file under (imreeyal, 17/08).
+        "schema_version": "1.1",
         "report_type": "final_game_result",
         "game_id": gid,
         "game_uid": game_uid_value,
@@ -195,18 +205,18 @@ def build_result(
         "sha256": consensus_sha256(result),
         "confirmed": all_settled(sub_games),
     }
-    if not counted:
-        # **Friendly only.** A counted file goes to the lecturer template-pure,
-        # and a top-level key of our own invention there is an unexplained diff
-        # against every other team's artefact for a grader to puzzle over
-        # (imreeyal, 16/08). On a friendly it earns its place: it is the record
-        # of *why* this series does not count, which is the one thing an
-        # uncounted artefact most needs to say about itself.
-        result["league"] = {
-            "authority": "book App. E rule 52 - one counted series per pairing",
-            "counted": False,
-            "reason": "friendly",
-        }
+    # **No `league` block, on a friendly or anywhere else.** It used to be added
+    # here for uncounted series, as the record of *why* the file does not count.
+    # Retired 17/08 at imreeyal's ask, superseding their own earlier position
+    # that ours was fine to keep: what marks a series friendly is the recipient
+    # channel, never a field, because a friendly file is one that by definition
+    # never reaches the grader who would read the field. A key of our own
+    # invention buys nothing there and costs a diff against every other team's
+    # artefact in the one file both sides byte-compare.
+    #
+    # `counted` stays a parameter: it still decides where the report is SENT
+    # (`core/compat/reporting.py`), which is the thing that actually carries the
+    # meaning this block used to claim.
     return result
 
 

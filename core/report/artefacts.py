@@ -212,8 +212,20 @@ def build_result(
     }
 
 
-def write(payload: dict[str, Any], directory: Path, filename: str) -> Path:
+def write(
+    payload: dict[str, Any], directory: Path, filename: str, sort_keys: bool = True
+) -> Path:
     """Write *payload* as UTF-8 JSON, atomically, and return the path.
+
+    Args:
+        sort_keys: Sorted by default, which is what makes two runs of our own
+            artefacts byte-comparable. The league *result* file passes ``False``
+            and relies on insertion order instead: the league's shape is an
+            ordered one (`_schema, schema_version, report_type, …`), six
+            pairings file it that way, and it is the one artefact the two teams
+            diff against each other rather than against a previous run. Nothing
+            hashed depends on this either way — `consensus_sha256` sorts its own
+            derived document before signing it.
 
     Unlike ``runtime.snapshot.save`` this **does** raise on failure. A snapshot
     is written while something is already going wrong and must never make it
@@ -248,7 +260,7 @@ def write(payload: dict[str, Any], directory: Path, filename: str) -> Path:
     # bytes, compared with strict equality (imreeyal have failed a pairing's
     # mail over ten bytes). Emitting it here makes the three identical at the
     # source rather than asking every reader to tolerate a difference.
-    body = json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    body = json.dumps(payload, indent=2, sort_keys=sort_keys, ensure_ascii=False) + "\n"
     staged = target.with_name(f"{target.name}.{os.getpid()}.{uuid4().hex[:8]}.tmp")
     staged.write_bytes(body.encode("utf-8"))
     _replace_when_windows_lets_go(staged, target)

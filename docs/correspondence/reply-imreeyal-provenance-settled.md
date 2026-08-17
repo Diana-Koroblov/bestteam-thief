@@ -1,136 +1,157 @@
-# Reply to imreeyal — §2 corrected and the mechanism found, four dispositions accepted, and one disclosure of our own that is worse than any of them
+# Reply to imreeyal — sealed-record reader in, result reshaped to your template, heads posted; and one item in your list we have no record of
 
-Subject: bestteam ↔ imreeyal — §2 corrected to the wire (and it was our bug, not a
-judgement call); §1/§3/§4/§5 accepted; and we filed no logs for either series
+Subject: bestteam ↔ imreeyal — all four changes shipped and pushed; heads below;
+verification friendly agreed; and please tell us what the step-1 scent frame is
 
 Hi imreeyal —
 
-All five settled, four of them your way. §2 is corrected in our copy and we found the
-mechanism that produced the wrong value, which is uglier than "we picked the wrong hash"
-and worth putting on the record. And we owe you a disclosure that outranks every item in
-your letter: **we have no logs for either series.**
+Everything you asked for is in, shipped and pushed. Heads at the bottom. One item in your
+verification list we cannot confirm because we have never heard of it — §5 below, and it
+is the only thing standing between us and naming the T.
 
-**The score is untouched and was never in question: 40–60, 4–2 to imreeyal.**
+**The score is untouched throughout: 40–60, 4–2 to imreeyal.**
 
 ---
 
-## §2 — ACCEPTED, corrected, and it was never a judgement call on our side
+## 1. §2 — corrected, and the sealed record is now the source
 
-You asked us to file `5bf3cfc…` for you in all six. Done:
+Your copy and ours agree on your column: `5bf3cfc…` in all six.
 
     g01: 662d2866... -> 5bf3cfcce27a05a6c16263fa1314f8533bf1657f
     g03: 662d2866... -> 5bf3cfcce27a05a6c16263fa1314f8533bf1657f
     g05: 662d2866... -> 5bf3cfcce27a05a6c16263fa1314f8533bf1657f
 
-Hash-neutral, checked before we wrote rather than after:
+    consensus before : ff77bb1d6e31751a...
+    consensus after  : ff77bb1d6e31751a...  UNCHANGED
 
-    recomputed consensus (before) : ff77bb1d6e31751a...  OK, matches the filed value
-    recomputed consensus (after)  : ff77bb1d6e31751a...  UNCHANGED
+**The reader now takes your commit from your sealed step-0 record**, with the handshake
+identity block kept only as a cross-check and `--their-commit` left as an operator
+override above both. Precedence is strongest-source-first, exactly as you put it.
 
-**But we did not "hold" 662d2866 in any meaningful sense, and you should know why.** We
-went looking for where our copy got it, expecting a reader pointed at the wrong field.
-It was worse. At match time the line was:
+We took your two-channel rule further than you asked, because your own sentence made the
+case for it: *"a mismatch between a peer's OWN two channels is itself a finding"*. So a
+divergence is not a tie we break quietly — we file the sealed value **and say so**:
 
-    their_commit = str(getattr(args, "their_commit", "") or "")
+    their two channels disagree: sealed step-0 5bf3cfc... but handshake
+    declared 662d286... - filing the sealed one
 
-That is the whole derivation. `--their-commit`, the command-line flag, and **nothing
-else** — our filed column never touched the wire at any point. The value came from us
-typing your heads in from this thread, one per terminal, matched to role on the
-assumption that you run one repository per role the way we do. The perfect mirror of our
-own alternation in that column is not evidence about your topology; it is our assumption
-reflected back at us.
+A silent pick would destroy the only evidence that the disagreement existed, which is
+the thing your rule exists to preserve. Four tests pin the precedence, including that a
+peer who seals no commit at all still gets its handshake value filed rather than a blank
+— sealing nothing is not the same as declaring nothing.
 
-So your §2 is not us conceding a close reading. Your account is the only one with a
-source behind it, and ours had none. It now reads from the identity block the two peers
-actually exchange, with the flag left as an operator override.
+## 2. The result file — rebuilt to your template. Corrected copy attached.
 
-**One precision, because this thread runs on them.** Our fixed reader takes your
-`github_commit` from the **identity block in the handshake**, not from your **sealed
-step-0 record**. For you the two agree, so nothing turns on it here — but your §2
-argument was specifically "our file matches the wire, the only source either audit layer
-can check", and the sealed record is the stronger of the two wires: it is inside the
-commitment and cannot be revised afterwards, which the handshake block can. If you would
-rather we read the sealed record, say so and we will move it. We would rather match the
-source you are arguing from than the one that happened to be easier to reach.
+Adopted in full, and the attachment is our re-filed 17/08 copy in the new shape.
 
-## The disclosure: we filed no logs. Not for this series, not for the 16/08 one.
+- **Top-level keys in your order, and no others.** As it happens our builder already
+  constructed them in exactly that sequence; the file didn't show it because our writer
+  sorted keys on the way out. The result file now writes in insertion order. Every other
+  artefact still sorts — this is the one file two teams diff against each other rather
+  than against a previous run of their own, so it is the one that earns the exception.
+- **`schema_version` is now `1.1`.** We checked before agreeing rather than after: §9.3.3
+  mandates the report's *structure* and pins no version string for it, and the `1.2` we
+  had been sending is Appendix B.3's — which belongs to the shared `game.json`, a
+  different file with a different schema. So this was ours to align and we have.
+- **The `league` block is gone**, everywhere, not just on counted files. Your channel
+  argument won it: a friendly is defined by never reaching the grader, so a marker inside
+  a file the grader never opens is a diff that buys nothing.
+- **Mail subject** is now `Police-Thief series result: winner <group_id> (reported by
+  <role>)`, the same string counted or friendly, no suffix. A drawn series sends
+  `winner none` rather than a blank, so the subject still parses into four fields.
 
-This is ours to volunteer and it is worse than anything in your letter.
+**One place we resolved an ambiguity in your letter, and you should overrule us if we
+read it wrong.** You wrote *"sub-game rows and final_result exactly as your current file
+already has them"* — but our rows carried a `steps` field and yours do not, and your
+verification item 2 asks for a cross-diff of **zero** differences, which `steps` makes
+impossible on every row. Read together with your §5 (*"it stays unfiled"*), we took the
+zero-diff reading and **removed `steps` from the filing**. It is not lost: it now lives
+as `step_count`, per side, inside our sub-game log — which is where you said the counts
+belong and where their disagreement is trivia. Say the word and we will put it back.
 
-Going to check your §2 against our own sealed records, we found there was nothing to
-check it against. Our `--out` directory for 17/08 contains exactly one file:
+## 3. The logs — thank you, and the correction is accepted
 
-    results/2026-08-17-friendly/
-      result_bestteam-vs-imreeyal.json        <- and nothing else
+Your league math is right and we will stop over-charging ourselves for it: nothing from
+16/08 or 17/08 is ever submitted by either team, so the missing artefacts cost the league
+nothing. What mattered was that the four kinds exist from here, and they now do —
+declaration, config, log, result, written per sub-game.
 
-No `log_*.json`, no `config_*.json`, no `declaration_*.json`. Same for 16/08. The cause
-is that our reference-protocol path wrote the result artefact and only the result
-artefact — while our own module docstring said *"the series is over and its logs are on
-disk"* and our match-day document claimed the path *"files the four artefacts"*. Two
-statements, both false in the same direction, so neither ever contradicted the other and
-the gap survived two complete series.
+Consequence #2 stands as we stated it: our acceptance of §2 is corroborated rather than
+independent, and we would not have offered it as more than that.
 
-Three consequences, stated plainly:
+## 4. §1, §3, §4, §5 — closed
 
-1. **Neither series can be replayed.** Both our copies name `log_bestteam-vs-imreeyal_
-   g01.json` and friends in their `log_files` field. Those files were never written. If
-   you have been treating that field as a pointer to something we hold, it is not.
-2. **Our acceptance of §2 is not independent.** We are taking your sealed records on your
-   word plus the bug we found on our own side, which corroborates you. That is enough for
-   a friendly and we are content with it; it would not have been enough for a counted
-   match, and we would rather say so than let you assume we cross-checked you.
-3. **The `steps` disagreement in your §5 cannot be settled by either of us.** You count
-   g02 at 20, we count 21. You declined to file the field and you were right, but your
-   reasoning was that the counts live in the logs where the disagreement is trivia — and
-   on our side they do not live anywhere.
+Your reader fix is noted as landed and run; our copy is ready and re-filed, so this
+friendly's paperwork closes the moment you confirm receipt of the attachment. §3 and §4
+close as you state them. §5 closes with `steps` unfiled on both sides — see the
+ambiguity note in §2 above for the one decision we made inside it.
 
-**Fixed, today, and tested rather than asserted.** The path now writes the log, the
-per-sub-game config snapshot and the declaration beside the result. The log carries both
-sides' `{payload, nonce, commit}` records verbatim plus the live commits your turns
-actually arrived with, so it re-audits off disk under the same rule that verified it
-live — including the re-sealed-record attack, which self-consistency alone would pass.
-The test that keeps it honest re-reads a written log and re-verifies it rather than
-inspecting fields, because the DoD is the round trip and not the shape.
+## 5. ⚠ The step-1 scent frame — we have no record of this, and will not confirm blind
 
-The two false sentences are corrected in place, each with what it cost written next to
-it.
+Your verification list asks us to declare our cop's step-1 scent frame *"clean (fix
+landed), or declared beforehand as expected evidence-noise"*, and says *"silent is the
+only wrong option"*. You also refer to *"the one-line fix"* as though it is something we
+have in hand.
 
-## §1 — ACCEPTED, and we will re-file alongside you
+**We have never heard of this.** It is in neither of your previous letters to us, and a
+search of our correspondence, our contradictions register and our TODO turns up nothing
+about a step-1 frame, a first-frame scent anomaly, or a one-line fix for one. Either a
+message went astray between us, or it was raised with a different pairing and reached our
+thread by mistake.
 
-Nothing for us to change: our copy already carries the role-alternating table (police
-`fc01a448` on 1/3/5, thief `57e3cdaf` on 2/4/6) and always has. We will re-file the
-moment you tell us your reader fix has landed, so both copies land together as you
-proposed. Ours is ready now and waiting on your word rather than the other way round.
+We are not going to declare an anomaly clean when we do not know what it is, and we are
+not going to declare it noisy either — both would be inventing a position. So, taking the
+third option your own rule allows and declaring it openly rather than staying silent:
 
-## §3 — ACCEPTED
+> **We cannot answer item 3 yet. Tell us what you observed — which sub-game, which frame,
+> and what the value was against what you expected — and we will either fix it before the
+> window or declare it as expected noise, in writing, before we arm.**
 
-Your channel argument is right and better than the field we proposed: a friendly is
-defined by never reaching the grader's inbox, not by a marker inside a file no grader
-reads. Our `league` block stays on our own friendly copies as our own policy, and it
-comes off our counted files — that commitment stands and is now in our counted checklist
-rather than only in this thread. Yours stay template-pure and we will not ask again.
+If it turns out to be real, we would rather find it in your description than in a live
+series. This is the one item blocking the T.
 
-## §4 — ACCEPTED, no change either side
+## 6. The verification friendly — agreed, and agreed for your reasons
 
-Process lifetimes against engagement windows, both honest, both outside every hash, both
-now explained on the record. Your 1.1-second g03/g02 overlap needs no defence from our
-side; our thief process being up from 11:15 and merely waiting needs none from yours.
+Yes, and we would have asked for one if you had not. Four changes on our side have never
+run in a live series, and *"a passing test and a working window are different facts"* is
+exactly the lesson our own morning taught us: our logs gap survived two complete series
+behind two documents that both said the opposite.
 
-## §5 — ACCEPTED
+Your four checks, with what we will have ready for each:
 
-Declared-not-filed, per your convention. See the third consequence above for why we now
-agree more strongly than we would have yesterday: it is the one field where two honest
-conventions visibly disagree, and neither of us can currently produce the evidence that
-would settle it.
+1. **All four artefact kinds on disk, both sides.** Ours writes `declaration_`,
+   `config_…_gNN`, `log_…_gNN` and `result_` per series, and prints an
+   `artefacts : N file(s)` line at settlement so the count is visible without a
+   directory listing.
+2. **Result shape, zero cross-diff.** See §2 — including the `steps` decision, which is
+   the one thing that could still put a difference on every row if you overrule us.
+3. **Step-1 scent frame.** Blocked on §5.
+4. **Your commits from your sealed records, no operator flag.** We will run with no
+   `--their-commit` at all, so the derivation has no manual input anywhere in it. Your
+   `5bf3cfc…` appearing on all six by itself is the check passing.
+
+Terms unchanged, uncounted, reports to the two teams only, bestteam cop on odds
+alternating, **your thief opens sub-game 1** — confirmed on our side, and worth saying
+explicitly because our reference wire has the thief open too, so we agree with no change
+needed.
+
+## 7. Our heads, pushed, as you asked
+
+Both published and clean before this message went out:
+
+    cop    376676889d276091e879748513f0e317abb6095c   (bestteam-cop,   origin/main)
+    thief  635182d4fa3a3ca4f815e90161b5aa6535b954ae   (bestteam-thief, origin/main)
+
+Each resolves to `published on origin/main` — our runner refuses to arm on a head that is
+dirty, has no remote, or sits on no remote branch, so these are the same hashes our
+step-0 records will seal.
+
+Our `config_sha256` is unchanged at `17606f14…` and our `game_uid` still derives to
+`ffad01a2…` — the terms have not moved, only the code around them.
 
 ---
 
-So: your §1 reader, our §2 correction (done), and we re-file together on your signal. If
-you would prefer we read your sealed step-0 record rather than your handshake block,
-that is a one-line change and we will make it before the re-file rather than after.
-
-And yes — we would like to play again. Ours has not got meaner yet, but it can now prove
-what it did, which last week it could not.
+Answer §5 and name the T, and we are on the tunnel five minutes early.
 
 — bestteam
    Itay Malich, Diana Koroblov
