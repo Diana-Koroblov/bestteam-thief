@@ -1,0 +1,172 @@
+Subject: bestteam ↔ imreeyal — the freeze broke and that is on us; checks 2 and 4 both
+root-caused (a typed value outranked a sealed one, and two runs merged into one report);
+check 1 answered; corrected result attached; heads posted and this time they will not move
+
+Hi imreeyal —
+
+Three findings, all correct, none disputed. Taking the third one first because it is the
+one that deserves no explanation before the admission.
+
+---
+
+1. THE FREEZE. YOU ARE RIGHT, AND WE ARE NOT GOING TO SOFTEN IT.
+
+We posted e5268bb7 / 81c00956 and played 105d6617 / 526d00f2. A docs commit went
+out nine minutes before T and moved both heads. Everything you say about it is true: the
+diff was documentation, the heads resolve, they descend from the pair we posted — and it
+is still the violation, for the third time, one hour after we wrote the strongest version
+of the promise ourselves.
+
+The mechanism was mundane, which is the point. We had a doc change staged, we shipped it
+the way we ship everything, and our publish step pushes both repositories as a matter of
+course. Nobody decided to break the freeze; the freeze simply was not a thing our
+process could see. That is exactly the class of failure this pairing keeps finding in us,
+and "we did not mean to" has never been a defence we accepted from anyone else.
+
+We adopt your rule as written, and it is now the sequence rather than a promise:
+
+The head that plays is the head you posted, byte-for-byte. If anything must land, one
+line in the thread BEFORE arming re-declares it.
+
+Concretely, on our side, from this message onward: the letter that posts heads is
+written after the last push, never before. The heads in §5 below were read off the
+remote after the final ship for this window. There is nothing staged, nothing pending,
+and nothing we intend to change. If that turns out to be false, you will get the one-line
+re-declaration before we arm, and if there is no time for it we will forfeit the window
+rather than play an undeclared head.
+
+2. CHECK 1 — THE ARTEFACT COUNT, OWED AND NOW GIVEN
+
+Fourteen files in the series directory, all four kinds:
+
+    declaration_bestteam-vs-imreeyal.json         1
+    config_bestteam-vs-imreeyal_gNN.json          6
+    log_bestteam-vs-imreeyal_gNN.json             6
+    result_bestteam-vs-imreeyal.json              1
+                                                 --
+                                                 14
+
+And the logs are not merely present — every one re-audits off disk, both sides' records,
+under the same rule that verified them live:
+
+    log_..._g01.json  passed=True  bestteam (34, [])  imreeyal (36, [])
+    log_..._g02.json  passed=True  bestteam (21, [])  imreeyal (21, [])
+    log_..._g03.json  passed=True  bestteam (34, [])  imreeyal (36, [])
+    log_..._g04.json  passed=True  bestteam (35, [])  imreeyal (35, [])
+    log_..._g05.json  passed=True  bestteam (34, [])  imreeyal (36, [])
+    log_..._g06.json  passed=True  bestteam (35, [])  imreeyal (35, [])
+
+    6/6 logs re-verify off disk
+
+First real-opponent logs we have ever written. Both previous series against you left a
+result and nothing else.
+
+3. CHECK 4 — CONFIRMED, AND THE READER WAS NEVER THE PROBLEM
+
+You are right about the values and right that the sealed-record reader did not produce
+them. But the reader worked. Our own logs prove your claim before we take your word for
+it, which is the first time in this pairing we have been able to say that:
+
+    sub | our sealed                                 | their sealed
+    ----+--------------------------------------------+------------------------------------------
+      1 | 105d66172a77987276f3a9afb3fe7c2105a74302   | bdbce8a267615038224f6af61814f24f240d251c
+      2 | 526d00f2cab410d4d24cf4bc31f5f53bcd32b24a   | bdbce8a267615038224f6af61814f24f240d251c
+      3 | 105d66172a77987276f3a9afb3fe7c2105a74302   | bdbce8a267615038224f6af61814f24f240d251c
+      4 | 526d00f2cab410d4d24cf4bc31f5f53bcd32b24a   | bdbce8a267615038224f6af61814f24f240d251c
+      5 | 105d66172a77987276f3a9afb3fe7c2105a74302   | bdbce8a267615038224f6af61814f24f240d251c
+      6 | 526d00f2cab410d4d24cf4bc31f5f53bcd32b24a   | bdbce8a267615038224f6af61814f24f240d251c
+
+bdbce8a2… in all six, exactly as you said, read out of the records you revealed to us.
+
+The root cause: our precedence put a typed value above a signed one. The derivation
+was --their-commit first, then the seal, then the handshake block. Both terminals were
+launched from the old runbook, which still carried --their-commit flags — 662d2866
+on the cop, 5bf3cfc on the thief, the pre-fix per-role guess typed out of this thread.
+The flag outranked the evidence and the reader never got a vote.
+
+You asked for "no operator flag anywhere in the derivation" and we built one where the
+flag won. Fixed, and inverted rather than patched: the seal now outranks everything,
+the flag survives only as a fallback for a peer that sealed nothing, and a flag or
+handshake block contradicting the seal is filed as the seal and reported as a finding:
+
+    their sealed step-0 says bdbce8a26761... but --their-commit says 662d28660eff...
+      - filing the sealed one
+
+Two tests pin it, one of which replaces a test that asserted the old rule. That test
+passing is what let this ship.
+
+4. CHECK 2 — CONFIRMED, AND THE CAUSE IS UGLIER THAN A STALE READER
+
+Your read of the symptom is exact and your guess at the class was close. It was not the
+reader reaching one process and not the other; both processes sealed correctly, as the
+table above shows. It was the merge, and it is the same defect class you named
+weeks ago — merge-by-filename — in a form we had explicitly predicted and then walked
+into anyway.
+
+Tonight's series was filed into the same --out directory as this morning's. The guard
+that separates two series compared calendar dates. Same terms, so the uid matched; same
+day, so the date matched; and this morning's six rows were merged in as though they were
+ours.
+
+The merge was not the damage. The damage was what it did to the completeness gate: the
+first of our two processes to file saw six rows in the file — three of tonight's and
+three of this morning's — decided the series was complete, and mailed it. That is the
+copy you diffed, with our thief's rows still carrying 57e3cdaf. Our second process
+filed minutes later and corrected every row, which is why the copy on our disk was right
+while the copy in your inbox was not.
+
+Fixed: the guard now compares when the runs began, not what day they fell on. Two
+role processes of one series start seconds apart — ours opened at 17:00:03 and 17:00:04
+— while two series on one afternoon are hours apart. Outside that window the merge is
+refused with both timestamps named, and the completeness gate never sees a foreign row.
+A regression test reproduces tonight exactly: 11:14 against 17:00, same uid, same day,
+now refused.
+
+5. THE CORRECTED FILE, AND OUR HEADS
+
+Attached: tonight's result, re-filed. Both columns now derived from sealed records —
+yours from the records you revealed to us, ours from what each of our two processes
+sealed:
+
+    sub | bestteam                                   | imreeyal
+      1 | 105d66172a77987276f3a9afb3fe7c2105a74302   | bdbce8a267615038224f6af61814f24f240d251c
+      2 | 526d00f2cab410d4d24cf4bc31f5f53bcd32b24a   | bdbce8a267615038224f6af61814f24f240d251c
+      3 | 105d66172a77987276f3a9afb3fe7c2105a74302   | bdbce8a267615038224f6af61814f24f240d251c
+      4 | 526d00f2cab410d4d24cf4bc31f5f53bcd32b24a   | bdbce8a267615038224f6af61814f24f240d251c
+      5 | 105d66172a77987276f3a9afb3fe7c2105a74302   | bdbce8a267615038224f6af61814f24f240d251c
+      6 | 526d00f2cab410d4d24cf4bc31f5f53bcd32b24a   | bdbce8a267615038224f6af61814f24f240d251c
+
+mutual_agreement.sha256 is unchanged at ff77bb1d… through every correction — the
+commit columns sit outside the consensus preimage, so the settlement you verified tonight
+is the settlement this file still carries. 60–40, 4–2 to imreeyal, untouched.
+
+Our heads for the next window, read off the remote after the final push, on the
+branch that plays:
+
+    cop    6bec686a970d9bdbbd572c70342ae0d42953385f   (bestteam-cop,   origin/itay)
+    thief  f4e113a944df92012bc05b743e63fe2d48f15cfb   (bestteam-thief, origin/itay)
+
+Fetch the branch, not main — main on our cop repository is a teammate's separate
+line and is not what runs. Both heads resolve and our pre-flight confirms each as
+published on origin/itay.
+
+Noted on yours: cop bdbce8a… unchanged, thief aa9c5c0… moved post-settlement.
+
+6. ONE THING BACK, SINCE TONIGHT EARNED IT
+
+The thing that made this letter possible is the artefact writer you asked us to prove.
+Every previous exchange between us about a commit column ended in one side taking the
+other's word. Tonight we read your seals out of our own logs and confirmed your finding
+before replying to it — and found our own bug in the same pass, because the logs showed
+our processes sealing correctly while the report said otherwise.
+
+Check 1 was the one that looked like paperwork. It was the one that turned two
+disagreements into two diagnoses.
+
+---
+
+Same protocol, same checks, posted heads and sealed heads identical. Name the T.
+
+— bestteam
+   Itay Malich, Diana Koroblov
+   itay.malich2@gmail.com

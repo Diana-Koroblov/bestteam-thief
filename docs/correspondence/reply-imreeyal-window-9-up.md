@@ -1,0 +1,75 @@
+# Bring-up: UP — heads unchanged, four conditions acknowledged, one limit disclosed before arming
+
+Subject: bestteam ↔ imreeyal — UP. 6bec686a / f4e113a9 unchanged and re-verified;
+one operational limit disclosed before we arm; fire when ready
+
+Hi imreeyal —
+
+**UP.** Doors up on our side, both roles, and nothing has landed since the letter.
+
+## Heads — unchanged, re-verified just now against the remote
+
+    cop    6bec686a970d9bdbbd572c70342ae0d42953385f   (bestteam-cop,   origin/itay)
+    thief  f4e113a944df92012bc05b743e63fe2d48f15cfb   (bestteam-thief, origin/itay)
+
+Both clones sit on `itay` at exactly those commits, `origin/itay` matches, and both
+working trees report **zero** modified files. These are the posted pair, they are the
+frozen pair, and they are what will seal. Nothing is staged and nothing is queued;
+the only uncommitted files anywhere on our side are the two letters themselves, which
+are documentation and will not be pushed until the window is settled and re-declared.
+
+Branch convention noted and adopted: **`origin/itay`** is the resolution target on our
+side too, for every check from here.
+
+## The four conditions
+
+1. **Posted == sealed, per-process.** Our identity block is captured once at series
+   start, before any artefact is written, so the odd rows will carry `6bec686a…` and the
+   even rows `f4e113a9…` — the two heads above and nothing else.
+2. **Both columns from seals, no flag.** We arm with **no `--their-commit` anywhere**.
+   Your column will be whatever your step-0 records seal; we expect `bdbce8a…` ×6 and
+   will file exactly what we read. The seal now outranks both the handshake block and
+   the flag, and a contradiction is filed as the seal and reported rather than resolved
+   silently.
+3. **Artefacts line at settlement**, counted in-thread before the window closes, and the
+   mailed copy matching the disk copy. See the disclosure below for what we have done to
+   make the second half of that true.
+4. **Result shape** as the last two windows: zero diff excluding the per-side timestamps,
+   `mutual_agreement.sha256` equal.
+
+## ⚠ One limit, disclosed before arming rather than after
+
+Our merge fix compares **when two runs began**, and treats anything inside a four-hour
+window as one series. That catches this morning against this evening. It does **not**
+catch two windows an hour apart filed into the same directory — we measured it rather
+than assumed it:
+
+    tonight's rows began 17:00:04Z; a new window filed into the SAME --out
+      +1h  -> MERGES 6 stale rows   <- the completeness gate would fire early again
+      +3h  -> MERGES 6 stale rows
+      +5h  -> refused
+
+Since this window is minutes rather than hours from the last one, the guard alone would
+not save us. **So the operational rule is one fresh `--out` directory per window**, and
+this one gets its own. That is what makes condition 3's second half hold tonight; the
+guard is the backstop, not the primary.
+
+We are telling you this before arming rather than letting you find it in a diff, because
+a limit you know about is a limit and a limit you discover is a defect. Tightening the
+guard so it does not depend on operator discipline is our first work after this window —
+and it is deliberately *after*, because the freeze is worth more tonight than the fix.
+
+## The corrected file
+
+You are right that it never arrived — our mailer is not wired to attach correspondence,
+which is our gap and not a mystery. Understood that the window supersedes it and that it
+is not a gate. We will paste the bytes in-thread after settlement rather than spend the
+bring-up window on it.
+
+---
+
+Doors up and held. Fire when ready — we answer within seconds of your first turn.
+
+— bestteam
+   Itay Malich, Diana Koroblov
+   itay.malich2@gmail.com
