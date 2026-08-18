@@ -66,6 +66,19 @@ or forget something real is still open.
 
 ## Operational gotchas learned the hard way tonight (not code bugs)
 
+- **Playing ANY match — including a rehearsal against the kit's own practice
+  bot — overwrites `config/<role>/game.json` in place** with whatever got
+  negotiated: `agreed_between`, `map_area`, `decay_model`, all silently
+  rewritten to the rehearsal opponent's values. Found live (18/08): a
+  sparring-bot rehearsal left `bestteam-thief`'s own `config/thief/game.json`
+  declaring `agreed_between: ["bestteam", "sparring-local"]` and
+  `decay_model: "multiplicative"` — the REAL opponent (najamjad) needs
+  `"najamjad"` and `"subtractive"`. Had this shipped or been left in place, the
+  next real match would have negotiated the wrong terms entirely. **Always
+  `git diff config/` after any rehearsal, in every repo it touched
+  (`p2p-chase` AND both split repos if run from there), before playing the
+  real match or running `ship.py`.**
+
 - **Killing and restarting our `core play` processes mid-series desyncs the
   opponent.** Their per-sub-game watchdog keeps running on their own clock; a
   restart on our side doesn't reset it, and they'll report sub-games as

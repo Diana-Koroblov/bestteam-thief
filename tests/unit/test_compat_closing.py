@@ -12,8 +12,10 @@ import argparse
 import json
 from pathlib import Path
 
+import pytest
+
 from core.compat import sealing
-from core.compat.closing import close_sub_game
+from core.compat.closing import close_sub_game, linger_for_audit
 from core.compat.match_log import verify_sub_game_log
 from core.domain.scoring import ScoreTable
 from core.protocol.schemas import Role
@@ -135,3 +137,23 @@ class TestTheRowStillGoes:
         assert len(rows) == 1
         assert written == []
         assert "artefacts NOT filed" in note
+
+
+class TestTheDoorStaysOpen:
+    """The reference path's own `--linger`, see `linger_for_audit`'s docstring."""
+
+    async def test_it_sleeps_for_the_configured_linger(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        slept: list[float] = []
+        monkeypatch.setattr("asyncio.sleep", lambda seconds: slept.append(seconds) or _noop())
+        await linger_for_audit(argparse.Namespace(linger=7.0))
+        assert slept == [7.0]
+
+    async def test_a_zero_linger_does_not_sleep_at_all(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            "asyncio.sleep", lambda seconds: (_ for _ in ()).throw(AssertionError("should not sleep"))
+        )
+        await linger_for_audit(argparse.Namespace(linger=0.0))
+
+
+async def _noop() -> None:
+    return None

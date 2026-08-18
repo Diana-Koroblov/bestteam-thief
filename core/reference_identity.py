@@ -21,15 +21,49 @@ not fraud — M#38 disqualifies the whole project for a wrong counted total.
 from __future__ import annotations
 
 import argparse
+import platform
 
 from core.infra.llm.factory import model_name
 from core.protocol.step_zero import commit_hash
 from core.runtime.prematch import REPO_ROOT
 from core.sdk.peer_sdk import PeerSDK
 from core.shared.declared_head import UnpublishedHeadError, describe_declared_head
+from core.shared.hardware import UNKNOWN, probe
 from core.shared.league_log import counted_matches
 
-__all__ = ["identity_of", "declared_head"]
+__all__ = ["identity_of", "declared_head", "machine_spec"]
+
+
+def machine_spec() -> dict:
+    """Return this computer in the reference's own `spec` shape.
+
+    🐛 **The reference seals a step-0 `system_spec` record into the closing
+    audit that never rides a live turn**, so nothing during play reveals its
+    absence. Lost along with the rest of this file's 16/08 fix (see
+    `docs/KNOWN_ISSUES.md`) and rediscovered live, 18/08: `verified_steps: 25,
+    failed_steps: [26]` against the kit's own sparring peer, a `tamper_forfeit`
+    worth 0 to BOTH teams (App. E rule 35) while our own side reported "audit
+    passed" throughout.
+
+    Their key names, not ours (`cpu_type`, `gpu_type`, `ram_gb`, `vram_gb`), and
+    their fallbacks for anything this machine will not say. `hardware.probe`
+    answers `"unknown"` where an OS declines to report; the reference's own
+    record uses `"unspecified"` / `"none"` / `0`, so we translate rather than
+    invent a number.
+    """
+    machine = probe()
+    cores = machine.cpu_cores
+    ram = machine.ram_gb
+    return {
+        "cpu_cores": int(cores) if isinstance(cores, int) else 0,
+        "cpu_type": machine.cpu_model if machine.cpu_model != UNKNOWN else "unspecified",
+        "gpu_type": machine.gpu if machine.gpu != UNKNOWN else "none",
+        "os": platform.system() or "any",
+        "ram_gb": float(ram) if isinstance(ram, (int, float)) else 0,
+        # Not probed on any platform we support, and a guess here would be a
+        # false declaration in a record the grader reads.
+        "vram_gb": 0,
+    }
 
 
 def declared_head(args: argparse.Namespace) -> str:
@@ -82,4 +116,8 @@ def identity_of(sdk: PeerSDK) -> dict:
         "llm_model": model_name(config),
         "github_commit": commit_hash(REPO_ROOT),
         "counted_games_played": counted_matches(),
+        # Carried on the identity block so `core/compat/` can seal the step-0
+        # record without importing `core.shared` itself (M#3): joining two
+        # subsystems is this gateway's job and nobody else's.
+        "spec": machine_spec(),
     }

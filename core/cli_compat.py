@@ -105,7 +105,9 @@ async def _run(
     )
     try:
         await asyncio.sleep(BIND_SECONDS)
-        return await _series(sdk, args, plan, inboxes)
+        result = await _series(sdk, args, plan, inboxes)
+        await closing.linger_for_audit(args)
+        return result
     finally:
         if sdk.opponent is not None:
             await sdk.opponent.aclose()

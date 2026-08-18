@@ -14,6 +14,7 @@ report that names it, so every failure comes back as a line to print.
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +24,23 @@ from core.compat.league_report import game_id
 from core.compat.league_row import row_from_session
 from core.report.artefacts import ArtefactError, utc_now
 
-__all__ = ["close_series", "close_sub_game"]
+__all__ = ["close_series", "close_sub_game", "linger_for_audit"]
+
+
+async def linger_for_audit(args: Any) -> None:
+    """Stay up after our own plan is spent, so a late audit push still lands.
+
+    🐛 The reference path's door used to close the instant `_series` returned —
+    no cushion, unlike the native path's own `--linger` (`cli_play.py`). Our
+    LAST sub-game's audit push races their own settlement on their side; if
+    their reveal (or a redial of ours) arrives a beat late, it hits a door we
+    already tore down — a 502/406 that reads as their bug and is ours
+    (imreeyal correspondence, 17/08, point 3).
+    """
+    linger = float(getattr(args, "linger", 20.0))
+    if linger > 0:
+        print(f"\nstaying up {linger:.0f}s so they can finish auditing our log (M#36) ...")
+        await asyncio.sleep(linger)
 
 
 def close_sub_game(

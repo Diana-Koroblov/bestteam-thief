@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from core.compat import league_report, sealing
+from core.compat.exchange import system_spec_record
 from core.compat.mailbox import Inboxes
 from core.compat.pairing import HandshakeError
 from core.compat.turn_wait import collect_our_agreement
@@ -228,9 +229,17 @@ class ReferenceSession:
             # the admission that they caught us: M#21 makes it a duty, and a
             # peer that fell silent on being caught would look like one that
             # dropped rather than one that lost.
-            await send_turn(self, outcome.claim_response)
+            #
+            # 🐛 A caught thief must STAND, not move (`turns.send_turn`'s
+            # `stand` doc): an ordinary turn here walks our revealed trail one
+            # cell past the capture, and their structural re-check reads that
+            # as a capture our own reveal denies — `tamper_forfeit` even though
+            # we conceded honestly. Lost once (16/08), rediscovered live
+            # against the kit's own sparring peer (18/08).
             if outcome.we_are_caught:
+                await send_turn(self, outcome.claim_response, stand=True)
                 return self._end("capture", Role.COP.value)
+            await send_turn(self, outcome.claim_response)
             if self._survived():
                 # Our own claim just rode out on that turn (`turns._win`). A
                 # claimant that kept waiting for an answer watchdogs into
@@ -252,10 +261,16 @@ class ReferenceSession:
         Carries ``sub_game_number`` beside the reference's own keys — additive,
         and every conformant peer drops unknown keys. It is what lets a
         receiver tell a late audit from the right one; see `collect_audit`.
+
+        🐛 **The step-0 `system_spec` record never rode a live turn**, so its
+        absence was invisible during play — every real turn verified, and only
+        the closing count came up one record short of what the reference
+        expected. Prepended here, not appended: it is *their* step 0, ahead of
+        everything we actually sent.
         """
         payload = AuditPayload(
             sender=self.role.value,
-            records=self.records,
+            records=[system_spec_record(self.identity, self.sub_game_number), *self.records],
             result_claim=self.result or "timeout",
         ).to_dict()
         payload["sub_game_number"] = self.sub_game_number

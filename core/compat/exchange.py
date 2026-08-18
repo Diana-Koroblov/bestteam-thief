@@ -13,11 +13,15 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
+from core.compat import sealing
 from core.domain.board import Position
 from core.domain.scent import encode
 from core.protocol.schemas import Reveal, Role
 
-__all__ = ["Incoming", "now_iso", "grid_of", "field_of", "synthetic_reveal", "sealed_payload"]
+__all__ = [
+    "Incoming", "now_iso", "grid_of", "field_of", "synthetic_reveal",
+    "sealed_payload", "system_spec_record",
+]
 
 
 def now_iso() -> str:
@@ -105,14 +109,38 @@ def sealed_payload(
     intent: str,
     hint: str,
     github_commit: str = "",
+    role: str = "",
+    sub_game: int = 0,
+    step: int | None = None,
 ) -> dict[str, Any]:
-    """Return the record we seal for this turn.
+    """Return the record we seal for this turn, in the reference's own shape.
 
     Self-describing on purpose, following the reference: the whole payload
     travels with its nonce in the closing audit, so the opponent re-hashes
     exactly what we supply and neither side has to have agreed its shape. That
     is what makes this protocol auditable against a stranger — and it is the
     one place where the reference's design is plainly better than our own.
+
+    🐛 **Self-describing is not shape-free, and this was lost once already**
+    (16/08, `docs/KNOWN_ISSUES.md`) **and rediscovered live, 18/08**, against
+    the kit's own sparring peer this time: `verified_steps: 25, failed_steps:
+    [26]`, our own side reporting "audit passed" throughout. Four things this
+    shape gets that a plain re-implementation would not, each read off a real
+    opponent's artefact rather than guessed:
+
+    * ``step`` is the **wire** step (the counter the turn actually travelled
+      under), not `state.step`. They bind each revealed record to the commit
+      that arrived under its step number; `state.step` is a different counter
+      that a standing concession leaves unchanged, so two records can claim the
+      same step and their verifier reads it as a withheld or re-sealed turn.
+    * ``move`` is ``MOVE:<direction>`` for a real move, and a bare ``STAY`` with
+      no prefix for standing still — not our raw direction value.
+    * ``verdict`` is always ``"moved"``. ``intent`` already answers whether the
+      hint was truthful; putting it in `verdict` too answers a question nobody
+      asked with a value that looks like a different one.
+    * ``role`` and ``sub_game`` are present on every turn record, so a reader
+      can place which side and which sub-game a record belongs to without
+      cross-referencing anything else.
 
     Args:
         github_commit: Included only when non-empty, which the caller does for
@@ -127,17 +155,50 @@ def sealed_payload(
             value is a declaration that we have no commit; an absent key hashes
             exactly as it did before this argument existed, which keeps every
             turn that does not carry one byte-identical to the old shape.
+        step: The wire step this record travels under. Falls back to
+            `state.step` when omitted, which keeps any caller that has not been
+            updated working exactly as before.
     """
     barriers = sorted([list(cell) for cell in state.barriers])
     payload = {
-        "step": int(state.step),
+        "step": int(state.step) if step is None else int(step),
         "state": f"grid={grid_size}x{grid_size};self={list(position)};barriers={barriers}",
         "position": list(position),
-        "move": move,
+        "move": move if move == "STAY" else f"MOVE:{move}",
         "intent": intent,
-        "verdict": intent,
+        "verdict": "moved",
         "hint": hint,
+        "role": role,
+        "sub_game": sub_game,
     }
     if github_commit:
         payload["github_commit"] = github_commit
     return payload
+
+
+def system_spec_record(identity: dict[str, Any], sub_game_number: int) -> dict[str, Any]:
+    """Return the sealed step-0 record the reference expects first in an audit.
+
+    **A record that never rides a live turn**, which is exactly why its absence
+    is invisible during play: every turn we send verifies, and the opponent
+    still fails the whole sub-game — for the one record we never sent. Their
+    verdict names it once any other orphan is out of the way: a count of
+    revealed records one short of what they expected (step 0 through N).
+
+    Their field names and their fallbacks (``unspecified`` / ``none`` / ``0``),
+    because the reader re-hashes exactly what we supply and a spelling of our
+    own would not reproduce. Values come off the identity block assembled in
+    `core.reference_identity`, so `core/compat/` never reaches into
+    `core.shared` to build it (M#3).
+    """
+    payload = {
+        "code_version": str(identity.get("github_commit") or "unknown"),
+        "group_name": str(identity.get("group_name") or ""),
+        "model": str(identity.get("llm_model") or "template"),
+        "num_games_declared": int(identity.get("counted_games_played") or 0),
+        "spec": dict(identity.get("spec") or {}),
+        "step": 0,
+        "sub_game_number": sub_game_number,
+        "type": "system_spec",
+    }
+    return {"payload": payload, **sealing.seal(payload)}

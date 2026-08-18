@@ -14,6 +14,7 @@ from typing import Any
 from core.compat import sealing
 from core.compat.exchange import Incoming, grid_of, now_iso, sealed_payload, synthetic_reveal
 from core.compat.wire import TurnMessage, wire_role
+from core.domain.actions import Direction
 from core.domain.movement import IllegalMoveError, resolve_move
 from core.domain.scent import decay, decode
 from core.protocol.schemas import Role
@@ -66,17 +67,47 @@ def read_turn(session: Any, message: TurnMessage) -> Incoming:
     return outcome
 
 
-async def send_turn(session: Any, owed: dict | None) -> None:
+async def send_turn(session: Any, owed: dict | None, stand: bool = False) -> None:
     """Decide, move, seal and push one turn — carrying any answer we owe.
 
     The move is applied **before** the hint and the scent are produced, so the
     field we transmit is deposited at the cell we actually ended on. Sealing one
     position and advertising a trail from another is the C-008 hole reintroduced
     from the other end, and here it would also make our own claim inconsistent.
+
+    Args:
+        stand: Send without deciding or moving — a concession. Set only when
+            they have just caught us.
+
+            🐛 **We must not move.** Their verifier re-checks a capture
+            structurally rather than trusting either peer: the cell they claim
+            it on must equal the LAST position our own reveal carries. Taking
+            one more ordinary turn walks that trail one cell past the capture,
+            and they read it as "a capture the thief's own reveal says never
+            happened" — `tamper_forfeit`, 0 to BOTH teams (App. E rule 35),
+            while our own side keeps reporting "audit passed" throughout,
+            because nothing on our side ever re-checks the claim we already
+            know is true. Lost once already (16/08) and rediscovered live
+            against the kit's own sparring peer (18/08) — see
+            `docs/KNOWN_ISSUES.md`.
+
+            **We must still answer.** M#21 makes it a duty, and the wire has no
+            channel for it but a turn message. So this is a real turn that goes
+            nowhere: STAY, at the cell where we were caught, carrying the
+            concession and nothing else.
     """
-    decision = session.runtime.decide()
-    position = apply_move(session, decision)
+    if stand:
+        decision = replace(session.runtime.decide(), move=Direction.STAY, barrier=None)
+        position = session.orchestrator.own_position
+    else:
+        decision = session.runtime.decide()
+        position = apply_move(session, decision)
     reveal = session.runtime.reveal_for(decision, session.state.step)
+    # Incremented before the seal, not after: the record must carry the same
+    # step number the turn actually travels under (imreeyal §3.6 — per-sender,
+    # starting at 1, not the shared game-progress counter `state.step`, which a
+    # standing concession leaves unchanged and would duplicate).
+    session.sent += 1
     payload = sealed_payload(
         session.state,
         position,
@@ -87,15 +118,13 @@ async def send_turn(session: Any, owed: dict | None) -> None:
         # Our first record of this sub-game only — the step-0 record their
         # artefact reads the commit column from (M#53). Repeating it on all 35
         # turns would seal the same string 35 times to say one thing once.
-        github_commit=str(session.identity.get("github_commit", "")) if not session.sent else "",
+        github_commit=str(session.identity.get("github_commit", "")) if session.sent == 1 else "",
+        role=wire_role(session.role.value),
+        sub_game=session.sub_game_number,
+        step=session.sent,
     )
     record = {"payload": payload, **sealing.seal(payload)}
     session.records.append(record)
-    # Per-sender, starting at 1 — not the shared game-progress counter
-    # `state.step` advances on either side's move. A single interleaved
-    # sequence (ours: 0,2,4...) looks like a reordered stream to a receiver
-    # expecting its own counterpart's steps to run 1,2,3... (imreeyal §3.6).
-    session.sent += 1
     trail = session.runtime.truth.filter
     wire_field = decay(decode(reveal.scent), trail.rate, trail.model)
     await session.client.call(
