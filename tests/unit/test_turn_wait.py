@@ -231,6 +231,40 @@ async def test_a_structured_not_yet_refusal_is_retried_not_abandoned() -> None:
     assert live.pushes, "the fresh client must be the one we go on to push with"
 
 
+async def test_push_agreement_exhausting_its_window_does_not_end_the_wait(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """🐛 Live against yanell11, 18/08: three sub-games abandoned at exactly
+    the `push_wait` mark, `total_wait` barely touched. `push_agreement`'s own
+    call sat outside this function's retry, so its window running out ended
+    the whole wait rather than starting a fresh one — right for a peer that
+    plays sub-games sequentially and can easily take longer than one 120s
+    window to reach ours.
+    """
+    from core.infra.errors import TransportError
+
+    calls = 0
+
+    async def _flaky(*_args: Any, **_kwargs: Any) -> Any:
+        nonlocal calls
+        calls += 1
+        if calls < 3:
+            raise TransportError("still not there")
+        return _Client()
+
+    monkeypatch.setattr("core.compat.turn_wait.push_agreement", _flaky)
+    session = _Session(sub_game_number=2)
+    session.inboxes.agreements.put(_agreement(2))
+
+    theirs = await await_agreement(
+        session, _Client(), {"sub_game_number": 2}, total_wait=5.0, push_wait=0.01,
+        repush_every=0.1, announce=lambda _line: None, redial=None,
+    )
+
+    assert theirs["sub_game_number"] == 2
+    assert calls >= 3, "must keep calling push_agreement across windows, not give up after one"
+
+
 async def test_the_total_budget_is_honoured_when_nobody_answers() -> None:
     """A peer that never arrives costs us the budget and then reports it."""
     session = _Session(sub_game_number=2)

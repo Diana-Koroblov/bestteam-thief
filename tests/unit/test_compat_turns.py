@@ -164,3 +164,33 @@ async def test_send_turn_reads_the_trail_one_decay_step_older_and_rounded(
     await send_turn(session, None)
     peak = max(client.calls[0]["smell_grid"].values())
     assert peak == pytest.approx(round(decayed_peak(minimal_config), 3))
+
+
+@thief_only
+async def test_a_transient_send_failure_is_retried_once_not_left_fatal(
+    minimal_config: Config,
+) -> None:
+    """🐛 Live against yanell11, 18/08: one `ConnectError` on `receive_turn`
+    ended a sub-game 26 turns in — a dropped packet, not a dead peer.
+    `negotiate` and `submit_audit` both retry; a turn during active play did
+    not, for no reason tied to the protocol.
+    """
+    from core.infra.errors import TransportError
+
+    class _FlakyOnce(_RecordingClient):
+        def __init__(self) -> None:
+            super().__init__()
+            self.attempts = 0
+
+        async def call(self, name: str, payload: dict, argument: str = "payload") -> dict:
+            self.attempts += 1
+            if self.attempts == 1:
+                raise TransportError("dropped")
+            return await super().call(name, payload, argument)
+
+    client = _FlakyOnce()
+    session = _session(Role.THIEF, minimal_config, client=client)
+    session.runtime.brain = brain_class("thief")()
+    await send_turn(session, None)
+    assert client.attempts == 2
+    assert len(client.calls) == 1

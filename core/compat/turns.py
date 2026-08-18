@@ -13,6 +13,7 @@ from typing import Any
 
 from core.compat import sealing
 from core.compat.exchange import Incoming, grid_of, now_iso, sealed_payload, synthetic_reveal
+from core.compat.turn_wait import push_once_more
 from core.compat.wire import TurnMessage, wire_role
 from core.domain.actions import Direction
 from core.domain.movement import IllegalMoveError, resolve_move
@@ -127,34 +128,39 @@ async def send_turn(session: Any, owed: dict | None, stand: bool = False) -> Non
     session.records.append(record)
     trail = session.runtime.truth.filter
     wire_field = decay(decode(reveal.scent), trail.rate, trail.model)
-    await session.client.call(
-        "receive_turn",
-        TurnMessage(
-            step=session.sent,
-            # `wire_role`, not the raw value. Our vocabulary says "cop"; the
-            # reference's says "police", and the greeting already translates
-            # (session.py). This did not, so every turn went out labelled from a
-            # role the receiver does not know. Harmless until the first barrier,
-            # which is checked against the sender's role — the reference then
-            # refused with "a barrier arrived from sender 'cop' — only the cop
-            # places barriers", a sentence that only parses once you see that
-            # 'cop' and "the cop" are two different strings to it. Cost a whole
-            # sub-game as a technical loss, eight turns in, against imreeyal's
-            # sparring peer.
-            sender=wire_role(session.role.value),
-            hint=reveal.hint,
-            smell_grid=grid_of({
-                cell: round(value, _WIRE_DECIMALS) for cell, value in wire_field.items()
-            }),
-            commit=record["commit"],
-            timestamp=now_iso(),
-            barrier_placed=list(decision.barrier) if decision.barrier else None,
-            capture_claim=_claim(session, decision, position),
-            claim_response=owed,
-            win_claim=_win(session),
-        ).to_dict(),
-        argument="message",
-    )
+    message = TurnMessage(
+        step=session.sent,
+        # `wire_role`, not the raw value. Our vocabulary says "cop"; the
+        # reference's says "police", and the greeting already translates
+        # (session.py). This did not, so every turn went out labelled from a
+        # role the receiver does not know. Harmless until the first barrier,
+        # which is checked against the sender's role — the reference then
+        # refused with "a barrier arrived from sender 'cop' — only the cop
+        # places barriers", a sentence that only parses once you see that
+        # 'cop' and "the cop" are two different strings to it. Cost a whole
+        # sub-game as a technical loss, eight turns in, against imreeyal's
+        # sparring peer.
+        sender=wire_role(session.role.value),
+        hint=reveal.hint,
+        smell_grid=grid_of({
+            cell: round(value, _WIRE_DECIMALS) for cell, value in wire_field.items()
+        }),
+        commit=record["commit"],
+        timestamp=now_iso(),
+        barrier_placed=list(decision.barrier) if decision.barrier else None,
+        capture_claim=_claim(session, decision, position),
+        claim_response=owed,
+        win_claim=_win(session),
+    ).to_dict()
+    # 🐛 One bare call, no retry: a single transient `ConnectError` mid-series
+    # — not a dead peer, just a dropped packet — ended a sub-game 26 turns in,
+    # against yanell11, 18/08. `negotiate` and `submit_audit` both retry; a
+    # turn during active play did not, for no reason tied to the protocol.
+    # `push_once_more` lives in `turn_wait.py`, not here: that module already
+    # owns the retry vocabulary and is the only `core.compat` file allowed to
+    # import `core.infra` (M#3) — this one also imports `core.protocol`, and
+    # touching both makes a module a gateway, which a turn's mechanics is not.
+    await push_once_more(session.client, "receive_turn", message)
 
 
 def apply_move(session: Any, decision: Any) -> tuple[int, int]:

@@ -62,6 +62,7 @@ __all__ = [
     "collect_our_agreement",
     "push_agreement",
     "push_audit",
+    "push_once_more",
 ]
 
 # How long to yield between inbox polls. Long enough not to spin a core, short
@@ -174,6 +175,26 @@ async def push_audit(opponent: Any, payload: dict, redial: Any) -> tuple[bool, l
     return False, notes
 
 
+async def push_once_more(client: Any, tool: str, payload: dict) -> None:
+    """Call *tool* on *client*, retrying once after a short pause on failure.
+
+    🐛 A single transient failure mid-series — a dropped packet, not a dead
+    peer — used to end the sub-game outright: `negotiate` and `push_audit`
+    both retry, but a turn during active play did not, for no reason tied to
+    the protocol. Cost a sub-game 26 turns in, against yanell11, 18/08. No
+    redial: unlike the handshake and the closing audit, a turn call has no
+    natural moment to fetch a fresh client, and one retry on the same one
+    already recovers from what a dropped packet actually is.
+    """
+    from core.infra.errors import PeerError
+
+    try:
+        await client.call(tool, payload, argument="message")
+    except PeerError:
+        await asyncio.sleep(1.0)
+        await client.call(tool, payload, argument="message")
+
+
 async def collect_our_agreement(session: Any, wait: float, ours: dict) -> dict:
     """Return the opponent's agreement **for this sub-game**, holding others.
 
@@ -248,11 +269,32 @@ async def await_agreement(
     something arrives for this sub-game that does not verify — the second is
     fatal at once rather than retried, because repeating an exchange cannot
     make two different contracts agree.
+
+    🐛 **`push_agreement` exhausting its own `push_wait` budget used to end
+    the whole wait, not just that one window.** The call sat outside this
+    loop's own retry, so a peer that took longer than `push_wait` (120s) to
+    reach our sub-game — normal for one that plays sub-games sequentially,
+    35 turns each — read as fatal here even though `total_wait` (900s) had
+    plenty left. Confirmed live against yanell11, 18/08: three sub-games in a
+    row abandoned at exactly the `push_wait` mark, both a `RemoteToolError`
+    ("not started yet") and a bare `TransportError` alike. `push_agreement`
+    is now itself inside the retry, given a fresh `push_wait`-sized window
+    each pass, until `total_wait` — not one window of it — is spent.
     """
+    from core.infra.errors import PeerError
+
     deadline = time.monotonic() + total_wait
     waited = False
     while True:
-        client = await push_agreement(client, message, push_wait, redial=redial)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise AgreementTimeoutError("the opponent never sent its agreement")
+        try:
+            client = await push_agreement(client, message, min(push_wait, remaining), redial=redial)
+        except PeerError as error:
+            if time.monotonic() >= deadline:
+                raise AgreementTimeoutError("the opponent never sent its agreement") from error
+            continue
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise AgreementTimeoutError("the opponent never sent its agreement")
