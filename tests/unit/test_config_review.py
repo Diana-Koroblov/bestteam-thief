@@ -44,17 +44,39 @@ def theirs(ours: dict) -> dict:
 
 
 def test_a_plain_appendix_f_config_is_playable(ours: dict, theirs: dict) -> None:
-    """**The fixture-saving case.** An opponent who read only the book sends no
-    `decay_model`, no `capture` section and no scent-sealing flag, because none
-    of those are in it. Every one is ours. Refusing would cost a match over
-    rules we invented (PRD_negotiation §3.6b)."""
-    for key in ("decay_model", "field_includes_current_turn", "seal_scent_digest"):
-        theirs["pheromones"].pop(key)
-    theirs.pop("capture")
+    """**The fixture-saving case, and our own contract is now that case.**
+
+    This used to pop our six extensions out of the proposal to simulate a peer
+    who read only the book. There is nothing left to pop: imreeyal's counted
+    checklist settled the agreed contract as the 9-key Appendix F shape, our
+    extensions moved to private config as pairing terms, and the plain shape a
+    book-only opponent sends is the shape we ourselves now send.
+
+    So the assertion inverts. Not "we tolerate six absences" but "there is
+    nothing to tolerate, and nothing is reported" — while a lowered minimum in
+    the same file would still be refused, which the tests below cover.
+    """
     found = review(theirs, ours)
     assert found.playable, "a config that breaches no Appendix F rule is legal to sign"
-    assert len(found.absent) == 6
-    assert all("in no Appendix" in item for item in found.absent)
+    assert found.absent == (), f"nothing should be reported absent: {found.absent}"
+
+
+def test_an_opponent_who_does_carry_our_extensions_is_not_refused(
+    ours: dict, theirs: dict
+) -> None:
+    """The other direction, which the old test could not express.
+
+    A peer may well send `decay_model` or a `capture` block — earlier pairings of
+    ours did, and the reference kit's own constitution carries some. Those are
+    recognised rows, so they must read as *differences to settle*, never as
+    unknown keys or as breaches.
+    """
+    theirs["pheromones"]["decay_model"] = "multiplicative"
+    theirs["capture"] = {"resolution": "after_moves"}
+    found = review(theirs, ours)
+    assert found.playable
+    assert not any("decay_model" in item for item in found.illegal)
+    assert not any("decay_model" in item for item in found.unknown)
 
 
 def test_an_absent_appendix_f_key_says_so(ours: dict, theirs: dict) -> None:

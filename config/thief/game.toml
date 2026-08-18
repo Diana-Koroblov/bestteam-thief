@@ -32,11 +32,66 @@ role = "thief"
 # Free-text, sent in the handshake. Keep it boring; it is public.
 contact_label = "bestteam-thief"
 
+# --- C-00x pairing terms: agreed in the thread, NOT contract keys ------------
+# These six values used to live in the shared `game.json`. imreeyal's counted
+# checklist (item 9) is that the FILED config artefact must be the shared
+# contract in its 9-key shape, and that our C-00x mechanism choices bind as
+# **pairing terms agreed in writing** rather than as keys inside that file. They
+# were right, and their file never carried them: our contract was theirs plus
+# these, which is why our canonical digest read 17606f14 against their cca1243e
+# over content that differed in no rule at all.
+#
+# ⚠️ **THEY ARE HERE, NOT DELETED, AND THE DIFFERENCE IS THE WHOLE POINT.**
+# Private config is the base and `game.json` is the overlay (config_manager
+# §"merged with the shared file on top"), so a key absent from the contract is
+# still resolved from here. Deleting them outright does three things, all bad:
+#
+#   * `core/domain/rules.py` calls `config.require()` on all three `capture`
+#     keys — a missing key raises, and a peer that cannot build its rules engine
+#     is a technical loss worth 0 to BOTH teams;
+#   * `pheromones.decay_model` is read as `get(..., "multiplicative")` in
+#     `core/crypto/scent_model.py` and `core/compat/session.py`. Absent, it
+#     silently becomes the model we did **not** agree — blurring our own belief
+#     filter exactly as it was blurred before 16/08, and changing the
+#     `scent_model_sha256` we seal into every step-0 declaration;
+#   * `seal_scent_digest` and `seal_barrier_cell` are read as `get(..., False)`,
+#     so absent they silently stop sealing and our commitment shape changes
+#     under an opponent auditing against the old one.
+#
+# Changing any value here changes what we PLAY without changing the digest we
+# publish. That is exactly the desynchronisation the `[game]` comment below
+# warns about, so treat these as frozen by the thread, not as local preferences.
+#
+# `version` is NOT repeated here: it is already declared at the top of this file,
+# which is where `load_config` now falls back to when the 9-key contract omits it.
+
+[capture]
+# N15 / C-006b, N14 / C-006a, N16 / C-006c. Appendix F defines no capture table
+# at all, which is why these are pairing terms rather than contract keys.
+resolution = "after_moves"
+stay_counts_as_move = false
+swap_is_capture = false
+
+[movement_and_barriers]
+# N20 / C-018. Presence, not value, is the signal: a turn without a barrier
+# hashes byte-identically whether or not either peer implements this.
+seal_barrier_cell = true
+
+[pheromones]
+# N13b / C-007. SUBTRACTIVE is what we agreed with imreeyal and what is bound by
+# scent_model_sha256 81ebee59 in every step-0 declaration — a digest THIS KEY
+# feeds, so it is not an independent pin on itself.
+decay_model = "subtractive"
+# N13 / C-005 and N13c / C-008.
+field_includes_current_turn = true
+seal_scent_digest = true
+
 [game]
 # Local run settings only. The negotiated physics — grid size, move set,
 # barrier count, scoring — deliberately do NOT appear here. Mirroring them
 # would create a second copy that a local edit could quietly desynchronise
-# while the shared digest still matched.
+# while the shared digest still matched. The block above is the one deliberate
+# exception, and it is documented there.
 seed = 20260812
 self_play_opponent = "cop"
 auto_advance = false
@@ -88,13 +143,31 @@ sub_game_patience_sec = 240
 [strategy]
 # See docs/PRD_strategy_advanced.md. These are ours alone; the opponent must
 # never learn them, and nothing here may alter the rules of the game.
-# 2 plies. The cop searches deeper because it is hunting and needs to see a
-# capture coming; what kills an evader is the one-move blunder into a sealable
-# cell, and depth 2 already sees that.
+# The cop still searches deeper because it is hunting and needs to see a capture
+# coming; what kills an evader is the one-move blunder into a sealable cell.
 # Which brain a graded match fields (TODO 9.5.7). Private, so this is not part
 # of the negotiated digest and the opponent never learns it. Left unset the
 # loader falls back to `thief.brain:ThiefBrain`, the baseline.
 thief_class = "thief.advanced:AdvancedThief"
+# ⛔ DEPTH 3 MEASURED AND NOT ADOPTED — the value below stays 2, because the
+# cop half of the same sweep fails our integration suite and the two were
+# measured as a pair. Re-measure both before taking either.
+#
+# The sweep, for whoever picks this up — 48 mirrored openings against our own advanced cop, one arm
+# per depth, everything else shipped. Thief survivals:
+#
+#     depth 2 (was)   31/48   0 self-separations   101 s
+#     depth 3         36/48   0 self-separations   101 s
+#     depth 4         31/48  46 self-separations   182 s   <- REFUSED
+#
+# Depth 4 is not merely worthless, it is **invalid**: 46 turns on which the cop
+# could not reach the thief at all. `selfplay`'s own rule is that no other number
+# on the table means anything until that counter is 0, so the arm is refused
+# rather than compared. That a deeper *thief* produces *cop* self-separation is
+# not understood and is worth its own investigation — `barrier_policy` is
+# supposed to refuse stranding placements outright.
+#
+# Private (Appendix F Table 22): not negotiated, and never sent.
 search_depth = 2
 # Survival is worth 10 to us and only 5 to the cop, so we play for the clock.
 prefer_cycles = true

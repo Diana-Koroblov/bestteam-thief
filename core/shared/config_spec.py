@@ -156,8 +156,29 @@ def classify(config: dict) -> tuple[list[str], list[str]]:
     for parameter in PARAMETERS:
         value = dotted_get(config, parameter.path, None)
         if value is None:
-            source = "our extension, in no Appendix" if parameter.ours else "Appendix F"
-            absent.append(f"{parameter.path}: missing ({source})")
+            # 🔻 **Our extensions are no longer contract keys, so their absence
+            # is not a finding — for either side.** They were, until imreeyal's
+            # counted checklist settled that the FILED config artefact is the
+            # agreed 9-key Appendix F shape and that our C-00x mechanism choices
+            # bind as pairing terms agreed in the thread. Their file never
+            # carried them; ours did, and that was the whole of the canonical
+            # digest mismatch (17606f14 against cca1243e) over content that
+            # differed in no rule.
+            #
+            # `ours` already meant "do not refuse a peer for omitting this". It
+            # now means the same thing for our own contract, because our own
+            # contract is that same 9-key shape. What did NOT change: when a
+            # value IS present it is still checked below, so a lowered minimum
+            # is still illegal whoever sent it.
+            #
+            # The safety this would otherwise lose — *we* must still actually
+            # hold these values — is asserted directly against the shipped
+            # MERGED configuration in `test_config_spec.py`, which is where it
+            # belongs: the merged config is what we play, and the contract is
+            # only what we agreed.
+            if parameter.ours:
+                continue
+            absent.append(f"{parameter.path}: missing (Appendix F)")
         elif legal(parameter, value):
             continue
         elif parameter.status == FIXED:

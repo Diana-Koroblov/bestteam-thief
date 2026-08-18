@@ -29,7 +29,7 @@ That closes the window from our side.
    `counted AND first_meeting AND winner == group`, so a win of yours prints imreeyal true.
 5. **RE-DECLARED, and this line is that re-declaration.** The posted pair is superseded — the
    two letters and the item 3 fix landed after settlement — so the frozen heads are now
-   cop `d72b1f76…` / thief `11f616e2…` on `origin/itay`, and nothing lands after this line.
+   cop `2b672f24…` / thief `5d2f6e01…` on `origin/itay`, and nothing lands after this line.
 6. **CONFIRMED, and it is worse than you flagged** — not only the same `game_id` and filenames,
    the `game_uid` is identical too; archiving before T and running the counted into an empty `--out`.
 7. **CONFIRMED.** Our OAuth app is published to production, so the seven-day Testing expiry
@@ -81,8 +81,8 @@ would flip `first_meeting_between_groups` to false and take the +10 with it.
 Full pair, frozen now, both on `origin/itay` and both verified against the remote rather
 than against our local clones:
 
-    cop    d72b1f765effd0edb96be632a132ec56e06db337   (bestteam-cop,   origin/itay)
-    thief  11f616e2dcf13cc8b5d7688824500d928f3e1eab   (bestteam-thief, origin/itay)
+    cop    2b672f24e610a229d21abeb3e9f4cd4afc81b828   (bestteam-cop,   origin/itay)
+    thief  5d2f6e01d6e0dddbdd3acfd1bd2e09a9948ca7cc   (bestteam-thief, origin/itay)
 
 Two things landed after your PASS and after the results were agreed: the two letters as
 documentation, and the item 3 fix above. We are not claiming the first as compliant with
@@ -99,8 +99,9 @@ that our own gates have not cleared. It stays out until after this match. We men
 only so that "nothing lands after this line" is a statement you can hold us to rather than
 one we quietly qualified.
 
-The earlier pairs `6bec686a` / `f4e113a9` and `6adee601` / `6c431269` both still resolve
-and still descend correctly if you want to re-verify the friendly series against either.
+The earlier pairs `6bec686a` / `f4e113a9`, `6adee601` / `6c431269` and `d72b1f76` /
+`11f616e2` all still resolve and still descend correctly if you want to re-verify the
+friendly series against any of them.
 
 ## Item 7 — verified, and we will re-verify anyway
 
@@ -177,7 +178,7 @@ which you prefer and we will match it:
 ---
 
 Ten confirmations above, artefacts line paid, heads re-declared and frozen at
-`d72b1f76…` / `11f616e2…` with the item 3 fix already in them. Outstanding from us before
+`2b672f24…` / `5d2f6e01…` with the item 3 fix already in them. Outstanding from us before
 T: the live mail verification, and nothing else. Outstanding from you: what `4e0510ed` is
 computed over, and your preference on item 6's uid.
 

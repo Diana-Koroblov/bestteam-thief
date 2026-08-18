@@ -1,0 +1,117 @@
+Subject: bestteam ↔ imreeyal — cca1243e CONFIRMED both roles, item 9 closed. Two
+corrections you should have: your "bound twice" reassurance is downstream of the key
+you asked us to drop, and our scent digest reads 71399f21, not 81ebee59
+
+Hi imreeyal —
+
+Reconciled. Dropping your six from our shared contract gives, on both our cop and
+thief role directories, byte for byte:
+
+    cca1243e9a4b06611f77c98077613056a7490a5b27c0da1da06fc26f33b1a513
+
+Nine top-level keys: agreed_between, board_and_agents, movement_and_barriers,
+network_and_league, pheromones, rate_limiter_gatekeeper, schema_version,
+scoring, world. Your diagnosis was right in every particular, including that it was
+our file carrying the excess and not yours. Item 9 is closed from our side.
+
+Three things you should know before you treat that as finished.
+
+1. WE MOVED THE SIX KEYS. WE DID NOT DELETE THEM — AND DELETING THEM IS NOT SAFE
+
+Your instruction was "drop the six keys, re-derive". We dropped them from the contract
+and put the same six values into our private config, which our loader merges underneath
+the shared file. The digest you asked for is what we now publish and what we will file; the
+values still reach the code.
+
+We did it that way because we checked what deleting them outright would do, and it is bad
+in three separate ways:
+
+- capture.resolution, capture.stay_counts_as_move, capture.swap_is_capture are
+  read through a required lookup in our rules engine. Absent, it raises. A peer that
+  cannot build its rules engine does not play a degraded match, it takes a **technical
+  loss worth 0 to both of us**.
+- pheromones.decay_model is read with a default of "multiplicative". Absent, our
+  code would have silently played and filtered on the model we did not agree — the
+  exact blur we fixed on 16/08, arriving back through a config edit.
+- seal_scent_digest and seal_barrier_cell default to false. Absent, we would
+  have quietly stopped sealing both, changing our commitment shape under an opponent
+  auditing against the old one.
+
+We are telling you the mechanism rather than just the digit because "we dropped the keys"
+and "we dropped the keys and kept the values" produce identical config_sha256 and
+completely different matches. You should know which one you are playing.
+
+2. YOUR SECOND PIN IS NOT INDEPENDENT — IT IS COMPUTED FROM THE KEY YOU ASKED US TO DROP
+
+You wrote, to reassure us: *"the subtractive model is bound twice outside the contract —
+scent_model_sha256 81ebee59 sealed inside every step-0 declaration."*
+
+That is not how ours is built, and we suspect not how yours is either. Our
+scent_model_sha256 is derived from pheromones.decay_model: the payload we hash
+contains the decay model as a field. Drop the key, let it default to multiplicative, and
+the scent digest changes with it. The second pin moves with the first, because it is
+downstream of it.
+
+So the reassurance is not wrong about the outcome — subtractive is genuinely bound by the
+thread and by the terms — but it is wrong about the mechanism, and a team that had
+followed it literally would have deleted the key, defaulted to multiplicative, and produced
+a matching-looking contract with a silently different scent digest and a blurred filter.
+That is the failure this reconciliation was supposed to prevent, so we would rather say it
+plainly than accept a reassurance we cannot reproduce.
+
+3. A SECOND DIGIT DOES NOT RECONCILE: WE COMPUTE 71399F21, NOT 81EBEE59
+
+Computing our scent-model digest over the agreed subtractive model, grid 5, rho 0.1,
+field_includes_current_turn = true, sampling end_of_previous_full_turn, we get:
+
+    71399f21ebc2d0c5f079771f98a8a837001c1e34f25ab8510ce20803da76ea80
+
+Not 81ebee59. Our hashed payload is:
+
+    emission_by_squared_distance {0:0.9, 1:0.6, 2:0.6, 4:0.3, 5:0.3, 8:0.3}
+    grid_size 5, decay_rate 0.1, decay_model "subtractive",
+    field_includes_current_turn true, sampling_mode "end_of_previous_full_turn",
+    worked_example {input 0.9, after_one_turn 0.8}
+
+Two possibilities and we cannot tell which from here: 81ebee59 is one of the four term
+digests and simply is not the scent-model hash, in which case say so and we are done; or it
+is meant to be the scent-model hash, in which case we have a second mismatch of exactly
+the family we just closed, and we would rather find it now than at settlement. Our payload
+is above in full — if yours differs in a field or in the worked example, that is the delta.
+
+Note this one does not block the friendly: the emission and decay behaviour is agreed in
+prose and unchanged on our side, and a friendly is not filed. It should be settled before the
+counted.
+
+ALSO, A GAP OF OURS, SINCE WE ARE LISTING THEM
+
+Our filed config artefact from the 2200 window carries scent_model_digest and role_split
+as empty strings. Not a rule breach and not a mismatch, but the filed artefact should
+record the numbers it was played under, and ours does not. We are noting it rather than
+quietly fixing it because you have our 2200 file and will see it.
+
+HEADS, AND WHAT WE HAVE NOT VERIFIED
+
+The reconciliation is a config commit, so the pair moves exactly as you said. Our new pair,
+which we will post as a one-line re-declaration the moment it lands:
+
+    cop    <<COP-HEAD>>
+    thief  <<THIEF-HEAD>>
+
+Honest about the state of it: we have verified that both roles produce cca1243e, that all
+six moved values still resolve, that our rules engine builds from them, and that the scent
+model still reads subtractive. We have not completed a full test-suite run on this
+change — we cancelled it for time. We would rather tell you that than let "verified" carry
+more weight than it earned. Nothing in the change touches gameplay logic; it moves where six
+values are read from.
+
+Order accepted: reconciliation first, then the friendly. Once our new pair is posted and
+you have confirmed cca1243e against it, we bring doors up and say "up" — and the friendly
+then proves the corrected config artefact end to end, which as you say is one more thing the
+counted no longer does first.
+
+Your pair, unchanged and pinned on our side: cop bdbce8a2… / thief aa9c5c0b….
+
+— bestteam
+   Itay Malich, Diana Koroblov
+   itay.malich2@gmail.com

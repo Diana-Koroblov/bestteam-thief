@@ -1,0 +1,100 @@
+# Canonical settle: construction identical, digests still differ — it is a real content difference, and our bytes are below
+
+Subject: bestteam ↔ imreeyal — ran your construction exactly; we get 17606f14, not
+cca1243e. Real content difference confirmed. Our 1169 bytes in full, plus where we
+think the delta is. Friendly can still proceed; the counted should not until this closes
+
+Hi imreeyal —
+
+Thank you for both answers, and for `4e0510ed` being the raw sha — that closes the half of
+item 9 that was a misunderstanding, on both sides at once.
+
+**Item 6 uid: accepted, LEAVE IT.** The counted shares the pairing uid with the friendlies
+by design, on your declaration, and we will not change our derivation. Archive plus fresh
+empty `--out` on our side regardless.
+
+Now the part that is not good news.
+
+## We ran your construction exactly, and it does not reconcile
+
+Your construction is character-for-character what we already do. Ours has always been, in
+one function that every hash in our project goes through:
+
+    json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    .encode("utf-8")          # no trailing newline
+
+Run over our shared contract, that gives:
+
+    17606f14dbbac0fce870f7e88282c23d95e34fa05c91f5d8e5ebe54976ed96a0
+
+We also tried `ensure_ascii=True` in case that was the divergence: **identical digest**, as
+it must be, because our contract is pure ASCII. And unsorted keys gives `26df5aa3…`, which
+matches neither of us, so key ordering is not it either.
+
+So we cannot reproduce `cca1243e` over our content, exactly as you could not reproduce
+`17606f14` over yours. **Both of us are computing the same function correctly over
+different inputs.** That is the real content difference you predicted, and we agree with
+your reading of it: the flat-14 terms match at `a284082d`, so gameplay is safe, and the
+delta is in a non-term key.
+
+## Our contract, in full — 1169 bytes, exactly as we hash them
+
+    {"agreed_between":["bestteam","imreeyal"],"board_and_agents":{"axis_origin_corner":"top-left","axis_start_index":0,"cop_start":[0,0],"grid_size":7,"num_agents":2,"thief_start":[3,3]},"capture":{"resolution":"after_moves","stay_counts_as_move":false,"swap_is_capture":false},"movement_and_barriers":{"max_barriers":14,"max_moves":35,"move_set":["N","S","E","W","STAY"],"seal_barrier_cell":true,"survival_threshold":35},"network_and_league":{"diversity_reward":10,"max_games_per_team":10,"min_games_to_pass":2,"num_games":6,"response_timeout_sec":30,"token_budget_per_series":200000,"watchdog_timeout_sec":60},"pheromones":{"decay_model":"subtractive","field_includes_current_turn":true,"pheromone_center_intensity":0.9,"pheromone_decay":0.1,"pheromone_grid_size":5,"pheromone_min_center_intensity":0.5,"seal_scent_digest":true},"rate_limiter_gatekeeper":{"concurrent_requests":2,"max_retries":3,"queue_depth":100,"requests_per_minute":30,"retry_backoff_sec":5},"schema_version":"1.2","scoring":{"capture_cop":20,"capture_thief":5,"survival_cop":5,"survival_thief":10,"technical_loss":0,"tie_score":2},"version":"1.00","world":{"hint_max_words":15,"map_area":"New York"}}
+
+Eleven top-level keys: `agreed_between`, `board_and_agents`, `capture`,
+`movement_and_barriers`, `network_and_league`, `pheromones`, `rate_limiter_gatekeeper`,
+`schema_version`, `scoring`, `version`, `world`.
+
+## Where we would look first, to save you the diff
+
+We are not asserting these are the delta — you hold the other half and will see it faster
+than we can guess it. But ranked by how likely we think each is:
+
+1. **`agreed_between` ordering.** Ours reads `["bestteam","imreeyal"]`. If yours reads
+   `["imreeyal","bestteam"]` — each team naturally listing itself first — the digests
+   diverge while every rule stays identical. This is our leading suspect precisely because
+   it is the one difference that could survive every gameplay check you and we have run.
+2. **The keys Appendix F does not cover at all.** Our `capture` block
+   (`resolution`, `stay_counts_as_move`, `swap_is_capture`) and three pheromone flags
+   (`field_includes_current_turn`, `seal_scent_digest`, `pheromone_min_center_intensity`)
+   are C-00x mechanism choices. Your item 9 said our C-00x flags belong in private config.
+   **If your shared file carries these in `readings` rather than as contract keys, that is
+   the difference and ours is the file that is wrong.** We would rather be told that than
+   defend it.
+3. **`version` / `schema_version` string form** — ours are `"1.00"` and `"1.2"`.
+
+If it is (2), say so and we will move them and re-derive, because your framing is right:
+the filed artefact must be one file, and one file cannot have two shapes.
+
+## What we propose now
+
+**The friendly can proceed.** You have said the flat-14 terms match, so the physics both
+peers enforce are the same; a friendly is not filed to the lecturer, so a contract delta
+costs nothing there and the two check-lines you endorsed still measure exactly what they
+were meant to measure.
+
+**The counted should not be locked until this closes.** Not because gameplay is at risk,
+but because item 9 is about the filed artefact, and two config artefacts that differ in a
+byte are precisely the disagreeing-filings shape that rule 35 punishes — the failure we
+would be walking into with our eyes open, in the one series that cannot be re-run.
+
+So: give us your bytes or name the delta, we reconcile, and then the same session can carry
+the friendly and the counted exactly as you planned.
+
+## Doors
+
+We are ready to bring doors up on your word. We have deliberately **not** said "up" in this
+letter, because "up" should mean armed and held, and we would rather say it once, cleanly,
+after you have seen the above and told us whether you want the friendly first or the
+reconciliation first. Either order suits us; say which and we will be up within minutes.
+
+Our pair, unchanged and frozen:
+
+    cop    2b672f24e610a229d21abeb3e9f4cd4afc81b828   (bestteam-cop,   origin/itay)
+    thief  5d2f6e01d6e0dddbdd3acfd1bd2e09a9948ca7cc   (bestteam-thief, origin/itay)
+
+Yours noted and pinned on our side: cop `bdbce8a2…` / thief `aa9c5c0b…`.
+
+— bestteam
+   Itay Malich, Diana Koroblov
+   itay.malich2@gmail.com

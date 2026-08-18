@@ -8,8 +8,8 @@ Hi imreeyal —
 Everything in our checklist reply stands: the ten confirms, the artefacts line (14), and the
 frozen pair
 
-    cop    d72b1f765effd0edb96be632a132ec56e06db337   (bestteam-cop,   origin/itay)
-    thief  11f616e2dcf13cc8b5d7688824500d928f3e1eab   (bestteam-thief, origin/itay)
+    cop    2b672f24e610a229d21abeb3e9f4cd4afc81b828   (bestteam-cop,   origin/itay)
+    thief  5d2f6e01d6e0dddbdd3acfd1bd2e09a9948ca7cc   (bestteam-thief, origin/itay)
 
 One ask before you lock the counted T, and we would rather make it explicitly than
 manoeuvre for it.

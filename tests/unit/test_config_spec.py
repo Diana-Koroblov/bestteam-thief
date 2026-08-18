@@ -196,12 +196,15 @@ def test_an_absent_key_is_not_an_illegal_one() -> None:
     from tests.paths import shared_config
 
     proposal = shared_config()
-    proposal["pheromones"].pop("decay_model")
+    # An **Appendix F** row, not one of ours: our extensions are no longer
+    # contract keys, so their absence is not a finding for either side. A row the
+    # book itself states is a different matter — a value neither peer agreed on.
+    proposal["world"].pop("map_area")
     proposal["movement_and_barriers"]["max_barriers"] = 10
     illegal, absent = classify(proposal)
     assert any("max_barriers" in item for item in illegal)
-    assert any("decay_model" in item for item in absent)
-    assert not any("decay_model" in item for item in illegal)
+    assert any("map_area" in item for item in absent)
+    assert not any("map_area" in item for item in illegal)
 
 
 def test_violations_still_reports_both_together() -> None:
@@ -211,7 +214,7 @@ def test_violations_still_reports_both_together() -> None:
     from tests.paths import shared_config
 
     proposal = shared_config()
-    proposal["pheromones"].pop("decay_model")
+    proposal["world"].pop("map_area")
     illegal, absent = classify(proposal)
     assert violations(proposal) == illegal + absent
     assert violations(proposal), "an absent key still makes our own config unplayable"

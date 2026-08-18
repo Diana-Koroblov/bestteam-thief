@@ -166,10 +166,25 @@ def load_config(role_dir: Path, *, enforce_rules: bool = True) -> Config:
     shared = _read_json(role_dir / "game.json")
     private = _read_toml(role_dir / "game.toml")
 
-    declared = str(shared.get("version", ""))
-    if not version.is_compatible(declared):
+    # Shared first, then private, and **absent is accepted** — exactly as
+    # `schema_version` is accepted absent twenty lines below, and for the same
+    # reason stated there: refusing over a missing label forfeits a fixture while
+    # proving nothing.
+    #
+    # After imreeyal's counted checklist (item 9) the agreed contract is the
+    # 9-key Appendix F shape, which carries no `version` at all — theirs never
+    # did, and ours carrying it was the whole of our canonical digest mismatch
+    # (17606f14 against their cca1243e) over content that differed in no rule.
+    # A gate that refused an absent version would now refuse every
+    # kit-conformant peer's contract, including the one we just agreed to.
+    #
+    # What is still refused is a **stated** incompatible version, which is a
+    # claim rather than a silence — the same distinction `schema_version` draws.
+    # Ours moved to the private file, so our own load still reads "1.00".
+    declared = str(shared.get("version", private.get("version", "")))
+    if declared and not version.is_compatible(declared):
         raise ConfigVersionError(
-            f"{role_dir / 'game.json'} declares version {declared or '<none>'}, "
+            f"{role_dir / 'game.json'} declares version {declared}, "
             f"which this code (version {version.VERSION}) cannot read"
         )
 

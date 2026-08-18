@@ -1,7 +1,6 @@
 {
   "schema_version": "1.2",
   "agreed_between": ["bestteam", "imreeyal"],
-  "version": "1.00",
   "board_and_agents": {
     "grid_size": 7,
     "num_agents": 2,
@@ -18,8 +17,7 @@
     "move_set": ["N", "S", "E", "W", "STAY"],
     "max_barriers": 14,
     "max_moves": 35,
-    "survival_threshold": 35,
-    "seal_barrier_cell": true
+    "survival_threshold": 35
   },
   "scoring": {
     "capture_cop": 20,
@@ -33,15 +31,7 @@
     "pheromone_center_intensity": 0.9,
     "pheromone_decay": 0.1,
     "pheromone_grid_size": 5,
-    "pheromone_min_center_intensity": 0.5,
-    "decay_model": "subtractive",
-    "field_includes_current_turn": true,
-    "seal_scent_digest": true
-  },
-  "capture": {
-    "resolution": "after_moves",
-    "stay_counts_as_move": false,
-    "swap_is_capture": false
+    "pheromone_min_center_intensity": 0.5
   },
   "network_and_league": {
     "response_timeout_sec": 30,
