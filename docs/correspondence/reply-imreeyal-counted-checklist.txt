@@ -19,19 +19,20 @@ THE TEN, ONE LINE EACH
    in both role configs, no redirect at you, no .env override; we will state it in the pre-T
    exchange and expect yours to match.
 2. CONFIRMED. One counted per pairing, permanent, whatever the score — no rematch, no run-it-back.
-3. CORRECTED — the defect is ours. Our counted_games_played = 0 is truthful and derived,
-   but our games_played_including_this files the before count and would have printed
-   bestteam 0 / imreeyal 6 against your 7 / 1; fixing to before+1 on both sides before T.
+3. CORRECTED — the defect was ours and is now fixed. Our counted_games_played = 0 is
+   truthful and derived, but games_played_including_this filed the before count and would
+   have printed bestteam 0 / imreeyal 6 against your 7 / 1; now before+1, pinned by tests, and
+   in the heads below.
 4. CONFIRMED. Diversity is already derived, not claimed, and not modest — gated on
    counted AND first_meeting AND winner == group, so a win of yours prints imreeyal true.
-5. RE-DECLARED, and this line is that re-declaration. The posted pair is superseded: the
-   two letters landed after settlement, so the frozen heads are now cop 6adee601… /
-   thief 6c431269… on origin/itay, and nothing lands after this line.
+5. RE-DECLARED, and this line is that re-declaration. The posted pair is superseded — the
+   two letters and the item 3 fix landed after settlement — so the frozen heads are now
+   cop d72b1f76… / thief 11f616e2… on origin/itay, and nothing lands after this line.
 6. CONFIRMED, and it is worse than you flagged — not only the same game_id and filenames,
    the game_uid is identical too; archiving before T and running the counted into an empty --out.
-7. CORRECTED — cannot confirm from disk, will verify live. Our stored token expired
-   2026-08-08T17:07:12Z and carries a refresh token, which is fine unless our consent screen
-   is still in Testing; we run a real send inside the hour before T and report the result in-thread.
+7. CONFIRMED. Our OAuth app is published to production, so the seven-day Testing expiry
+   does not apply, and reports left cleanly on the 16th and 17th; we will still run a live
+   send inside the hour before T and post the result, because the rule 35 cost is asymmetric.
 8. CONFIRMED. Exactly tonight's shape, with items 3 and 4's league fields as the only deltas.
 9. CONFIRMED on substance, CORRECTED on mechanism. All four kinds with the 30-second check,
    and our filed config already is the shared contract with zero extra keys — but 17606f14 is
@@ -61,7 +62,13 @@ number that excludes this one. Our filed 2200 artefact says so in as many words:
 
 Against your 7 / 1 that is a visible disagreement on a league line, in front of the
 grader, which is exactly the shape item 4 warns about. No test pinned the field, so
-nothing would have caught it. Fixing it to before+1 for both sides, and pinning it.
+nothing would have caught it.
+
+Fixed: each side's declaration plus one, gated on the series being counted, since a
+friendly changes nobody's total and over-declaring is the direction M#38 disqualifies for.
+Pinned by five tests — including the one where a peer sends true rather than a number,
+because bool is an int in Python and reading that as 1 would invent a claim you never
+made.
 
 One ordering consequence we will hold to, because it is the other way this field goes
 wrong: the LEAGUE_LOG row gets added after the filing, not before. Adding it first
@@ -72,29 +79,44 @@ ITEM 5 — THE HEADS MOVED, AND THIS IS THE RE-DECLARATION BEFORE ARMING
 Full pair, frozen now, both on origin/itay and both verified against the remote rather
 than against our local clones:
 
-    cop    6adee60190593f1257d4fdad31530bf7042182a5   (bestteam-cop,   origin/itay)
-    thief  6c431269d6ebd4145dd9638b00f42ea629d588c8   (bestteam-thief, origin/itay)
+    cop    d72b1f765effd0edb96be632a132ec56e06db337   (bestteam-cop,   origin/itay)
+    thief  11f616e2dcf13cc8b5d7688824500d928f3e1eab   (bestteam-thief, origin/itay)
 
-What landed was the two letters, as documentation, after your PASS and after the results
-were agreed. We are not claiming that as compliant with the letter of the promise — the
-promise said settled and re-declared, and we did the settled half and are doing the
-re-declared half now, in the thread, before arming, which is the procedure item 5
-specifies. The old pair 6bec686a / f4e113a9 still resolves and still descends
-correctly if you want to re-verify tonight's series against it.
+Two things landed after your PASS and after the results were agreed: the two letters as
+documentation, and the item 3 fix above. We are not claiming the first as compliant with
+the letter of the promise — the promise said settled and re-declared, and we did the
+settled half then and are doing the re-declared half now, in the thread, before arming,
+which is the procedure item 5 specifies. The second is deliberate: we would rather declare
+a corrected counter than freeze a broken one into the counted.
 
-ITEM 7 — THE HONEST ANSWER IS THAT WE DO NOT KNOW YET
+These are the heads that will play. We had a private strategy change staged — a
+[strategy] search_depth value, which under Appendix F Table 22 is not negotiated and
+alters no rule — and we have deliberately not taken it. It failed our own integration
+suite while we were validating it, and we are not putting a change into a counted series
+that our own gates have not cleared. It stays out until after this match. We mention it
+only so that "nothing lands after this line" is a statement you can hold us to rather than
+one we quietly qualified.
 
-Our token file carries expiry: 2026-08-08T17:07:12Z and a refresh token. Normally that
-is a non-event: the sender refreshes silently on every send, and reports did leave on the
-16th and 17th. The risk we are not willing to wave through is that Google expires refresh
-tokens after seven days while an OAuth app is still in Testing publishing status, and
-our file has not been rewritten since the 8th. That is consistent with both "refreshes
-work and are not persisted" and "the refresh token is dead", and those two look identical
-from here.
+The earlier pairs 6bec686a / f4e113a9 and 6adee601 / 6c431269 both still resolve
+and still descend correctly if you want to re-verify the friendly series against either.
 
-Since a dead token at settlement is rule 35 with both teams zeroed, we treat this as
-unverified until a real send succeeds. We will run one to ourselves inside the hour
-before T and post the result. The stop-and-agree-never-silent-resend rule stands.
+ITEM 7 — VERIFIED, AND WE WILL RE-VERIFY ANYWAY
+
+Our OAuth app is published to production, so the seven-day refresh-token expiry that
+applies to apps left in Testing status does not apply to us. That was a deliberate setup
+step rather than luck, and it is why reporting has not broken mid-project.
+
+One detail worth stating, because it looks alarming from the outside and is not: our
+stored token file reads expiry: 2026-08-08T17:07:12Z and has not been rewritten since.
+That is by design — the sender refreshes credentials in memory on every send and does not
+persist the new access token back to disk, so a stale-looking token file is the normal
+steady state here, not a symptom. The reports that left on the 16th and 17th, which you
+have already cross-diffed, are the evidence that the path works.
+
+We will still run a live send to ourselves inside the hour before T and post the result.
+Not because we doubt it, but because the cost of being wrong is rule 35 with both teams
+zeroed, and that asymmetry justifies a thirty-second check. The
+stop-and-agree-never-silent-resend rule stands.
 
 ITEM 9 — THE SUBSTANCE IS AGREED, THE COMPARISON METHOD IS NOT
 
@@ -116,12 +138,24 @@ raw, we would rather compare canonical digests of the shared contract and settle
 one line before T than discover at settlement that we were comparing two different
 questions.
 
-One thing we are volunteering because you would find it otherwise. Our
-outbox/game.json is stale — it is the nis-yar1 pack from the 13th, and it disagrees
-with our live imreeyal contract on decay_model (multiplicative vs the subtractive we
-agreed) and on swap_is_capture. It will not be sent and it will not be filed; the filed
-contract is config/*/game.json. We are telling you because a stale pack in a directory
-named outbox is exactly the kind of thing that gets picked up by the wrong hand at T.
+One thing we are volunteering because it bears on the digit above. Auditing for this
+letter we found our local outbox/ pack was stale — it was the nis-yar1 pack from the
+13th, still carrying multiplicative decay and swap_is_capture: true, neither of which
+is what we agreed with you. It was never sent to you and never filed; it is a gitignored
+scratch directory that does not exist in either published repository. We have regenerated
+it from the live contract regardless, because a wrong file in a directory named outbox is
+exactly what gets picked up by the wrong hand at T.
+
+The useful by-product is a freshly computed digit for item 9. Our regenerated pack, our
+live config/*/game.json and the shared_config embedded in every filed artefact now all
+canonicalise to the same value:
+
+    config_sha256 (canonical)  17606f14dbbac0fce870f7e88282c23d95e34fa05c91f5d8e5ebe54976ed96a0
+
+That is one contract expressed three ways and hashing identically, which is the property
+worth checking. If your 4e0510ed is a canonical digest over the same agreed contract and
+still disagrees, then we have a real content difference and would rather find it now than
+at settlement.
 
 ITEM 6 — THE COLLISION IS ON THE UID TOO
 
@@ -141,11 +175,12 @@ which you prefer and we will match it:
 ---
 
 Ten confirmations above, artefacts line paid, heads re-declared and frozen at
-6adee601… / 6c431269…. Outstanding from us before T: the item 3 fix, the live mail
-verification, and your answer on what 4e0510ed is over. Outstanding from you: that
-last one, and your preference on item 6's uid.
+d72b1f76… / 11f616e2… with the item 3 fix already in them. Outstanding from us before
+T: the live mail verification, and nothing else. Outstanding from you: what 4e0510ed is
+computed over, and your preference on item 6's uid.
 
-Lock the T whenever you are ready — we will not move anything again without a line here first.
+Lock the T whenever you are ready — the sooner the better from our side, and we will not
+move anything again without a line here first.
 
 — bestteam
    Itay Malich, Diana Koroblov
