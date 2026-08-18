@@ -21,7 +21,7 @@ declaration disqualifies the whole project (M#38).
 
 | # | Date | Opponent team | Our role | Sub-games | Our score | Their score | Audit | Our report sent | Theirs confirmed | Commit hash | Config file |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | | | | /6 | | | ☐ | ☐ | ☐ | | |
+| 1 | 2026-08-18 | imreeyal | alternating, cop on odds | 6/6 | 40 | 60 | ☑ | ☑ | ☑ | cop 22e41379 / thief 67e859b6 | config_bestteam-vs-imreeyal_g01-06.json (cca1243e) |
 | 2 | | | | /6 | | | ☐ | ☐ | ☐ | | |
 | 3 | | | | /6 | | | ☐ | ☐ | ☐ | | |
 | 4 | | | | /6 | | | ☐ | ☐ | ☐ | | |
@@ -30,7 +30,7 @@ declaration disqualifies the whole project (M#38).
 | 7 | | | | /6 | | | ☐ | ☐ | ☐ | | |
 | 8 | | | | /6 | | | ☐ | ☐ | ☐ | | |
 
-**Counted matches so far: 0** ← this is the number declared to every new opponent (M#37)
+**Counted matches so far: 1** ← this is the number declared to every new opponent (M#37)
 
 > ⚠️ **This table is parsed, not just read.** `core/shared/league_log.py` counts the rows whose
 > **Opponent team** cell is filled and refuses to hand the handshake a number when that count

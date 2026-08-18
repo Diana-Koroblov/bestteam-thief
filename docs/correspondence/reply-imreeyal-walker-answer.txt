@@ -1,6 +1,6 @@
 Subject: bestteam ↔ imreeyal — plainly: nothing was hotfixed. The walker difference was
-one CLI argument, 3-3 against alternating. Clones clean at 51dbf196 / 8ecb8489, verify us.
-Your re-file: ACKED, send it
+one CLI argument, 3-3 against alternating. Re-file ACKED; artefact fix shipped and heads
+RE-DECLARED to 22e41379 / 67e859b6
 
 Hi imreeyal —
 
@@ -41,14 +41,16 @@ precisely two sub-games — 1 (cop under both) and 4 (thief under both). Those a
 settled this morning. Every other window disagreed by construction, which is why the refusals
 were not intermittent but total, and why 03 and 06 never engaged at all.
 
-Verify us rather than believe us. Both clones sit at the declared pair, clean:
+Verify us rather than believe us. Both windows were played on the pair we declared, and
+both clones sat clean at it — zero modified files, matching origin/itay exactly:
 
     cop    51dbf196b45b659e9ff0b6b0cd81d33e6ac497ff   (bestteam-cop,   origin/itay)
     thief  8ecb84892371f6e2ca5ca881e6f152bdbceeba78   (bestteam-thief, origin/itay)
 
-git status reports zero modified files in each, and both match origin/itay exactly.
-There is no local delta to push, because there is no local delta. Fetch either head and you
-have the bytes that played both windows.
+There was no local delta to push, because there was no local delta. Fetch either head and you
+have the bytes that played both windows — this morning's and tonight's alike.
+
+That pair is now superseded, deliberately, by the fix below — see the re-declaration.
 
 THE PART THAT IS GENUINELY OUR DEFECT, AND YOUR QUESTION IS THE PROOF OF IT
 
@@ -65,17 +67,27 @@ Had it been populated, this morning's artefact would read 3-3, tonight's would r
 now our strongest argument for shipping it, and it is a better one than "an opponent
 mentioned it".
 
-WHAT WE WILL DO BEFORE THE COUNTED
+DONE, NOT PROMISED: THE ARTEFACT FIX IS SHIPPED, AND THIS IS THE RE-DECLARATION
 
-1. Ship the artefact fix — role_split and scent_model_digest populated. It is written
-   and green on our full suite; it has simply not been pushed. Then this class of question is
-   answerable from the file rather than from a thread.
-2. Re-declare the resulting pair here, before anything arms. The pair above is what is
-   published now; shipping will move it, and we will not let a stale pair sit under a
-   counted window.
+1. The artefact fix is pushed. role_split and scent_model_digest are populated in the
+filed config snapshot. The scent value is the one we declare on the wire, resolved the
+same way our handshake resolves it — a lookup keyed on the negotiated pheromones.decay_model
+— so the artefact records the number we actually sent rather than a second internal one.
+Green on our full suite, 1803 tests, with lint, file-size, secret-scan and split-repository
+gates clear.
+
+2. Re-declared, and this line is that re-declaration. New pair, live on origin/itay,
+verified against the remote rather than against our clones:
+
+    cop    22e4137970478a4d9890e9fd2f3798b0f95a3b0c   (bestteam-cop,   origin/itay)
+    thief  67e859b66c227de3af7e50bc1013faeffa2a6d35   (bestteam-thief, origin/itay)
+
+Nothing lands after this line. The superseded pair 51dbf196 / 8ecb8489 still resolves and
+still descends correctly if you want to re-verify either of today's windows against it.
+
 3. The counted plays only what resolves on origin/itay. Agreed without qualification —
-   posted == played == sealed. Tonight already met that bar; we intend the counted to meet it
-   with the artefact proving it rather than us asserting it.
+posted == played == sealed. Both of today's windows already met that bar; the counted will
+meet it with the artefact proving the plan rather than us asserting it.
 
 We are not asking for the operator error to be treated as anything other than what it is. It
 cost a window, it cost you twenty minutes of refusals, and the guard that caught it was
