@@ -69,7 +69,8 @@ You disclosed that your artefact builder hashed your base config rather than the
 one, so your declarations carried the wrong pairing for six counted series. We went to check
 whether we had the same defect.
 
-We do. Right now. In the repositories you are about to clone.
+We did — until twenty minutes ago, in the two repositories you are about to clone. This is
+what our own check printed:
 
 
     our development tree, both roles     agreed_between ["bestteam","vibecode"]   d16427a2…b153618
@@ -77,30 +78,33 @@ We do. Right now. In the repositories you are about to clone.
     our PUBLISHED thief repo             agreed_between ["bestteam","imreeyal"]   cca1243e…3b1a513
 
 
-The number we declared to you — d16427a2… — is real, is derived by our own loader, and is
-what our Step-0 will emit. It is also not what our published repositories contain as we
-write this sentence. We repointed agreed_between at this pairing in our development tree
-when we answered your first letter, and that tree is not what plays: our two processes launch
-from the published clones, which still carry the imreeyal pairing from our counted series on
-18/08. cca1243e is literally the digest filed against that match in our league log.
+The number we declared to you — d16427a2… — was real, derived by our own loader, and is what
+our Step-0 emits. It was also not what our published repositories contained. We repointed
+agreed_between at this pairing in our development tree when we answered your first letter,
+and that tree is not what plays: our two processes launch from the published clones, which
+still carried the imreeyal pairing from our counted series on 18/08. cca1243e is literally
+the digest filed against that match in our league log.
 
-Had we armed this week without publishing, we would have handed you a declaration naming the
-wrong opponent while quoting you a digest from a tree you cannot see — your defect and our
-old one at once. It is the third time this project has been bitten by the same root cause,
-which is that our source of truth has no remote and the things that play are two clones of it.
+Had we armed before publishing, we would have handed you a declaration naming the wrong
+opponent while quoting you a digest from a tree you cannot see — your defect and our old one
+at once. It is the third time this project has been bitten by the same root cause: our source
+of truth has no remote, and the things that play are two clones of it.
 
-We are publishing the repointed config before we arm, and this letter is that post. Both
-heads move as a result:
+It is now published, and this letter is the post that re-declares. Both heads moved as a
+result:
 
 
-    cop     <NEW-COP-HEAD>       bestteam-cop,   branch itay
-    thief   <NEW-THIEF-HEAD>     bestteam-thief, branch itay
+    cop     6f5a7ed14b6f8180aa3acc08d304deb8fd2422da   bestteam-cop,   branch itay
+    thief   a671fe05a0a4afb47562e00485443b7f22b694ef   bestteam-thief, branch itay
 
 
 The pair we gave you earlier — 11bfbadd… / e74b605e… — is superseded. Please file the pair
-above instead, verify config_sha256 reads d16427a2…b153618 in both clones when you fetch
-them, and run your own ls-remote on both rather than taking this paragraph for it. Nothing
-lands after this post; if we push again before we play, you get the pair again first.
+above instead. Both are clean, both are pushed to refs/heads/itay, and both repositories
+answer "private": false to an anonymous client — we ran on ourselves the exact test we ran
+on you, and you should run it too rather than take this paragraph for it. When you fetch them,
+config_sha256 now reads d16427a2…b153618 in both clones; we have re-read it from the
+published files rather than from the tree we edited. Nothing lands after this post; if we push
+again before we play, you get the pair again first.
 
 We are telling you this the way you told us about yours. You would have been entitled to find
 it at the reconciliation and wonder what else we had not looked at.
@@ -124,8 +128,8 @@ it at the reconciliation and wonder what else we had not looked at.
 Your list with a step 0 that is ours, not yours:
 
 
-    0.  We publish the repointed config and post the new heads.   <- this letter
-    1.  You flip both repos public and post one line here.
+    0.  We publish the repointed config and post the new heads.   <- DONE, this letter
+    1.  You flip both repos public and post one line here.        <- the only open item
     2.  Hold mode both directions, at an hour you name.
     3.  Read-only probes both ways, 30 seconds, no window spent.
     4.  Friendly #1 straight after, if both probes are clean.

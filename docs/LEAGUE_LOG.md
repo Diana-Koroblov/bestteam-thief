@@ -60,7 +60,7 @@ contacted.
 
 | Opponent team | Contact | Status | Agreed date | Our role | Notes |
 |---|---|---|---|---|---|
-| vibecode | agentsorch@gmail.com (Ron Marom, Amit Kuperminz) | ☑ contacted / ☑ agreed / ☐ played | friendly TBD, any hour | cop on 1/3/5 | Terms locked both ways: a284082d, 81ebee59 chebyshev + merge-by-max, game_uid d570f249, role sentence read back. BLOCKED on two items: their declared heads (c3589098 / 41f3dc51) do not resolve — both repos 404 unauthenticated; and whether their audit re-hashes our supplied payload or rebuilds from a 6-key schema (ours seals 7 keys + github_commit) |
+| vibecode | agentsorch@gmail.com (Ron Marom, Amit Kuperminz) | ☑ contacted / ☑ agreed / ☐ played | friendly, hour TBD by us | cop on 1/3/5 | ALL SETTLED, nothing left to negotiate. a284082d; 81ebee59 chebyshev + merge-by-max, 0.800/0.500/0.200 on the wire; game_uid d570f249; config d16427a2 diffed key-by-key against their file — 36/36 identical, and their file produces a284082d through OUR loader. Payload re-hashed as supplied (proved their side). Public repos = counted-T precondition only. Our heads 6f5a7ed1 / a671fe05, clean and published. Open: name T; optionally verify their bundles at c956604a / da8d3b54 |
 | | | ☐ contacted / ☐ agreed / ☐ played | | | |
 | | | ☐ contacted / ☐ agreed / ☐ played | | | |
 | | | ☐ contacted / ☐ agreed / ☐ played | | | |
