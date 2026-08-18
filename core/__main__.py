@@ -12,6 +12,7 @@ also the boundary the published repositories split on: each ships only its own.
 from __future__ import annotations
 
 import sys
+from contextlib import suppress
 from pathlib import Path
 
 from core import cli_commands
@@ -43,6 +44,17 @@ def _config_dir(role: str) -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     """Return 0 when the peer started cleanly."""
+    # 🐛 A hint the wire itself allows to be non-ASCII (the book's own
+    # "mixed" hint language puts Hebrew and emoji on it) crashed the whole
+    # process the moment we tried to print one: stdout without an explicit
+    # encoding falls back to the OS's ANSI codepage (cp1255 on this Hebrew
+    # Windows machine) rather than UTF-8, and `UnicodeEncodeError` there is
+    # unhandled — a live cop mid-series against yanell11, 18/08. `replace`
+    # rather than `strict` because a hint we cannot render is still a turn we
+    # must not lose the game over.
+    for stream in (sys.stdout, sys.stderr):
+        with suppress(AttributeError):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     args = parse_args(argv)
     if args.command == "replay":
         return cli_commands.replay(args)

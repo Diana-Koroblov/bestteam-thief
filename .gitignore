@@ -33,6 +33,13 @@ results/tmp/
 *.log
 !results/**/log_*.json
 
+# Ad-hoc `--out` directories for a live or rehearsal match (results_<name>/,
+# outside the committed `results/` tree). A live series writes here while it
+# plays; `git add -A` mid-match would stage in-progress artefacts into
+# whichever repository is running, real match data included. Committed
+# results belong under `results/` on purpose, by hand, once a series ends.
+results_*/
+
 # Locally generated series artefacts. They are produced by our own two brains
 # playing each other, so they are **not match records** — and a synthetic
 # `log_<game_id>_gNN.json` sitting where a grader looks for real ones is exactly
