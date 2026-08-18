@@ -13,6 +13,7 @@ from typing import Any
 
 from core.compat import sealing
 from core.compat.exchange import Incoming, grid_of, now_iso, sealed_payload, synthetic_reveal
+from core.compat.turn_log import log_turn
 from core.compat.turn_wait import push_once_more
 from core.compat.wire import TurnMessage, wire_role
 from core.domain.actions import Direction
@@ -44,6 +45,7 @@ def read_turn(session: Any, message: TurnMessage) -> Incoming:
     accepted = {theirs.value, "police"} if theirs is Role.COP else {theirs.value}
     if message.sender not in accepted:
         raise ProtocolError(f"turn message sender {message.sender!r} is not {theirs.value}")
+    log_turn(session.role.value, session.sub_game_number, int(message.step), "received")
     # What actually arrived, independent of anything the closing audit later
     # claims — this is what a rewritten-and-resealed record is checked against.
     session.received[int(message.step)] = message.commit
@@ -152,6 +154,13 @@ async def send_turn(session: Any, owed: dict | None, stand: bool = False) -> Non
         claim_response=owed,
         win_claim=_win(session),
     ).to_dict()
+    # Logged before the call, not after: a hang inside it — one real
+    # hypothesis for a cop that stopped answering mid-game, yanell11, 18/08 —
+    # would otherwise leave nothing on disk naming the step that never
+    # returned. `sending` here and `received` from the far end's own log both
+    # naming the same step is the confirmation an audit's hash cannot give:
+    # that the process was still alive up to exactly this point.
+    log_turn(session.role.value, session.sub_game_number, session.sent, "sending")
     # 🐛 One bare call, no retry: a single transient `ConnectError` mid-series
     # — not a dead peer, just a dropped packet — ended a sub-game 26 turns in,
     # against yanell11, 18/08. `negotiate` and `submit_audit` both retry; a
@@ -161,6 +170,7 @@ async def send_turn(session: Any, owed: dict | None, stand: bool = False) -> Non
     # import `core.infra` (M#3) — this one also imports `core.protocol`, and
     # touching both makes a module a gateway, which a turn's mechanics is not.
     await push_once_more(session.client, "receive_turn", message)
+    log_turn(session.role.value, session.sub_game_number, session.sent, "sent")
 
 
 def apply_move(session: Any, decision: Any) -> tuple[int, int]:

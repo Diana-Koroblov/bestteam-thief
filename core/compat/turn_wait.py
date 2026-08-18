@@ -176,23 +176,35 @@ async def push_audit(opponent: Any, payload: dict, redial: Any) -> tuple[bool, l
 
 
 async def push_once_more(client: Any, tool: str, payload: dict) -> None:
-    """Call *tool* on *client*, retrying once after a short pause on failure.
+    """Call *tool* on *client*, retrying with a fresh connection on failure.
 
-    🐛 A single transient failure mid-series — a dropped packet, not a dead
-    peer — used to end the sub-game outright: `negotiate` and `push_audit`
-    both retry, but a turn during active play did not, for no reason tied to
-    the protocol. Cost a sub-game 26 turns in, against yanell11, 18/08. No
-    redial: unlike the handshake and the closing audit, a turn call has no
-    natural moment to fetch a fresh client, and one retry on the same one
-    already recovers from what a dropped packet actually is.
+    🐛 A transient failure mid-series used to end the sub-game outright:
+    `negotiate` and `push_audit` both retry, but a turn during active play
+    did not, for no reason tied to the protocol. Cost a sub-game 26 turns in
+    against yanell11, 18/08.
+
+    🐛 **The first fix retried on the same client and still lost the next
+    sub-game.** `OpponentClient` caches one session and reuses it
+    (`core/infra/mcp_client.py`); once that session is the thing that broke,
+    every retry against it fails the identical way; a retry only recovers
+    anything once `aclose()` has cleared the cache and the next call is
+    allowed to open a fresh one. Three attempts, not one — the same peer hit
+    a longer outage than a single dropped packet on the very next sub-game.
     """
     from core.infra.errors import PeerError
 
-    try:
-        await client.call(tool, payload, argument="message")
-    except PeerError:
-        await asyncio.sleep(1.0)
-        await client.call(tool, payload, argument="message")
+    delay = 1.0
+    for attempt in range(3):
+        try:
+            await client.call(tool, payload, argument="message")
+            return
+        except PeerError:
+            if attempt == 2:
+                raise
+            with suppress(Exception):
+                await client.aclose()
+            await asyncio.sleep(delay)
+            delay *= 2
 
 
 async def collect_our_agreement(session: Any, wait: float, ours: dict) -> dict:

@@ -11,15 +11,23 @@ also the boundary the published repositories split on: each ships only its own.
 
 from __future__ import annotations
 
+import faulthandler
 import sys
+import traceback
 from contextlib import suppress
 from pathlib import Path
+from typing import Any
 
 from core import cli_commands
 from core.cli_args import CONFIG_DIRS, parse_args
 from core.protocol.schemas import Role
 from core.sdk.peer_sdk import PeerSDK
 from core.shared.provider_budget import BudgetError, ProviderUnreachableError
+
+# Kept open for the process's lifetime — `faulthandler` writes to whatever
+# file object it was given at enable() time, so closing this early would
+# make every later dump silently go nowhere.
+_fault_handle: Any = None
 
 __all__ = ["main"]
 
@@ -68,6 +76,17 @@ def main(argv: list[str] | None = None) -> int:
         return cli_probe.probe_command(args)
 
     role = Role.COP if CONFIG_DIRS[args.role] == "police" else Role.THIEF
+    if args.command == "play":
+        # Requested directly (yanell11, 18/08) after a cop went silent
+        # mid-game with no trace anywhere. `dump_traceback_later` answers the
+        # question a crash traceback cannot: if the process is *hung* rather
+        # than dead, this fires on its own timer and names exactly which
+        # `await` every thread is stuck on, into a file that survives even a
+        # process nobody could reach to ask.
+        global _fault_handle
+        _fault_handle = Path(f"fault_{args.role}.log").open("w", encoding="utf-8")  # noqa: SIM115
+        faulthandler.enable(file=_fault_handle)
+        faulthandler.dump_traceback_later(200, repeat=True, file=_fault_handle)
     sdk = PeerSDK(_config_dir(args.role), role)
 
     # Before anything else, and before any model is contacted: a metered
@@ -85,7 +104,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "play":
         from core import cli_play
 
-        return cli_play.play(sdk, args)
+        # A crash that leaves no trace is the expensive kind (yanell11,
+        # 18/08): the fault file above catches a hang, this catches the other
+        # half — an exception that reaches here still exits the process, but
+        # now it names itself on disk first rather than depending on whoever
+        # redirected stdout to have kept the console.
+        try:
+            return cli_play.play(sdk, args)
+        except BaseException:
+            if _fault_handle is not None:
+                _fault_handle.write(f"\n{traceback.format_exc()}")
+                _fault_handle.flush()
+            raise
 
     view = sdk.board_view()
     print(f"role            : {sdk.role.value}")

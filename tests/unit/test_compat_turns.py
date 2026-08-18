@@ -166,8 +166,33 @@ async def test_send_turn_reads_the_trail_one_decay_step_older_and_rounded(
     assert peak == pytest.approx(round(decayed_peak(minimal_config), 3))
 
 
+class _FlakyClient(_RecordingClient):
+    """Fails its first *fail_times* calls, clearing the cached session each
+    time `aclose` runs — same shape as `OpponentClient` (`core/infra/
+    mcp_client.py`), where a retry against an uncleared session fails
+    identically to the call that broke it.
+    """
+
+    def __init__(self, fail_times: int) -> None:
+        super().__init__()
+        self.fail_times = fail_times
+        self.attempts = 0
+        self.acloses = 0
+
+    async def call(self, name: str, payload: dict, argument: str = "payload") -> dict:
+        self.attempts += 1
+        if self.attempts <= self.fail_times:
+            from core.infra.errors import TransportError
+
+            raise TransportError("dropped")
+        return await super().call(name, payload, argument)
+
+    async def aclose(self) -> None:
+        self.acloses += 1
+
+
 @thief_only
-async def test_a_transient_send_failure_is_retried_once_not_left_fatal(
+async def test_a_transient_send_failure_is_retried_not_left_fatal(
     minimal_config: Config,
 ) -> None:
     """🐛 Live against yanell11, 18/08: one `ConnectError` on `receive_turn`
@@ -175,22 +200,26 @@ async def test_a_transient_send_failure_is_retried_once_not_left_fatal(
     `negotiate` and `submit_audit` both retry; a turn during active play did
     not, for no reason tied to the protocol.
     """
-    from core.infra.errors import TransportError
-
-    class _FlakyOnce(_RecordingClient):
-        def __init__(self) -> None:
-            super().__init__()
-            self.attempts = 0
-
-        async def call(self, name: str, payload: dict, argument: str = "payload") -> dict:
-            self.attempts += 1
-            if self.attempts == 1:
-                raise TransportError("dropped")
-            return await super().call(name, payload, argument)
-
-    client = _FlakyOnce()
+    client = _FlakyClient(fail_times=1)
     session = _session(Role.THIEF, minimal_config, client=client)
     session.runtime.brain = brain_class("thief")()
     await send_turn(session, None)
     assert client.attempts == 2
+    assert client.acloses == 1, "the cached session must be cleared before retrying"
+    assert len(client.calls) == 1
+
+
+@thief_only
+async def test_a_second_failure_is_also_retried_not_just_the_first(
+    minimal_config: Config,
+) -> None:
+    """🐛 The fix above still lost the *next* sub-game: one retry on the same
+    client hit the identical broken session, because nothing had cleared it.
+    A peer can take longer than one retry to recover from."""
+    client = _FlakyClient(fail_times=2)
+    session = _session(Role.THIEF, minimal_config, client=client)
+    session.runtime.brain = brain_class("thief")()
+    await send_turn(session, None)
+    assert client.attempts == 3
+    assert client.acloses == 2
     assert len(client.calls) == 1
