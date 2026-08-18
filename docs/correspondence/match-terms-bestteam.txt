@@ -476,9 +476,9 @@ OURS, IN THE SAME SHAPE
                         permanent, one hostname per process, never rotate
 
     cop repo            https://github.com/Diana-Koroblov/bestteam-cop
-    cop commit          68cbdd211dcfdd4de97039e92daa12f8a12d13ac      (branch itay)
+    cop commit          11bfbaddb26b977a7a0143e8f29d886b2a68c671      (branch itay)
     thief repo          https://github.com/Diana-Koroblov/bestteam-thief
-    thief commit        91de6c78779d17558e8fbc1000e7e395e21ed243      (branch itay)
+    thief commit        e74b605e1a90c4a5ee09ffe97bbd33bac46c6472      (branch itay)
 
     terms hash          a284082dfb1572236f1b614d29295a99625539c7d33a096f7f8921bafbc3d08d
                         (reference/flat 14-key shape — the native digest needs your id, §3)

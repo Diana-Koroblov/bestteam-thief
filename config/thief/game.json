@@ -1,6 +1,6 @@
 {
   "schema_version": "1.2",
-  "agreed_between": ["bestteam", "imreeyal"],
+  "agreed_between": ["bestteam", "vibecode"],
   "board_and_agents": {
     "grid_size": 7,
     "num_agents": 2,

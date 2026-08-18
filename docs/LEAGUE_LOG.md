@@ -60,7 +60,7 @@ contacted.
 
 | Opponent team | Contact | Status | Agreed date | Our role | Notes |
 |---|---|---|---|---|---|
-| | | ☐ contacted / ☐ agreed / ☐ played | | | |
+| vibecode | agentsorch@gmail.com (Ron Marom, Amit Kuperminz) | ☑ contacted / ☑ agreed / ☐ played | friendly TBD, any hour | cop on 1/3/5 | Terms locked both ways: a284082d, 81ebee59 chebyshev + merge-by-max, game_uid d570f249, role sentence read back. BLOCKED on two items: their declared heads (c3589098 / 41f3dc51) do not resolve — both repos 404 unauthenticated; and whether their audit re-hashes our supplied payload or rebuilds from a 6-key schema (ours seals 7 keys + github_commit) |
 | | | ☐ contacted / ☐ agreed / ☐ played | | | |
 | | | ☐ contacted / ☐ agreed / ☐ played | | | |
 | | | ☐ contacted / ☐ agreed / ☐ played | | | |

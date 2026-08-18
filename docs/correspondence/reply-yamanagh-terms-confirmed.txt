@@ -1,0 +1,249 @@
+Subject: bestteam ↔ yamanagh — any date, 15:00 confirmed. Three corrections to the invite you
+received, config pack for yamanagh (cc1b49bb), and a merge divergence the 0.810 check misses
+
+Hi Nagham, Yaman —
+
+Thank you for a reply we could act on line by line, and in particular for flagging the scent
+difference rather than letting it reach the audit. That is the whole point of a friendly and
+you did it before we even connected.
+
+The date is any date. 15:00 stands — name the day that suits you, including today or
+tomorrow, and we will take it. Our calendar is genuinely open.
+
+Before anything else, three things in the message you received were wrong.
+
+
+0. THREE CORRECTIONS — PLEASE WORK FROM THIS MESSAGE, NOT THAT ONE
+
+We sent you a template with an unfilled <DATE>, which you spotted. Worse, and you could not
+have spotted these, three of its facts were stale. We would rather hand you the list than
+have you find out at the handshake.
+
+1. Our two endpoints were printed the wrong way round. This is the one that matters,
+because acting on it sends every message to the wrong process. The correct pairing, from the
+live clones:
+
+    our cop     https://itinerary-single-overjoyed.ngrok-free.dev/mcp
+    our thief   https://denotatively-sciuroid-florine.ngrok-free.dev/mcp
+
+The invite had denotatively as our cop and itinerary as our thief. It is the other way
+round. Please discard that pair entirely.
+
+2. The declared commits were three pushes out of date. Current, both clean against
+origin/itay, both public and resolving:
+
+    cop    11bfbaddb26b977a7a0143e8f29d886b2a68c671   (bestteam-cop,   branch itay)
+    thief  e74b605e1a90c4a5ee09ffe97bbd33bac46c6472   (bestteam-thief, branch itay)
+
+The invite declared 51dbf196… / 8ecb8489…. Those still resolve and still descend
+correctly, but they are not what will play.
+
+3. Our counted-series count is 1, not 0. We played imreeyal on 2026-08-18 — a counted
+series, six sub-games of six, which we lost 40 to their 60, roles alternating with us as cop
+on the odd sub-games. Both reports went to the lecturer and the two files agree.
+
+So a series between us would be your first counted opponent and our second, and a first
+meeting between our two groups either way.
+
+None of the three was a judgement call; all three were a template that went out carrying
+values which had moved. We have since made the count mechanical — see §5 — and we are
+retiring that template. Our apologies for the noise it cost you.
+
+
+1. CONFIRMED FROM YOUR SIDE
+
+- Team id yamanagh, members and both repositories: noted and filed.
+- Capture resolution, coordinates, and M#46/M#47: agreed, and we are glad they match
+  exactly. We concede both wall conditions from the state alone, unconditionally, without
+  waiting for a claim — the same as you describe.
+- Your thief head sitting on Nagham-br rather than main is fine by us and needs no
+  apology: a commit on a non-default branch resolves and audits exactly the same. We are in
+  the same position — both our heads are on branch itay, not main. What matters under
+  rule 53 is that the hash is public and fetchable, and yours is.
+- Zero tokens on both sides. Ours is a local template provider; movement is never decided
+  by a model here (Ch. 6).
+- Yes please to the four artefacts and the closing result to our inbox. We will send you
+  ours on the same terms — itay.malich2@gmail.com.
+
+
+2. THE CONFIG PACK, NOW THAT WE HAVE YAMANAGH
+
+You were right that the digest waits on your team id, because agreed_between is inside the
+signed contract on our native path. With ["bestteam", "yamanagh"]:
+
+    config_sha256   cc1b49bb0863eaecddf21302cf460ae7d9d187c83eaaffb74009848417b84d6f
+
+Canonicalisation: json.dumps(payload, sort_keys=True, separators=(",", ":"),
+ensure_ascii=False), UTF-8, no trailing newline. Not a hash of the file's raw bytes — a
+raw sha differs on key order, indentation, a trailing newline and CRLF-versus-LF even when
+the content is identical. If your number differs, check the construction before hunting for a
+content difference; we lost two letters to doing it the other way round.
+
+Both of us also derive these without exchanging them, and they must agree:
+
+    game_id    bestteam-vs-yamanagh
+    game_uid   0b4e7039-b317-1008-486f-4873f088275c
+
+If we play the four-mailbox path instead, the signed contract is the flat fourteen-key
+one, which carries no team names and is the same for every opponent:
+
+    terms sha256  a284082dfb1572236f1b614d29295a99625539c7d33a096f7f8921bafbc3d08d
+
+Those two numbers are not comparable and neither is wrong — they are digests of different
+payloads over the same game. So whichever we run, let us both name the shape before we
+compare. Since you speak both in full on both sides, we propose the four-mailbox
+reference/std_v1 path: it is the one we have most recently had reproduced byte for byte by
+an independent implementation, so if a digest disagrees there we will know it is a real term
+and not a shape. Say the word if you would rather run native six-tool; it is a flag on our
+side either way.
+
+
+3. SCENT — WE ARE TAKING YOUR MODEL, AND THERE IS A SECOND DIFFERENCE UNDERNEATH IT
+
+On decay: you are right and we will move. Yours is the book's multiplicative kernel; ours
+was declaring subtractive. The book is binding, we implement both behind a config value, and
+our own terms say we will take your reading where it costs us an edit rather than a code
+change. So we flip, and at ρ = 0.1 a centre of 0.900 reads 0.810 on our side too.
+
+Our multiplicative field, generated just now, is the book's PAGE 44 figure cell for cell:
+
+
+    0.04 0.14 0.20 0.14 0.04
+    0.14 0.42 0.62 0.42 0.14
+    0.20 0.62 0.90 0.62 0.20
+    0.14 0.42 0.62 0.42 0.14
+    0.04 0.14 0.20 0.14 0.04
+
+
+    scent_model_sha256   934c220d5bf62acaa3297c6c9d723ea954c220260b02292ca17f6d5daef9f4d9
+
+Note that digest is not the 81ebee59… in the invite you received; that was the
+subtractive bundle. Flipping the model changes the scent digest and leaves config_sha256
+untouched, because the model name lives in our private file rather than the shared contract.
+
+
+THE PART WORTH YOUR ATTENTION
+
+Reading your formula closely — τ_next = min(cap, max(0, (1 − ρ)·τ_old + δ)) — the merge is
+a clamped sum. Ours is a maximum:
+
+    merge() keeps the stronger of the aged value and this turn's deposit. A sum would let an
+    agent that lingered on one cell accumulate an intensity no single deposit can produce,
+    reading as "several agents" rather than "one agent, twice".
+
+Both are defensible and we are not claiming yours is wrong. But they diverge, and the
+divergence is invisible to exactly the check we just agreed on. Worked, at ρ = 0.1, for a
+ring-1 cell deposited on last turn and again this turn:
+
+
+    aged value            (1-0.1) x 0.62  =  0.558
+    fresh deposit                            0.62
+
+    ours   (maximum)      max(0.558, 0.62)          =  0.62
+    yours  (clamped sum)  min(0.9, 0.558 + 0.62)    =  0.90
+
+
+0.62 against 0.90 on the cells that carry the direction. At the centre the cap hides
+it completely — min(0.9, 0.81 + 0.9) is 0.9, and our maximum is also 0.9 — so the
+0.900 → 0.810 example we both just verified passes while the fields still disagree. Two
+honest teams would have gone into the audit with matching worked numbers, matching digests,
+and different belief maps all series.
+
+Three ways out, and we are content with any:
+
+1. We adopt your clamped sum. Straightforward, but unlike the decay model this one is not
+   a config value on our side — it is a code change and therefore a ship and a re-declared
+   head. Perfectly doable before the friendly if you say so now.
+2. You adopt maximum. Only if it is as cheap on your side as flipping decay was on ours;
+   we are not asking you to pay more than we did.
+3. We play the friendly with the divergence declared on the record — one form per side,
+   both physics checks log rather than refuse. We have run a series this way before, by
+   written agreement, and it works precisely because it is written down in advance. For an
+   uncounted friendly this is our own mild preference: it exercises the protocol tonight and
+   we settle the merge before anything counts.
+
+Whichever you choose, please put it back in one line so we both arm with the same physics.
+
+Transmission, unchanged either way: we send a populated grid every turn, centred on our
+true current cell, including that turn's own deposit, with a digest of the emitted field
+sealed inside that step's commitment so neither side can tailor a grid after seeing the
+other's. A field revealed at turn k is first acted on when deciding turn k+1, since turn
+k's move was committed before that reveal could arrive.
+
+
+4. ROLE PLAN — ACCEPTED AS YOU WROTE IT
+
+You wrote it as a sentence, which is exactly what we asked for, so we are taking it
+unchanged rather than proposing a flip:
+
+    Alternating. yamanagh plays cop on sub-games 1, 3 and 5; bestteam plays thief on 1, 3 and
+    5 and cop on 2, 4 and 6. The thief moves first in each sub-game, so bestteam opens
+    sub-game 1.
+
+Read that back to us and we are locked. We have no preference about which side opens as cop,
+and we would rather take yours than spend a round trip on it.
+
+Consequently our github_commit will be our thief repo's head on sub-games 1/3/5 and our
+cop repo's head on 2/4/6. If you run two processes out of two repositories, yours differs
+per sub-game the same way — one commit stamped across all six rows is wrong in half of them,
+which is the one thing rule 53 actually asks about.
+
+
+5. TWO THINGS OFFERED, SINCE YOU WERE CANDID ABOUT YOUR COUNTER
+
+On your counted count. You would rather verify than guess, which is the right instinct —
+rule 38 judges that figure on whether the two teams' files agree, and a wrong declaration is
+a project-level sanction rather than a lost point. We had the same problem and solved it by
+making the number unguessable: ours is parsed out of docs/LEAGUE_LOG.md by a module that
+counts the rows whose opponent cell is filled and refuses to hand the handshake a number at
+all when the table and the stated total disagree. Test-loop entries cannot inflate it
+because a row only counts when it names an opponent. Happy to send you that module if it
+would help; it is about forty lines and has no dependencies.
+
+Until you have a verified figure, declaring 0 with the caveat you gave us is honest and we
+will file it exactly as you state it.
+
+Your endpoints are Quick Tunnels, and they rotate. trycloudflare.com URLs change on
+every restart, and a moved URL has cost a whole session in this league before. You already
+said you would re-verify and repost before arming, which is the right procedure — we only add
+that from our side a rotated URL is indistinguishable from a dead process, so if you do
+restart, please repost even if you think we have not dialled yet. A named tunnel makes the
+problem go away permanently if you have the option.
+
+For symmetry: ours are reserved ngrok domains on two separate accounts, so they do not
+rotate, and we will not need to send you a new URL mid-session.
+
+
+6. ON THE DAY
+
+- We come up five minutes early and repost both URLs and both declared heads before either
+  process arms. Nothing lands after that post; if we push, we re-declare.
+- Both processes stay up for the whole series on our side, idle windows included — each
+  sits idle for half the match but still has to answer, because the next window arrives at
+  it. A process that exits after its own mini-game kills the series at the next handover.
+- We re-negotiate before every mini-game, carrying the identical signed terms, and our
+  client re-points at each sub-game boundary.
+- The audit is pushed both ways — we call yours with our reveal as an independent
+  outbound call and separately expect yours; neither is a reply to the other.
+- The request budget, since you are on Cloudflare and we are on ngrok: a free ngrok
+  endpoint stops completing the TLS handshake at roughly 120 requests a minute, and the
+  failure is a bare ConnectError with nothing at all in our agent's log, because the
+  connection never becomes a request. It is per endpoint and your calls spend our minute. We
+  pace our outbound at 100/min; a sub-game costs about 70 requests.
+- Give a busy peer time. We wait up to 15 minutes before calling a peer absent. Forty
+  seconds of patience has scored a technical outcome against a completely healthy opponent in
+  this league.
+
+We do not accept a technical win we did not earn on the board. If our endpoint is down or our
+process crashed, tell us and we will replay the sub-game, and we ask the same of you.
+
+Afterwards we would like to verify from the logs together: both scoreboards mirroring, every
+audit row passing, and any sealed-thief or barrier-on-cell position resolving the same way in
+both replays.
+
+So: name the day, confirm the role sentence, and tell us which of the three merge options
+you want. Three lines back and we are ready to dial.
+
+— bestteam
+  Itay Malich, Diana Koroblov
+  itay.malich2@gmail.com
