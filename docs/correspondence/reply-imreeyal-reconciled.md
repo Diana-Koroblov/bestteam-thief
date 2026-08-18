@@ -1,10 +1,27 @@
 # Reconciled: cca1243e reproduces on both our roles — but we moved the six keys rather than deleting them, and your second pin is not independent
 
-Subject: bestteam ↔ imreeyal — cca1243e CONFIRMED both roles, item 9 closed. Two
-corrections you should have: your "bound twice" reassurance is downstream of the key
-you asked us to drop, and our scent digest reads 71399f21, not 81ebee59
+Subject: bestteam ↔ imreeyal — cca1243e CONFIRMED both roles, item 9 closed; heads
+re-declared. One correction and one defect you should have: your "bound twice" pin is
+computed FROM the key you asked us to drop, and our reviewer would have refused your file
 
 Hi imreeyal —
+
+**Reconciled, shipped, and this letter is the item-5 re-declaration you asked for.**
+
+Standing items first, so this letter stands on its own:
+
+- **Artefacts line, paid:** `artefacts: 14 file(s)` — 1 declaration + 6 config + 6 log +
+  1 result, for `bestteam-vs-imreeyal` / `ffad01a2-4965-be0b-c708-3cdbedd7373a`.
+- **The ten confirmations stand** exactly as sent: 1 confirmed (lecturer alone,
+  `rmisegal+uoh26finalgame@gmail.com`, no redirect), 2 confirmed, 3 corrected and fixed
+  (`games_played_including_this` now files before+1 on a counted series, pinned by tests),
+  4 confirmed (derived, not claimed), 5 re-declared below, 6 confirmed and your LEAVE IT
+  adopted, 7 confirmed (app published to production), 8 confirmed, 9 closed by this letter,
+  10 confirmed.
+- **Item 6 uid: LEAVE IT**, on your declaration. The counted shares the pairing uid with the
+  friendlies by design, and our archive plus a fresh empty `--out` carries the load.
+
+Now the substance.
 
 **Reconciled.** Dropping your six from our shared contract gives, on both our cop and
 thief role directories, byte for byte:
@@ -48,42 +65,44 @@ completely different matches. You should know which one you are playing.
 You wrote, to reassure us: *"the subtractive model is bound twice outside the contract —
 scent_model_sha256 81ebee59 sealed inside every step-0 declaration."*
 
-That is not how ours is built, and we suspect not how yours is either. Our
-`scent_model_sha256` is **derived from** `pheromones.decay_model`: the payload we hash
-contains the decay model as a field. Drop the key, let it default to multiplicative, and
-the scent digest changes with it. The second pin moves with the first, because it is
-downstream of it.
+The value is right and we send it: `81ebee59…` is the registry's named bundle for
+subtractive, and both our roles declare exactly that. No disagreement on the number.
 
-So the reassurance is not wrong about the *outcome* — subtractive is genuinely bound by the
-thread and by the terms — but it is wrong about the *mechanism*, and a team that had
-followed it literally would have deleted the key, defaulted to multiplicative, and produced
-a matching-looking contract with a silently different scent digest and a blurred filter.
-That is the failure this reconciliation was supposed to prevent, so we would rather say it
-plainly than accept a reassurance we cannot reproduce.
+The correction is about *why* it is safe. On our side that declaration is a lookup **keyed
+on `pheromones.decay_model`** — the very key you asked us to drop. Delete it, let it default
+to multiplicative, and the same line declares `934c220d…` instead. The second pin does not
+hold the first steady; it follows it.
 
-## 3. A second digit does not reconcile: we compute 71399f21, not 81ebee59
+So the reassurance is right about the outcome and wrong about the mechanism, and the
+difference is not academic: a team that had followed it literally would have deleted the
+key, defaulted to multiplicative, declared the *other* registry hash, and blurred its own
+filter — while the contract digest you asked for matched perfectly. That is precisely the
+failure this reconciliation existed to prevent, which is why we moved the key rather than
+deleting it, and why we are saying so rather than accepting a reassurance we could not
+reproduce from our own code.
 
-Computing our scent-model digest over the agreed subtractive model, grid 5, rho 0.1,
-`field_includes_current_turn = true`, sampling `end_of_previous_full_turn`, we get:
+## 3. Reconciling found a defect that would have refused YOUR file at the handshake
 
-    71399f21ebc2d0c5f079771f98a8a837001c1e34f25ab8510ce20803da76ea80
+This is the one you should care about most, and we would not have found it by editing JSON.
 
-Not `81ebee59`. Our hashed payload is:
+Our config reviewer — the thing that reads your proposed `game.json` and exits non-zero
+rather than let us sign something illegal — treated an **absent `version` key as an illegal
+value**. Your nine-key contract carries no `version`. So our own reviewer, run against the
+contract we had just spent two letters agreeing with you, would have listed it as illegal
+and refused it. Minutes before a match, on the file we asked you for.
 
-    emission_by_squared_distance {0:0.9, 1:0.6, 2:0.6, 4:0.3, 5:0.3, 8:0.3}
-    grid_size 5, decay_rate 0.1, decay_model "subtractive",
-    field_includes_current_turn true, sampling_mode "end_of_previous_full_turn",
-    worked_example {input 0.9, after_one_turn 0.8}
+Its own module docstring names this exact failure first: *"Refusing a legal proposal...
+would produce a green suite while losing a match."* It was doing precisely that.
 
-Two possibilities and we cannot tell which from here: `81ebee59` is one of the four term
-digests and simply is not the scent-model hash, in which case say so and we are done; or it
-**is** meant to be the scent-model hash, in which case we have a second mismatch of exactly
-the family we just closed, and we would rather find it now than at settlement. Our payload
-is above in full — if yours differs in a field or in the worked example, that is the delta.
+Fixed to the same rule as everything else here — absence is silence, a stated incompatible
+version is a claim — in both the reviewer and the loader.
 
-Note this one does **not** block the friendly: the emission and decay behaviour is agreed in
-prose and unchanged on our side, and a friendly is not filed. It should be settled before the
-counted.
+Two things worth saying about it. First, it is independent of the digest: it would have
+fired whether or not we reconciled, because it is about the **shape** of your file rather
+than its content. Second, **check your side.** If your kit refuses an absent `version` and
+we ever send you a contract shaped like the one you asked us to adopt, the same thing
+happens in the other direction — and neither of us would suspect the reviewer, because both
+files would be correct.
 
 ## Also, a gap of ours, since we are listing them
 
@@ -92,25 +111,34 @@ as **empty strings**. Not a rule breach and not a mismatch, but the filed artefa
 record the numbers it was played under, and ours does not. We are noting it rather than
 quietly fixing it because you have our 2200 file and will see it.
 
-## Heads, and what we have not verified
+## Heads — re-declared, live, and verified against the remote
 
-The reconciliation is a config commit, so the pair moves exactly as you said. Our new pair,
-which we will post as a one-line re-declaration the moment it lands:
+The reconciliation is a config commit, so the pair moved exactly as you said it would. This
+is the re-declaration; both are already on `origin/itay` and checked against the remote
+rather than against our local clones:
 
-    cop    <<COP-HEAD>>
-    thief  <<THIEF-HEAD>>
+    cop    51dbf196b45b659e9ff0b6b0cd81d33e6ac497ff   (bestteam-cop,   origin/itay)
+    thief  8ecb84892371f6e2ca5ca881e6f152bdbceeba78   (bestteam-thief, origin/itay)
 
-Honest about the state of it: we have verified that both roles produce `cca1243e`, that all
-six moved values still resolve, that our rules engine builds from them, and that the scent
-model still reads subtractive. We have **not** completed a full test-suite run on this
-change — we cancelled it for time. We would rather tell you that than let "verified" carry
-more weight than it earned. Nothing in the change touches gameplay logic; it moves where six
-values are read from.
+Verified rather than asserted, and it took longer than "drop six keys" suggests: both roles
+produce `cca1243e`, all six moved values still resolve, the rules engine builds from them,
+the scent model still reads subtractive, and the **full suite is green — 1803 passed, 92%
+coverage** — with lint, file-size and secret-scan gates clear. We skipped only the
+192-sub-game strategy benchmark, which a configuration change does not exercise.
 
-**Order accepted: reconciliation first, then the friendly.** Once our new pair is posted and
-you have confirmed `cca1243e` against it, we bring doors up and say "up" — and the friendly
-then proves the corrected config artefact end to end, which as you say is one more thing the
-counted no longer does first.
+That run mattered. Making the contract match yours broke **thirty** of our own tests, and
+working through them is how we found the reviewer defect in section 3. A team that had edited the
+JSON and pushed would have had a matching digest, a green-looking repository, and a
+handshake that refuses you.
+
+**Order accepted: reconciliation first, then the friendly — and the reconciliation is now
+done and pushed.** The pair above is live on `origin/itay`, the published contract at both
+repositories hashes to `cca1243e`, and nothing further will land.
+
+Confirm `cca1243e` against our heads and we will say **"up"** in one line and hold doors.
+The friendly then proves three things at once rather than one: your two endorsed
+check-lines, the corrected league counter, and the corrected config artefact — all in a
+series that can be re-run, which is exactly the argument you made back to us.
 
 Your pair, unchanged and pinned on our side: cop `bdbce8a2…` / thief `aa9c5c0b…`.
 

@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from core.compat.match_log import build_sub_game_log
-from core.compat.wire import wire_role
+from core.compat.wire import SCENT_MODEL_SHA256, wire_role
 from core.report.artefacts import build_config_snapshot, build_declaration, write
 
 __all__ = ["file_sub_game", "file_declaration"]
@@ -34,6 +34,7 @@ def file_sub_game(
     outcome: str,
     our_group: str,
     their_group: str,
+    role_split: str = "",
 ) -> list[Path]:
     """File the config snapshot and the log for one finished sub-game.
 
@@ -45,14 +46,31 @@ def file_sub_game(
     exchange a config digest at all; passing ours as the agreed one would put a
     number in an artefact that nobody ever agreed to, which is exactly the
     invented value `core/report/artefacts.py` refuses to write.
+
+    🐛 **`role_split` and `scent_model_digest` filed as empty strings** through
+    every window up to and including 17/08's, because this call passed neither
+    and both default to `""`. The native path has always passed them; this twin
+    never did. imreeyal read our 2200 artefact and noted it, and they are right
+    that a filed artefact should record the numbers the sub-game was played
+    under — an artefact that omits them cannot be checked against the handshake
+    that agreed them.
+
+    The scent digest is the one we **declare on the wire**, resolved the same way
+    `core/compat/session.py` resolves it: a lookup keyed on the negotiated
+    `pheromones.decay_model`. Reading it from anywhere else would file a number
+    we never sent. Our internal formula digest in `core/crypto/scent_model.py`
+    is a different object and deliberately not this one.
     """
     config = sdk.runtime.orchestrator.config
     role = wire_role(session.role.value)
+    model = str(config.get("pheromones.decay_model", "multiplicative"))
     snapshot = build_config_snapshot(
         game_identifier=game_identifier,
         sub_game=number,
         shared_config=config.shared,
         role=role,
+        role_split=role_split,
+        scent_model_digest=SCENT_MODEL_SHA256.get(model, ""),
     )
     log = build_sub_game_log(
         game_identifier=game_identifier,
