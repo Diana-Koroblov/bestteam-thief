@@ -105,10 +105,22 @@ async def push_agreement(
     Returns the client the push finally succeeded on — which is **not** always
     the one passed in, and callers must keep it.
 
-    Only a **transport** failure is retried. Peers legitimately start seconds
-    apart, and the native path gives the same courtesy in `cli_handshake.greet`.
-    A refusal on the merits is not retryable and is not raised here at all — it
-    comes back later, as their agreement failing to verify.
+    A **transport** failure is retried, and so is a **structured refusal that
+    names itself transient** — a peer answering synchronously rather than
+    holding us silently still means "not yet," not "no." A refusal that is
+    actually about the merits (wrong terms, unauthorised sender) keeps
+    refusing on every retry and still surfaces once the budget runs out; the
+    cost of trying is a few extra seconds, not a wrong verdict.
+
+    🐛 **A single-process peer that answers negotiate synchronously was
+    indistinguishable from one that refuses on the merits.** Two of our own
+    processes hold an out-of-turn agreement and never answer it at all
+    (`Inboxes.held`); yanell11's one peer instead replies at once with
+    `'negotiate' was rejected by the opponent: sub-game 2 has not started on
+    this peer yet ... retry when it does` — and the OLD code treated every
+    `RemoteToolError` as final, so our thief abandoned sub-games 2, 4 and 6 in
+    the same second it opened them, never once retrying, while their own peer
+    was still finishing sub-game 1 exactly as its message said (18/08).
 
     🐛 **Every retry used to reuse the dead socket.** Against a peer that starts
     a fresh process per sub-game — the reference runner does — the session dies
@@ -119,14 +131,14 @@ async def push_agreement(
     whole time.* So `redial` is called between attempts, and a redial that fails
     is itself just another thing to retry — the peer may still be down.
     """
-    from core.infra.errors import TransportError
+    from core.infra.errors import RemoteToolError, TransportError
 
     deadline = time.monotonic() + seconds
     while True:
         try:
             await client.call("negotiate", message, argument="message")
             return client
-        except TransportError:
+        except (TransportError, RemoteToolError):
             if time.monotonic() >= deadline:
                 raise
             print(f"  no answer yet; retrying for {deadline - time.monotonic():.0f}s more ...")

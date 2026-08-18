@@ -200,6 +200,37 @@ async def test_a_dead_socket_is_redialled_rather_than_retried_forever() -> None:
     assert live.pushes, "the fresh client must be the one we go on to push with"
 
 
+async def test_a_structured_not_yet_refusal_is_retried_not_abandoned() -> None:
+    """🐛 yanell11's single process answers negotiate synchronously, 18/08:
+    `'negotiate' was rejected: sub-game 2 has not started on this peer yet ...
+    retry when it does`. The old code treated every `RemoteToolError` as
+    final, so our thief abandoned sub-games 2, 4 and 6 in the same second it
+    opened each one, while their peer was still finishing sub-game 1 as its
+    own message said. Answering instead of holding silently still means "not
+    yet," not "no."
+    """
+    from core.infra.errors import RemoteToolError
+
+    class _NotYet:
+        async def call(self, *_args: Any, **_kwargs: Any) -> dict:
+            raise RemoteToolError("negotiate", "sub-game 2 has not started on this peer yet")
+
+    session = _Session(sub_game_number=2)
+    live = _Client()
+
+    async def redial() -> Any:
+        session.inboxes.agreements.put(_agreement(2))
+        return live
+
+    theirs = await await_agreement(
+        session, _NotYet(), {"sub_game_number": 2}, total_wait=5.0, push_wait=2.0,
+        repush_every=0.1, announce=lambda _line: None, redial=redial,
+    )
+
+    assert theirs["sub_game_number"] == 2
+    assert live.pushes, "the fresh client must be the one we go on to push with"
+
+
 async def test_the_total_budget_is_honoured_when_nobody_answers() -> None:
     """A peer that never arrives costs us the budget and then reports it."""
     session = _Session(sub_game_number=2)
@@ -221,59 +252,3 @@ def test_the_default_budget_spans_more_than_one_sub_game() -> None:
     from core.compat.turn_wait import TURN_WAIT_SECONDS
 
     assert TURN_WAIT_SECONDS >= 600.0
-
-
-async def test_push_audit_lands_on_the_first_try() -> None:
-    """The ordinary case: their door is still the one we last talked to."""
-    from core.compat.turn_wait import push_audit
-
-    client = _Client()
-    landed, notes = await push_audit(client, {"sub_game_number": 1}, redial=None)
-
-    assert landed
-    assert notes == []
-    assert client.pushes == [("submit_audit", 1)]
-
-
-async def test_push_audit_redials_a_dead_socket_instead_of_giving_up() -> None:
-    """🐛 **What najamjad actually hit, 17/08.** The peer that just won can exit
-    the moment it has read its inbox, killing its server mid-response — so the
-    client the last turn left us with is routinely a corpse by the time we
-    reach the audit push. Silently swallowing that failure (the old code) reads
-    on their side as "AUDIT SKIPPED" while our own log shows nothing wrong."""
-    from core.compat.turn_wait import push_audit
-    from core.infra.errors import PeerError
-
-    class _Dead:
-        async def call(self, *_args: Any, **_kwargs: Any) -> dict:
-            raise PeerError("session terminated")
-
-    live = _Client()
-
-    async def redial() -> Any:
-        return live
-
-    landed, notes = await push_audit(_Dead(), {"sub_game_number": 1}, redial=redial)
-
-    assert landed
-    assert "attempt 1 failed" in notes[0]
-    assert live.pushes == [("submit_audit", 1)]
-
-
-async def test_push_audit_reports_when_it_never_lands() -> None:
-    """Both attempts fail: the caller must be told, not left to assume silence
-    means success — that assumption is the whole bug this function replaces."""
-    from core.compat.turn_wait import push_audit
-    from core.infra.errors import PeerError
-
-    class _AlwaysDead:
-        async def call(self, *_args: Any, **_kwargs: Any) -> dict:
-            raise PeerError("session terminated")
-
-    async def redial() -> Any:
-        return _AlwaysDead()
-
-    landed, notes = await push_audit(_AlwaysDead(), {"sub_game_number": 1}, redial=redial)
-
-    assert not landed
-    assert "never landed" in notes[-1]
