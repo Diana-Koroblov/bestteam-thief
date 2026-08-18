@@ -34,6 +34,21 @@ def runtime(minimal_config) -> PeerRuntime:
     return peer
 
 
+def after_the_first_move(peer: PeerRuntime, to: tuple[int, int] = (1, 0)) -> None:
+    """Advance past the opening move, which is when the first emission is owed.
+
+    Emission accompanies an action — Ch. 4.3's *"every time an agent moves or
+    stays in place"* — so at step 0, before any move, there is deliberately
+    nothing to transmit (`LocalTruth._advance`). A test about what the **wire**
+    carries therefore has to stand where a real turn stands: after the move,
+    which is exactly where `core/compat/turns.send_turn` calls `reveal_for`.
+
+    Asserting at step 0 is what let the spawn-deposit bug look correct for two
+    live series — the frame it produced was wrong on the wire and right here.
+    """
+    peer.orchestrator.advance(peer.orchestrator.state.advanced(cop=to))
+
+
 def their_reveal(step: int, at: tuple[int, int], role: Role = Role.THIEF) -> dict:
     """The payload an opponent standing on *at* would send."""
     return {
@@ -96,6 +111,7 @@ def test_our_reveal_carries_the_field_we_emitted(runtime: PeerRuntime) -> None:
     from core.domain.actions import Direction
     from core.domain.brain_base import Decision
 
+    after_the_first_move(runtime)
     runtime.observe()  # emits this turn's deposit
     reveal = runtime.reveal_for(Decision(Direction.N))
     assert decode(reveal.scent) == runtime.truth.filter.trail
@@ -196,6 +212,7 @@ def test_a_reveal_transmits_this_turns_field_even_if_nobody_observed(
     until 16/08 — a test that pins the wrong physics is how it survived.
     """
     model = str(minimal_config.get("pheromones.decay_model", "multiplicative"))
+    after_the_first_move(runtime)
     reveal = runtime.reveal_for(_north())
     assert decode(reveal.scent) == emit(runtime.orchestrator.own_position, BOARD, model)
 

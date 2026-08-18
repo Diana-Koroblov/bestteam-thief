@@ -87,7 +87,7 @@ def _send(
         game_uid_value=uid,
         timezone=str(sdk.runtime.orchestrator.config.get("network.timezone", "Asia/Jerusalem")),
         repos={our_group: our_identity.get("repos", {}), their_group: their_identity.get("repos", {})},
-        games_played=_games_played(our_group, their_group, their_identity),
+        games_played=_games_played(our_group, their_group, their_identity, counted),
         first_meeting=_first_meeting(their_group),
         tie_score=int(sdk.runtime.orchestrator.config.require("scoring.tie_score")),
     )
@@ -120,7 +120,10 @@ def _send(
 
 
 def _games_played(
-    our_group: str, their_group: str, their_identity: dict[str, Any] | None = None
+    our_group: str,
+    their_group: str,
+    their_identity: dict[str, Any] | None = None,
+    counted: bool = False,
 ) -> dict[str, int | None]:
     """Ours is always known; theirs is whatever they declared, else null.
 
@@ -129,11 +132,36 @@ def _games_played(
     not claim. 🐛 We hard-coded None and so filed `imreeyal: null` through a
     series in which every one of their greetings declared 6. Reading it back is
     not endorsing it; it is reporting their claim as theirs.
+
+    🐛 **And then we filed the wrong number in the right-sounding field.** Both
+    inputs here are *before* counts — M#37 makes each side declare the matches it
+    played **prior** to this one, and `counted_matches()` reads exactly that off
+    `LEAGUE_LOG.md`. But the field they feed is `games_played_including_this`,
+    so on a counted series each side owes its before-count **plus this one**. We
+    filed `{bestteam: 0, imreeyal: 6}` on 17/08 where the truth at T was 1 and 7,
+    and no test pinned it. Two honest peers would then have printed different
+    totals for the same series in front of the grader — the same visible
+    disagreement the diversity line is warned about, one field along.
+
+    The increment is gated on *counted* because a friendly changes nobody's
+    total: including a friendly in the count would over-declare against M#38,
+    which is the direction that disqualifies rather than the one that merely
+    costs points.
+
+    Ordering this depends on, and the reason it is not asserted here: the
+    LEAGUE_LOG row for this series must be written **after** the filing. Adding
+    it first would make `counted_matches()` already include this match, turn the
+    `+ 1` into a double count, and flip `_first_meeting` to False — taking the
+    diversity reward with it.
     """
+    played_now = 1 if counted else 0
     declared = (their_identity or {}).get("counted_games_played")
+    # `bool` is an `int` in Python, and a peer that sent `true` here has not
+    # declared a count — reading it as 1 would invent a claim they never made.
+    claimed = isinstance(declared, int) and not isinstance(declared, bool)
     return {
-        our_group: counted_matches(),
-        their_group: declared if isinstance(declared, int) else None,
+        our_group: counted_matches() + played_now,
+        their_group: declared + played_now if claimed else None,
     }
 
 

@@ -23,6 +23,40 @@ def test_games_played_is_ours_and_null_for_an_unclaimed_opponent() -> None:
     assert isinstance(result["bestteam"], int)
 
 
+def test_a_counted_series_counts_itself_on_both_sides() -> None:
+    """The field is `games_played_including_this`, and both inputs are *before*
+    counts — so a counted series owes each side its declaration plus one.
+
+    🐛 Filed `{bestteam: 0, imreeyal: 6}` on 17/08 where the truth at T was 1 and
+    7. Nothing pinned it, and two honest peers would have printed different
+    totals for the same series in front of the grader.
+    """
+    before = _games_played("bestteam", "imreeyal", {"counted_games_played": 6})
+    after = _games_played("bestteam", "imreeyal", {"counted_games_played": 6}, counted=True)
+
+    assert after["imreeyal"] == before["imreeyal"] + 1
+    assert after["bestteam"] == before["bestteam"] + 1
+
+
+def test_a_friendly_counts_for_nobody() -> None:
+    """A friendly changes no counted total. Including one would over-declare,
+    and over-declaring is the direction M#38 disqualifies for."""
+    friendly = _games_played("bestteam", "imreeyal", {"counted_games_played": 6}, counted=False)
+    assert friendly["imreeyal"] == 6
+
+
+def test_an_unclaimed_opponent_stays_null_even_on_a_counted_series() -> None:
+    """`null` means *unclaimed*. Incrementing a claim nobody made would turn
+    silence into a declaration of 1 that we invented on their behalf."""
+    assert _games_played("bestteam", "imreeyal", {}, counted=True)["imreeyal"] is None
+
+
+def test_a_boolean_is_not_a_declared_count() -> None:
+    """`True` is an `int` in Python, so a peer sending `true` would otherwise be
+    read as having declared 1 — a claim they never made."""
+    assert _games_played("bestteam", "imreeyal", {"counted_games_played": True})["imreeyal"] is None
+
+
 def test_first_meeting_is_true_for_an_opponent_never_counted_before() -> None:
     assert _first_meeting("a-brand-new-opponent-nobody-has-played") is True
 
