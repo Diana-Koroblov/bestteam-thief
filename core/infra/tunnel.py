@@ -151,7 +151,19 @@ PROVIDERS: dict[str, Provider] = {
     "ngrok": Provider(
         name="ngrok",
         binary="ngrok",
-        args=("http", "{port}"),
+        # 🐛 A bare port (`ngrok http {port}`) leaves the forwarding target's
+        # host implicit — ngrok resolves it as "localhost" itself, on OUR
+        # machine. Windows' own resolver can hand that to ::1 before
+        # 127.0.0.1 (RFC 6724 address selection), and the server binds
+        # `0.0.0.0` (`core/infra/mcp_server.py`) — IPv4 only, nothing on ::1.
+        # The tunnel then answers, DNS resolves, TLS completes, and every
+        # session attempt still fails: "tunnel up, nothing listening where it
+        # points," indistinguishable from the server being down from the
+        # opponent's side. Caught live against yanell11, 18/08 — fifteen
+        # minutes of retries against a healthy-looking tunnel, `WouldBlock`
+        # every time. Naming `127.0.0.1` here removes the ambiguity at the
+        # source rather than hoping the OS resolves "localhost" our way.
+        args=("http", "127.0.0.1:{port}"),
         domain_args=("--url", "{domain}"),
         token_env="NGROK_AUTHTOKEN",
         install_hint="winget install ngrok.ngrok",

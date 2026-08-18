@@ -106,7 +106,7 @@ def test_the_static_domain_is_pinned_on_the_command_line(binary_present) -> None
     spawner = Spawner()
     manager, _ = build(spawner)
     manager.start()
-    assert spawner.commands[0][:5] == ("ngrok", "http", "8081", "--url", DOMAIN)
+    assert spawner.commands[0][:5] == ("ngrok", "http", "127.0.0.1:8081", "--url", DOMAIN)
 
 
 def test_without_a_domain_the_url_flag_is_dropped_entirely(binary_present) -> None:
@@ -114,7 +114,7 @@ def test_without_a_domain_the_url_flag_is_dropped_entirely(binary_present) -> No
     spawner = Spawner()
     manager, _ = build(spawner, domain=None)
     manager.start()
-    assert spawner.commands[0][:3] == ("ngrok", "http", "8081")
+    assert spawner.commands[0][:3] == ("ngrok", "http", "127.0.0.1:8081")
     assert "--url" not in spawner.commands[0]
 
 
@@ -264,7 +264,7 @@ def test_from_config_reads_the_private_network_section(minimal_config) -> None:
 def test_an_overridden_port_moves_the_tunnel_with_the_server(minimal_config) -> None:
     """Otherwise `--port` publishes a domain that forwards nowhere."""
     manager = TunnelManager.from_config(minimal_config, "tok", port=9999)
-    assert build_command(manager.spec, manager.port, manager.domain)[2] == "9999"
+    assert build_command(manager.spec, manager.port, manager.domain)[2] == "127.0.0.1:9999"
 
 
 def test_every_provider_reads_its_token_from_its_own_variable() -> None:
