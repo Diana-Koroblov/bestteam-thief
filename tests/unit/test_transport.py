@@ -282,3 +282,21 @@ def test_only_the_expected_disconnects_are_silenced() -> None:
     assert not kept("Error in post_writer")
     assert not kept("Session termination failed: 404")
     assert kept("Failed to send message"), "a real client failure must still surface"
+
+
+async def test_a_hung_connect_times_out_rather_than_waiting_forever(monkeypatch) -> None:
+    """🐛 `__aenter__` had no timeout; a half-open tunnel that accepts the
+    connection and answers nothing hung the whole process, 18/08 — 3:20 and
+    still parked in this exact `await`."""
+    import asyncio
+
+    class _Hangs:
+        __init__ = lambda self, *_a: None  # noqa: E731
+
+        async def __aenter__(self) -> None:
+            await asyncio.sleep(30)
+
+    monkeypatch.setattr("fastmcp.Client", _Hangs)
+    client = OpponentClient(base_url="https://a.test", timeout_sec=0.05)
+    with pytest.raises(DeadlineError):
+        await client.call("negotiate", {}, argument="message")

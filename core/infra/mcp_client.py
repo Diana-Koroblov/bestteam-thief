@@ -227,13 +227,26 @@ class OpponentClient:
         self.live.last_call = time.monotonic()
 
     async def _connect(self) -> Any:
-        """Return the open session, opening one if this is the first call."""
+        """Return the open session, opening one if this is the first call.
+
+        🐛 **`call()`'s own `timeout_sec` bounds the tool call, not this.**
+        `client.__aenter__()` had no timeout of its own, and the handshake it
+        performs is exactly the step a half-open tunnel — accepting the TCP
+        connection, answering nothing — leaves hanging: not an exception, not
+        a slow reply, no return at all. `dump_traceback_later` named it live
+        against yanell11, 18/08: the event loop still parked in this same
+        `await`, 3:20 later. Every retry inherits the same unbounded wait, so
+        the fix belongs here, at the one place every call passes through,
+        rather than in each caller that cannot see the session underneath it.
+        """
         from fastmcp import Client
 
         if self.live.session is None:
             client = Client(self.target)
             try:
-                self.live.session = await client.__aenter__()
+                self.live.session = await asyncio.wait_for(
+                    client.__aenter__(), timeout=self.timeout_sec
+                )
             except Exception as error:  # noqa: BLE001 - classified like any call failure
                 raise self.classify("connect", error, self.timeout_sec) from error
             self.live.client = client
