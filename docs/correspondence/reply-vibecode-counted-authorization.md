@@ -17,15 +17,15 @@ NOT PART OF THE MESSAGE. Stripped from the .txt.
   Our prior count is parsed live: counted_matches() == 1 (imreeyal, 18/08).
 
   Heads at time of writing, both clean, both public, both resolving:
-    cop   6f5a7ed14b6f8180aa3acc08d304deb8fd2422da
-    thief a671fe05a0a4afb47562e00485443b7f22b694ef
+    cop   fd4c079ccf9655db519ac5c6a10f6a69c6aa0257
+    thief 5fd1187243ed82d7bbd2051ff0f3effc81e810c8
 
   Regenerate after any edit:
     uv run python <scratchpad>/md2txt.py docs/correspondence/reply-vibecode-counted-authorization.md
 -->
 
 Subject: Re: bestteam ↔ vibecode — authorization confirmed and quoted back, T = <T>. Prior
-count 1, parsed not typed. Heads 6f5a7ed1 / a671fe05. One finding on the consensus hash
+count 1, parsed not typed. Heads fd4c079c / 5fd11872. One finding on the consensus hash
 
 Hi Ron, Amit —
 
@@ -79,15 +79,17 @@ own field derives the same way, our two documents should read `bestteam 2` and `
 
 ## 3. Our heads at arming
 
-Unchanged since the friendlies, both clean with zero modified files, both on branch `itay`,
-both public and resolving:
+**These moved since our last post, and this letter is the re-declaration.** We committed the
+two friendlies' evidence and the corrected runbook after your mail, which republished both
+clones. The pair you have filed — `6f5a7ed1…` / `a671fe05…` — is superseded by:
 
 ```
-cop     6f5a7ed14b6f8180aa3acc08d304deb8fd2422da   bestteam-cop
-thief   a671fe05a0a4afb47562e00485443b7f22b694ef   bestteam-thief
+cop     fd4c079ccf9655db519ac5c6a10f6a69c6aa0257   bestteam-cop
+thief   5fd1187243ed82d7bbd2051ff0f3effc81e810c8   bestteam-thief
 ```
 
-Resolve them yourself before you arm, as you have every time. If either moves before T you get
+Both clean with zero modified files, both on branch `itay`, both public and resolving. Resolve
+them yourself before you arm, as you have every time. If either moves again before T you get
 the new pair in this thread first and nothing lands after that post.
 
 Your pair is filed: `c956604a…` / `da8d3b54…`.

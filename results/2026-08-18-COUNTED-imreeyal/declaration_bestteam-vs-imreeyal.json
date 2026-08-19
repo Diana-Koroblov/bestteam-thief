@@ -1,0 +1,86 @@
+{
+  "code_version": "1.00",
+  "created_utc": "2026-08-18T17:06:26+00:00",
+  "ended_utc": "2026-08-18T17:06:26+00:00",
+  "game_id": "bestteam-vs-imreeyal",
+  "hardware": {
+    "cpu_cores": 8,
+    "cpu_mhz": 3800,
+    "cpu_model": "AMD Ryzen 7 9700X 8-Core Processor",
+    "cpu_threads": 16,
+    "gpu": "AMD Radeon RX 9070 XT; AMD Radeon(TM) Graphics",
+    "machine": "AMD64",
+    "os": "Windows 11",
+    "python": "3.13.13",
+    "ram_gb": 31.2
+  },
+  "llm_model": "template",
+  "mcp_urls": {
+    "bestteam": "",
+    "imreeyal": "https://cop.imreeyal.com/mcp"
+  },
+  "repositories": {
+    "ours_cop": "https://github.com/Diana-Koroblov/bestteam-cop",
+    "ours_thief": "https://github.com/Diana-Koroblov/bestteam-thief",
+    "theirs_cop": "https://github.com/Imreec/copthief-p2p-cop",
+    "theirs_thief": "https://github.com/Imreec/copthief-p2p-thief"
+  },
+  "started_utc": "2026-08-18T16:44:57+00:00",
+  "step_zero": {
+    "ours": {
+      "counted_games_played": 0,
+      "github_commit": "67e859b66c227de3af7e50bc1013faeffa2a6d35",
+      "group_id": "bestteam",
+      "group_name": "bestteam",
+      "llm_model": "template",
+      "members": [
+        "Itay Malich",
+        "Diana Koroblov"
+      ],
+      "repos": {
+        "cop": "https://github.com/Diana-Koroblov/bestteam-cop",
+        "thief": "https://github.com/Diana-Koroblov/bestteam-thief"
+      }
+    },
+    "theirs": {
+      "counted_games_played": 6,
+      "github_commit": "c9ae097220e0c7a95816f9eb12514139841372b0",
+      "group_id": "imreeyal",
+      "group_name": "ImreEyal-Police",
+      "llm_model": "none",
+      "mcp_servers": {
+        "cop": "https://cop.imreeyal.com/mcp",
+        "thief": "https://thief.imreeyal.com/mcp"
+      },
+      "members": [
+        "Imree Cohen",
+        "Eyal Shtinmetz"
+      ],
+      "repos": {
+        "cop": "https://github.com/Imreec/copthief-p2p-cop",
+        "thief": "https://github.com/Imreec/copthief-p2p-thief"
+      },
+      "spec": {
+        "cpu_cores": 24,
+        "cpu_freq_mhz": 3693,
+        "cpu_type": "AMD64 Family 25 Model 33 Stepping 0, AuthenticAMD",
+        "gpu_cores_or_cuda": "cuda",
+        "gpu_type": "NVIDIA GeForce RTX 3080 Ti",
+        "os": "Windows (10.0.19045)",
+        "ram_gb": 31.9,
+        "vram_gb": 12.0
+      }
+    }
+  },
+  "teams": {
+    "bestteam": [
+      "Itay Malich",
+      "Diana Koroblov"
+    ],
+    "imreeyal": [
+      "Imree Cohen",
+      "Eyal Shtinmetz"
+    ]
+  },
+  "token_cap": 200000
+}

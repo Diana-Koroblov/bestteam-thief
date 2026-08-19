@@ -1,0 +1,1297 @@
+{
+  "code_version": "1.00",
+  "config_sha256": "cca1243e9a4b06611f77c98077613056a7490a5b27c0da1da06fc26f33b1a513",
+  "created_utc": "2026-08-18T17:04:27+00:00",
+  "game_id": "bestteam-vs-imreeyal",
+  "live_commits": {
+    "imreeyal": {
+      "1": "8e50c0d29b8d33d2a29d02f6f8b5b4f3242f4dbaa64fe7b4e032229e238c26d3",
+      "10": "55d66a73e2485c3b3a80332e7dd1c8145102e895ba62c6d3ba730d8530ad666f",
+      "11": "e675afc683c1176d20638cdb838d18229f4754170d727b4072f4045ccf3e6c39",
+      "12": "19bdef659fd448cfafb7f25e9717f080a71f68276b5024b25b63b1a8178f0a80",
+      "13": "e9552faacde8b70d54c6698a16a4efbe0856089dd1515aabddd31314711d4faf",
+      "14": "f20a55054ac636901c43244d8bdfa9eff77a68bac2dad8321c025b8967d4384a",
+      "15": "33e4e000aa1bde81c0978d5e659247f7409ba4b678ef0e1dd2fbe9ad65b36951",
+      "16": "2ad5dd0f6ee0cfea737cdf04d41c700503aa740370cf70ea1ab86fb9b76329a2",
+      "17": "fa6229efd5ba6ef494c24417f809ec538de97c16874f339aa8cee312d028dd58",
+      "18": "c0093e5d3246fef5372bf932c8084559b8d73244857fe4bd3383bd4a047ca4aa",
+      "19": "cf39bf389bc341f90ae2febaea7c9dc1a79db5c091e146c2b958fad6eca604a4",
+      "2": "de35374543fe63f22ada6ad671049f92f70053d0817aca9286e493f28769ce7c",
+      "20": "0dad4c1aa4803e379e7a5634fc440f1a5a14505fb9fd22782680edc80f65e5d1",
+      "21": "0d466d18261dbe9beca7831b82ab953c5627215265c2e4942d1dbe3f54b96b68",
+      "22": "be0957525bea5023310c0a9f1f09e2a6bec63f43e267ea310fc777475c781103",
+      "23": "4d1e20ac06dc50abdb3c6ad892e8836589f87df9ff1c5511b2f563d8f1a3238f",
+      "24": "e1dfb5f35930ba95f29400f7707b88c3ba5e8e3baeb9b306c0224e55533b50d9",
+      "25": "3c69a135391a03766b3fc2df035cefd6d11a05ede0e2e80f2f4364d744baffe4",
+      "26": "70e5a4c0efaa139b4698f448d3d1b4b7a499a9b92074c2e0713208d9a47ac792",
+      "27": "5691f32606dc00fcb98d3afbd7fe5e466284f69faede81d5adebec2435253f28",
+      "28": "5b033f23366b5aac9b9b311ef5650e1124a30c3ab83be83f77c35a95a6133277",
+      "29": "e025067148fe1ff5be056472da2102cdfbc5343847962ea0470e01bebf43b4aa",
+      "3": "c63317142721b6cedfeaf4ef65600187dcd8a4d228b72cbf1984d6ebadf6f07b",
+      "30": "f28f14c673fb784d99c9fb3bd3cafd674a84318f1a311493fbe0618c2a3e4f58",
+      "31": "a09ef77a4413faaa86f45c21378a636c3582e101c9e326d40ab72fa410bb4a22",
+      "32": "2bfd8489522cbda40114ea48a3fea3d1b42041f00561e6a3042699d2ad818a84",
+      "33": "def1d3eeea1c7939766afb22db43a94d470b10ab3c4b3f5211deaf77b393b710",
+      "34": "d20923d9d1626dcdab881d84acf8d813ba4fd31a432564abf26e5fedc08b6e28",
+      "35": "594ca807348ea80ef34f2f35fb1269ab8d86c4514509a1c7b0382aa72d77e732",
+      "4": "733280c4c8b61332f49c44dcabed558491c4d04378944f002f7824e7bcaf67be",
+      "5": "a81a8210baaedfdcedd509709948562d012bcae87898c55de97531a62b7dc55c",
+      "6": "5bc62f32b12aa3e573ab968bff045cba25f12955564e43699e0aa16ca2e27889",
+      "7": "a2d5141d80791018782a1b2f0d42ae368bd5ec4eb4e6726584b0f5709f3a381d",
+      "8": "2ced5aa0b0b9027ac46732a8056f8484f25c25a9d663e170cc0825df803aef56",
+      "9": "1ff550a7f903fcc29b509ea39fb44692b42a80d64894fa76b1b1a826526e3578"
+    }
+  },
+  "outcome": "survival",
+  "protocol": "reference",
+  "records": {
+    "bestteam": [
+      {
+        "commit": "a3031c157696161fe57eec0bb0c712e0384d185cb4b4f0152897d9ae77e33e22",
+        "nonce": "b4eed42b5defb64f435197405e6627d2",
+        "payload": {
+          "github_commit": "22e4137970478a4d9890e9fd2f3798b0f95a3b0c",
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "E",
+          "position": [
+            0,
+            1
+          ],
+          "state": "grid=7x7;self=[0, 1];barriers=[]",
+          "step": 1,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "e9489f50488d722a37227062f7ad0eb2feddc6e7394d19061dcefcfe63a1debb",
+        "nonce": "b586b5d058ff28b73af1d80f42a2b98a",
+        "payload": {
+          "hint": "I am somewhere you have not thought to look.",
+          "intent": "truth",
+          "move": "STAY",
+          "position": [
+            0,
+            1
+          ],
+          "state": "grid=7x7;self=[0, 1];barriers=[[0, 0]]",
+          "step": 2,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "bb8f88d69d1273d460ef45978feba9406da5975ddf290898f9b61ea1441bd576",
+        "nonce": "7805eb32f5051eb6a20d9e22c2e6e125",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "S",
+          "position": [
+            1,
+            1
+          ],
+          "state": "grid=7x7;self=[1, 1];barriers=[[0, 0]]",
+          "step": 3,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "0a4c05a44a82441e63254dfc64cf230a52e33c747da910e881138003e913b299",
+        "nonce": "493e74c8244b4f5de8b4657a93350d12",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "S",
+          "position": [
+            2,
+            1
+          ],
+          "state": "grid=7x7;self=[2, 1];barriers=[[0, 0]]",
+          "step": 4,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "7254ba88b518091ed46128bf31d008a358aedaef824497c33924c66f111db1b2",
+        "nonce": "a20511a00e9c6b4f9eb1b4e09a23796a",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "E",
+          "position": [
+            2,
+            2
+          ],
+          "state": "grid=7x7;self=[2, 2];barriers=[[0, 0]]",
+          "step": 5,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "c36f7840fee4cbe446941d2a0520718a925d5820ec6e8e7ad21e5aabd9fc6078",
+        "nonce": "4614dee783172d5494744bcfa790a34e",
+        "payload": {
+          "hint": "I am somewhere you have not thought to look.",
+          "intent": "truth",
+          "move": "S",
+          "position": [
+            3,
+            2
+          ],
+          "state": "grid=7x7;self=[3, 2];barriers=[[0, 0]]",
+          "step": 6,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "76cd6b684d151ee8f57af0b1d91cffbb889e216c145024696f5905aee6f72360",
+        "nonce": "d4af0e6d80ddf7c0c61d5ba1211122a7",
+        "payload": {
+          "hint": "You are chasing a rumour, not an agent.",
+          "intent": "truth",
+          "move": "E",
+          "position": [
+            3,
+            3
+          ],
+          "state": "grid=7x7;self=[3, 3];barriers=[[0, 0]]",
+          "step": 7,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "065ba00c96cf636833b7a8b9cc190fb7a50de102f25df2e31853e8dbcfb93772",
+        "nonce": "23769817cd4b045fdd6fca8a527e6780",
+        "payload": {
+          "hint": "You are chasing a rumour, not an agent.",
+          "intent": "truth",
+          "move": "STAY",
+          "position": [
+            3,
+            3
+          ],
+          "state": "grid=7x7;self=[3, 3];barriers=[[0, 0], [3, 4]]",
+          "step": 8,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "79f09c15bb44fab8af5e38cd03dc642ce246278f894e8cb5d095f3d491062bf2",
+        "nonce": "8296e8292cb9f57cf472a412e64e5062",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "S",
+          "position": [
+            4,
+            3
+          ],
+          "state": "grid=7x7;self=[4, 3];barriers=[[0, 0], [3, 4]]",
+          "step": 9,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "61d1d20dc7dec8dbb4ac0c0171c1c00d18a21235c80e9ec9e8036aea7594f7e8",
+        "nonce": "999bcce38a62ffdad983f85d2fde471f",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "E",
+          "position": [
+            4,
+            4
+          ],
+          "state": "grid=7x7;self=[4, 4];barriers=[[0, 0], [3, 4]]",
+          "step": 10,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "280565849b061677c0335ae9012d33055c36a3b7e2ed0a0c6db93039fdcec88f",
+        "nonce": "3efedff81c1f209d33572bb643e61f56",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "STAY",
+          "position": [
+            4,
+            4
+          ],
+          "state": "grid=7x7;self=[4, 4];barriers=[[0, 0], [3, 4], [4, 5]]",
+          "step": 11,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "986e61bd7c6529f554357459777b86ee9c0880d6f6bccaf12979344b3c6c6ce1",
+        "nonce": "1f0dd0965274337b950758c7f03cf0ff",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "STAY",
+          "position": [
+            4,
+            4
+          ],
+          "state": "grid=7x7;self=[4, 4];barriers=[[0, 0], [3, 4], [4, 3], [4, 5]]",
+          "step": 12,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "108e64ce32595775194c78b463273cc0bab46781124b6f44dc3593f66c71caa7",
+        "nonce": "220e915cdf503b86c0fa930b1e85d564",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "S",
+          "position": [
+            5,
+            4
+          ],
+          "state": "grid=7x7;self=[5, 4];barriers=[[0, 0], [3, 4], [4, 3], [4, 5]]",
+          "step": 13,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "f375600ec678aa1b9f0d6ce730f86bf75dea2594a439cfe8875bb04582097b62",
+        "nonce": "46fe99da0cd3956a66f68e01d6c56745",
+        "payload": {
+          "hint": "You are chasing a rumour, not an agent.",
+          "intent": "truth",
+          "move": "STAY",
+          "position": [
+            5,
+            4
+          ],
+          "state": "grid=7x7;self=[5, 4];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4]]",
+          "step": 14,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "783874885c11481df1e4d47bb5c2ec878db40b80cd359ee170c3a3704b7b6223",
+        "nonce": "b7d806aa9fcbeb9a3d31c587fbe7d056",
+        "payload": {
+          "hint": "I am somewhere you have not thought to look.",
+          "intent": "truth",
+          "move": "STAY",
+          "position": [
+            5,
+            4
+          ],
+          "state": "grid=7x7;self=[5, 4];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 15,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "7248f3e77d6b7e45723fc1d23547650fc3d30e5ccde85eb015b3c25ed79e8d0c",
+        "nonce": "2ea873aee2dd94ba4a72f4f45dfd637a",
+        "payload": {
+          "hint": "You are chasing a rumour, not an agent.",
+          "intent": "truth",
+          "move": "E",
+          "position": [
+            5,
+            5
+          ],
+          "state": "grid=7x7;self=[5, 5];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 16,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "518f83676896df1c2af80d84dbc77e37cab8e49d0e0cd747761b0c274dad7f36",
+        "nonce": "d47c239741e71f2dad6cced95383d4ef",
+        "payload": {
+          "hint": "You are chasing a rumour, not an agent.",
+          "intent": "truth",
+          "move": "E",
+          "position": [
+            5,
+            6
+          ],
+          "state": "grid=7x7;self=[5, 6];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 17,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "8df7f467182afc4f08d5d7752ff2c5261196af8b6cea124c24ed7cdb4edafeea",
+        "nonce": "9d87eefe89cefe840406ee4ecf889f9b",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "N",
+          "position": [
+            4,
+            6
+          ],
+          "state": "grid=7x7;self=[4, 6];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 18,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "c83d7a2060cd285d581fe48a85d8314fae403e15cbbcc3f0eac31a54abb2825f",
+        "nonce": "2364b71daca750040ce032c259088f45",
+        "payload": {
+          "hint": "You are chasing a rumour, not an agent.",
+          "intent": "truth",
+          "move": "N",
+          "position": [
+            3,
+            6
+          ],
+          "state": "grid=7x7;self=[3, 6];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 19,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "4c7cb610b1d5772f9c345a42e120d03928b34c85b2427aaf951f6e94138114f4",
+        "nonce": "d429853ab071f9dd2f01b6668ead002e",
+        "payload": {
+          "hint": "I am somewhere you have not thought to look.",
+          "intent": "truth",
+          "move": "N",
+          "position": [
+            2,
+            6
+          ],
+          "state": "grid=7x7;self=[2, 6];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 20,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "f422ecc0302e0257c471785710257d7692509d88b1fadb6f9c8e8d52e1fc8e7a",
+        "nonce": "49b9f794f05ad95fa5ff682d61a02265",
+        "payload": {
+          "hint": "You are chasing a rumour, not an agent.",
+          "intent": "truth",
+          "move": "W",
+          "position": [
+            2,
+            5
+          ],
+          "state": "grid=7x7;self=[2, 5];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 21,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "882c5f70c556758fea0896acb2fea9b346a4c118d5b36e1c9bba2f94fdafd760",
+        "nonce": "4252714fac8910345f28cbde9343d573",
+        "payload": {
+          "hint": "I am somewhere you have not thought to look.",
+          "intent": "truth",
+          "move": "N",
+          "position": [
+            1,
+            5
+          ],
+          "state": "grid=7x7;self=[1, 5];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 22,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "8e3af305ccf66cb11bf468b538228fb3b7300dd85b6d5631bb50e2e1b575f44d",
+        "nonce": "e1e106d59a9959339e80a38570ff71ae",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "E",
+          "position": [
+            1,
+            6
+          ],
+          "state": "grid=7x7;self=[1, 6];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 23,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "1c8fc3f08c8e2ed9030ce18bdd6d20804ed1cd261a4d1b0b1b5572557fd04d26",
+        "nonce": "2147642b38d874fcafd743069c15eb3a",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "W",
+          "position": [
+            1,
+            5
+          ],
+          "state": "grid=7x7;self=[1, 5];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 24,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "337dddb5226915482c2bf3fa619ebb2ba68a4cf5be7cd7a9287818a9470899bd",
+        "nonce": "1fd32db55a60bbc06c2aad1c94487fa7",
+        "payload": {
+          "hint": "You are chasing a rumour, not an agent.",
+          "intent": "truth",
+          "move": "W",
+          "position": [
+            1,
+            4
+          ],
+          "state": "grid=7x7;self=[1, 4];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 25,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "10fff827e31c1811fb2dfef271fbcf1f4bf929b6d66a8ee792ea0243b9174251",
+        "nonce": "60de78a34116d4a8c84ea9927d66c745",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "W",
+          "position": [
+            1,
+            3
+          ],
+          "state": "grid=7x7;self=[1, 3];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 26,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "dee73ba3c553fcac39ee45b912cd727dde52b6ce1505e16752daaacbf1e094bc",
+        "nonce": "a1df2a6fae44cff3935c0a18e7d816cc",
+        "payload": {
+          "hint": "I am somewhere you have not thought to look.",
+          "intent": "truth",
+          "move": "S",
+          "position": [
+            2,
+            3
+          ],
+          "state": "grid=7x7;self=[2, 3];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 27,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "8725432049f99c50bfdaca356b13f21c2799c786052f84bf0fea0fdbca1bd850",
+        "nonce": "a0ccc6b1579be33c50ba5f17c2a1c8b7",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "W",
+          "position": [
+            2,
+            2
+          ],
+          "state": "grid=7x7;self=[2, 2];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 28,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "82742d0dc00d09fa6d65da6c4690bd10e4987823a085fd63941e1f9590121d2e",
+        "nonce": "344525182d6f42a0bc0798b4d7ec9ade",
+        "payload": {
+          "hint": "I am somewhere you have not thought to look.",
+          "intent": "truth",
+          "move": "S",
+          "position": [
+            3,
+            2
+          ],
+          "state": "grid=7x7;self=[3, 2];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 29,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "34fd338f4d8083ce2638396324822a1c67ed0f49076709e153f481efc5ccc2e0",
+        "nonce": "204eef51a2cf238c038e348668885576",
+        "payload": {
+          "hint": "I am somewhere you have not thought to look.",
+          "intent": "truth",
+          "move": "W",
+          "position": [
+            3,
+            1
+          ],
+          "state": "grid=7x7;self=[3, 1];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 30,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "9ee194dbaa819c88a98875d645b962dda970ef71dd8e24f516ea10cffdec67b7",
+        "nonce": "0435c6d27a4f086c79cd2df427d55a39",
+        "payload": {
+          "hint": "I am somewhere you have not thought to look.",
+          "intent": "truth",
+          "move": "STAY",
+          "position": [
+            3,
+            1
+          ],
+          "state": "grid=7x7;self=[3, 1];barriers=[[0, 0], [3, 2], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 31,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "1153215790f69387bc9fba87ed594fbe5fe15a9a3a49e4d4951721899b3a7bc6",
+        "nonce": "cc0824977126f5e0a494ea2a0fa85865",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "STAY",
+          "position": [
+            3,
+            1
+          ],
+          "state": "grid=7x7;self=[3, 1];barriers=[[0, 0], [3, 0], [3, 2], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 32,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "60ac3bfb411cbdbfd95aa4aa23abb48762408c16b075fafb6bf685ac3d29e651",
+        "nonce": "68a8adf1409277ad987c0cbfc5815eae",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "STAY",
+          "position": [
+            3,
+            1
+          ],
+          "state": "grid=7x7;self=[3, 1];barriers=[[0, 0], [3, 0], [3, 1], [3, 2], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 33,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "d5c52cb94a83a7be3d35c41346ea94b98ac0e60cee91c0d1e5eab48d7fb41df7",
+        "nonce": "74ad5c81e71d100ea31c3a91e9e6c9a4",
+        "payload": {
+          "hint": "I am somewhere you have not thought to look.",
+          "intent": "truth",
+          "move": "S",
+          "position": [
+            4,
+            1
+          ],
+          "state": "grid=7x7;self=[4, 1];barriers=[[0, 0], [3, 0], [3, 1], [3, 2], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 34,
+          "verdict": "truth"
+        }
+      }
+    ],
+    "imreeyal": [
+      {
+        "commit": "2825943d7ee030b2b70e4643c0164d0b5a415799674fa6733de525c708abcfa2",
+        "nonce": "1e1a7cf310246a60cac290ac94c21613",
+        "payload": {
+          "code_version": "1.00",
+          "github_commit": "c9ae097220e0c7a95816f9eb12514139841372b0",
+          "group_name": "ImreEyal-Police",
+          "model": "none",
+          "num_games_declared": 6,
+          "scent_model_sha256": "81ebee59640e80eae8ca9ee5f86abd26e7edf5cdbb27d15925cb6ee45ca6ddf4",
+          "spec": {
+            "cpu_cores": 24,
+            "cpu_freq_mhz": 3693,
+            "cpu_type": "AMD64 Family 25 Model 33 Stepping 0, AuthenticAMD",
+            "gpu_cores_or_cuda": "cuda",
+            "gpu_type": "NVIDIA GeForce RTX 3080 Ti",
+            "os": "Windows (10.0.19045)",
+            "ram_gb": 31.9,
+            "vram_gb": 12.0
+          },
+          "step": 0,
+          "sub_game_number": 5,
+          "type": "system_spec"
+        }
+      },
+      {
+        "commit": "8e50c0d29b8d33d2a29d02f6f8b5b4f3242f4dbaa64fe7b4e032229e238c26d3",
+        "nonce": "47919709a586f228c1fa08a4a599bd63",
+        "payload": {
+          "hint": "They say the crowds near Greenwich Village hide anyone.",
+          "intent": "truth",
+          "model": "none",
+          "move": "W",
+          "position": [
+            3,
+            2
+          ],
+          "response_seconds": 0.007,
+          "state": "grid=7x7;self=[3, 2];barriers=[]",
+          "step": 1,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "de35374543fe63f22ada6ad671049f92f70053d0817aca9286e493f28769ce7c",
+        "nonce": "058d6ec3bb55c782997f44123a34aad7",
+        "payload": {
+          "hint": "I heard sirens somewhere around Greenwich Village.",
+          "intent": "truth",
+          "model": "none",
+          "move": "S",
+          "position": [
+            4,
+            2
+          ],
+          "response_seconds": 0.029,
+          "state": "grid=7x7;self=[4, 2];barriers=[]",
+          "step": 2,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "c63317142721b6cedfeaf4ef65600187dcd8a4d228b72cbf1984d6ebadf6f07b",
+        "nonce": "e2e3e4fa1b1093b3466ae3e611517e96",
+        "payload": {
+          "hint": "The shadows by Grand Central feel busy tonight.",
+          "intent": "truth",
+          "model": "none",
+          "move": "E",
+          "position": [
+            4,
+            3
+          ],
+          "response_seconds": 0.015,
+          "state": "grid=7x7;self=[4, 3];barriers=[[0, 0]]",
+          "step": 3,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "733280c4c8b61332f49c44dcabed558491c4d04378944f002f7824e7bcaf67be",
+        "nonce": "38ef47da0797ce9f8c0c8098f383a856",
+        "payload": {
+          "hint": "Word is, keep an eye on Brooklyn Bridge.",
+          "intent": "truth",
+          "model": "none",
+          "move": "E",
+          "position": [
+            4,
+            4
+          ],
+          "response_seconds": 0.087,
+          "state": "grid=7x7;self=[4, 4];barriers=[[0, 0]]",
+          "step": 4,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "a81a8210baaedfdcedd509709948562d012bcae87898c55de97531a62b7dc55c",
+        "nonce": "714b957a1e7dc23e277f2d3adc41643b",
+        "payload": {
+          "hint": "Someone was asking about Grand Central just now.",
+          "intent": "truth",
+          "model": "none",
+          "move": "N",
+          "position": [
+            3,
+            4
+          ],
+          "response_seconds": 0.206,
+          "state": "grid=7x7;self=[3, 4];barriers=[[0, 0]]",
+          "step": 5,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "5bc62f32b12aa3e573ab968bff045cba25f12955564e43699e0aa16ca2e27889",
+        "nonce": "90c74387676f985c8e9adf3fee67f903",
+        "payload": {
+          "hint": "All roads seem to lead to Brooklyn Bridge.",
+          "intent": "truth",
+          "model": "none",
+          "move": "S",
+          "position": [
+            4,
+            4
+          ],
+          "response_seconds": 0.26,
+          "state": "grid=7x7;self=[4, 4];barriers=[[0, 0]]",
+          "step": 6,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "a2d5141d80791018782a1b2f0d42ae368bd5ec4eb4e6726584b0f5709f3a381d",
+        "nonce": "cab3e44c2be6729364afa1d1e1040272",
+        "payload": {
+          "hint": "They say the crowds near Brooklyn Bridge hide anyone.",
+          "intent": "truth",
+          "model": "none",
+          "move": "STAY",
+          "position": [
+            4,
+            4
+          ],
+          "response_seconds": 0.265,
+          "state": "grid=7x7;self=[4, 4];barriers=[[0, 0]]",
+          "step": 7,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "2ced5aa0b0b9027ac46732a8056f8484f25c25a9d663e170cc0825df803aef56",
+        "nonce": "b49421805731712c90e2129c73dd1e62",
+        "payload": {
+          "hint": "I heard sirens somewhere around Brooklyn Bridge.",
+          "intent": "truth",
+          "model": "none",
+          "move": "E",
+          "position": [
+            4,
+            5
+          ],
+          "response_seconds": 0.238,
+          "state": "grid=7x7;self=[4, 5];barriers=[[0, 0]]",
+          "step": 8,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "1ff550a7f903fcc29b509ea39fb44692b42a80d64894fa76b1b1a826526e3578",
+        "nonce": "961c9c49153b3af53f46a5e1f7c4a972",
+        "payload": {
+          "hint": "The shadows by Brooklyn Bridge feel busy tonight.",
+          "intent": "truth",
+          "model": "none",
+          "move": "S",
+          "position": [
+            5,
+            5
+          ],
+          "response_seconds": 0.176,
+          "state": "grid=7x7;self=[5, 5];barriers=[[0, 0], [3, 4]]",
+          "step": 9,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "55d66a73e2485c3b3a80332e7dd1c8145102e895ba62c6d3ba730d8530ad666f",
+        "nonce": "53fa85441e902220a3df9a72a783a9a3",
+        "payload": {
+          "hint": "Word is, keep an eye on Brooklyn Bridge.",
+          "intent": "truth",
+          "model": "none",
+          "move": "STAY",
+          "position": [
+            5,
+            5
+          ],
+          "response_seconds": 0.178,
+          "state": "grid=7x7;self=[5, 5];barriers=[[0, 0], [3, 4]]",
+          "step": 10,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "e675afc683c1176d20638cdb838d18229f4754170d727b4072f4045ccf3e6c39",
+        "nonce": "9eee23bc2d85dbfe9bf5cce059c9a0bd",
+        "payload": {
+          "hint": "Someone was asking about Brooklyn Bridge just now.",
+          "intent": "truth",
+          "model": "none",
+          "move": "STAY",
+          "position": [
+            5,
+            5
+          ],
+          "response_seconds": 0.155,
+          "state": "grid=7x7;self=[5, 5];barriers=[[0, 0], [3, 4]]",
+          "step": 11,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "19bdef659fd448cfafb7f25e9717f080a71f68276b5024b25b63b1a8178f0a80",
+        "nonce": "de0de5ca8933a11d474ba23fb738ccf7",
+        "payload": {
+          "hint": "All roads seem to lead to Brooklyn Bridge.",
+          "intent": "truth",
+          "model": "none",
+          "move": "STAY",
+          "position": [
+            5,
+            5
+          ],
+          "response_seconds": 0.085,
+          "state": "grid=7x7;self=[5, 5];barriers=[[0, 0], [3, 4], [4, 5]]",
+          "step": 12,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "e9552faacde8b70d54c6698a16a4efbe0856089dd1515aabddd31314711d4faf",
+        "nonce": "b87051d8c29df9d9688d2b423d727a8c",
+        "payload": {
+          "hint": "They say the crowds near Brooklyn Bridge hide anyone.",
+          "intent": "truth",
+          "model": "none",
+          "move": "E",
+          "position": [
+            5,
+            6
+          ],
+          "response_seconds": 0.05,
+          "state": "grid=7x7;self=[5, 6];barriers=[[0, 0], [3, 4], [4, 3], [4, 5]]",
+          "step": 13,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "f20a55054ac636901c43244d8bdfa9eff77a68bac2dad8321c025b8967d4384a",
+        "nonce": "507aeb5c3fc603cbf2169938ae9c50a8",
+        "payload": {
+          "hint": "I heard sirens somewhere around Brooklyn Bridge.",
+          "intent": "truth",
+          "model": "none",
+          "move": "STAY",
+          "position": [
+            5,
+            6
+          ],
+          "response_seconds": 0.02,
+          "state": "grid=7x7;self=[5, 6];barriers=[[0, 0], [3, 4], [4, 3], [4, 5]]",
+          "step": 14,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "33e4e000aa1bde81c0978d5e659247f7409ba4b678ef0e1dd2fbe9ad65b36951",
+        "nonce": "64313f8f552b6fd6cd7def62059d4de0",
+        "payload": {
+          "hint": "The shadows by Brooklyn Bridge feel busy tonight.",
+          "intent": "truth",
+          "model": "none",
+          "move": "STAY",
+          "position": [
+            5,
+            6
+          ],
+          "response_seconds": 0.066,
+          "state": "grid=7x7;self=[5, 6];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4]]",
+          "step": 15,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "2ad5dd0f6ee0cfea737cdf04d41c700503aa740370cf70ea1ab86fb9b76329a2",
+        "nonce": "578374578be14d0b38d0c0a3a7ff64d4",
+        "payload": {
+          "hint": "Word is, keep an eye on Brooklyn Bridge.",
+          "intent": "truth",
+          "model": "none",
+          "move": "STAY",
+          "position": [
+            5,
+            6
+          ],
+          "response_seconds": 0.065,
+          "state": "grid=7x7;self=[5, 6];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 16,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "fa6229efd5ba6ef494c24417f809ec538de97c16874f339aa8cee312d028dd58",
+        "nonce": "3324169ef3b815b2a6130c20037e14f5",
+        "payload": {
+          "hint": "Someone was asking about Brooklyn Bridge just now.",
+          "intent": "truth",
+          "model": "none",
+          "move": "N",
+          "position": [
+            4,
+            6
+          ],
+          "response_seconds": 0.005,
+          "state": "grid=7x7;self=[4, 6];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 17,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "c0093e5d3246fef5372bf932c8084559b8d73244857fe4bd3383bd4a047ca4aa",
+        "nonce": "d0097c2958f2506bd411b099c517b5f7",
+        "payload": {
+          "hint": "All roads seem to lead to The Docks.",
+          "intent": "truth",
+          "model": "none",
+          "move": "N",
+          "position": [
+            3,
+            6
+          ],
+          "response_seconds": 0.001,
+          "state": "grid=7x7;self=[3, 6];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 18,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "cf39bf389bc341f90ae2febaea7c9dc1a79db5c091e146c2b958fad6eca604a4",
+        "nonce": "24e571ccc2895f430cb32c6ddba809e1",
+        "payload": {
+          "hint": "They say the crowds near Grand Central hide anyone.",
+          "intent": "truth",
+          "model": "none",
+          "move": "N",
+          "position": [
+            2,
+            6
+          ],
+          "response_seconds": 0.006,
+          "state": "grid=7x7;self=[2, 6];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 19,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "0dad4c1aa4803e379e7a5634fc440f1a5a14505fb9fd22782680edc80f65e5d1",
+        "nonce": "26da5fbdb84202ed049ba4978f4a8e8c",
+        "payload": {
+          "hint": "I heard sirens somewhere around Grand Central.",
+          "intent": "truth",
+          "model": "none",
+          "move": "W",
+          "position": [
+            2,
+            5
+          ],
+          "response_seconds": 0.003,
+          "state": "grid=7x7;self=[2, 5];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 20,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "0d466d18261dbe9beca7831b82ab953c5627215265c2e4942d1dbe3f54b96b68",
+        "nonce": "00d9d4adad429f59c3c0b5bb13ac7bdc",
+        "payload": {
+          "hint": "The shadows by Central Park feel busy tonight.",
+          "intent": "truth",
+          "model": "none",
+          "move": "N",
+          "position": [
+            1,
+            5
+          ],
+          "response_seconds": 0.014,
+          "state": "grid=7x7;self=[1, 5];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 21,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "be0957525bea5023310c0a9f1f09e2a6bec63f43e267ea310fc777475c781103",
+        "nonce": "98a94f75a9e5e17062b2b5cb2b596cfd",
+        "payload": {
+          "hint": "Word is, keep an eye on Central Park.",
+          "intent": "truth",
+          "model": "none",
+          "move": "N",
+          "position": [
+            0,
+            5
+          ],
+          "response_seconds": 0.03,
+          "state": "grid=7x7;self=[0, 5];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 22,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "4d1e20ac06dc50abdb3c6ad892e8836589f87df9ff1c5511b2f563d8f1a3238f",
+        "nonce": "44fbffe981f0d99c4c7853e7736f62e0",
+        "payload": {
+          "hint": "Someone was asking about Central Park just now.",
+          "intent": "truth",
+          "model": "none",
+          "move": "W",
+          "position": [
+            0,
+            4
+          ],
+          "response_seconds": 0.023,
+          "state": "grid=7x7;self=[0, 4];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 23,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "e1dfb5f35930ba95f29400f7707b88c3ba5e8e3baeb9b306c0224e55533b50d9",
+        "nonce": "3d6e4fdd2dca147a59cf559d5b7ae817",
+        "payload": {
+          "hint": "All roads seem to lead to Central Park.",
+          "intent": "truth",
+          "model": "none",
+          "move": "S",
+          "position": [
+            1,
+            4
+          ],
+          "response_seconds": 0.014,
+          "state": "grid=7x7;self=[1, 4];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 24,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "3c69a135391a03766b3fc2df035cefd6d11a05ede0e2e80f2f4364d744baffe4",
+        "nonce": "2e4e11fbd7e789c136a321727022bef1",
+        "payload": {
+          "hint": "They say the crowds near Central Park hide anyone.",
+          "intent": "truth",
+          "model": "none",
+          "move": "W",
+          "position": [
+            1,
+            3
+          ],
+          "response_seconds": 0.053,
+          "state": "grid=7x7;self=[1, 3];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 25,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "70e5a4c0efaa139b4698f448d3d1b4b7a499a9b92074c2e0713208d9a47ac792",
+        "nonce": "95ebb181c2b433ec23455c081332f8d7",
+        "payload": {
+          "hint": "I heard sirens somewhere around Central Park.",
+          "intent": "truth",
+          "model": "none",
+          "move": "S",
+          "position": [
+            2,
+            3
+          ],
+          "response_seconds": 0.051,
+          "state": "grid=7x7;self=[2, 3];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 26,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "5691f32606dc00fcb98d3afbd7fe5e466284f69faede81d5adebec2435253f28",
+        "nonce": "2533ef5371af2a78f59082ffdfd252b0",
+        "payload": {
+          "hint": "The shadows by Central Park feel busy tonight.",
+          "intent": "truth",
+          "model": "none",
+          "move": "W",
+          "position": [
+            2,
+            2
+          ],
+          "response_seconds": 0.099,
+          "state": "grid=7x7;self=[2, 2];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 27,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "5b033f23366b5aac9b9b311ef5650e1124a30c3ab83be83f77c35a95a6133277",
+        "nonce": "d8b958baa1f1ec6aa5cff0f3f900a8b4",
+        "payload": {
+          "hint": "Word is, keep an eye on Greenwich Village.",
+          "intent": "truth",
+          "model": "none",
+          "move": "S",
+          "position": [
+            3,
+            2
+          ],
+          "response_seconds": 0.064,
+          "state": "grid=7x7;self=[3, 2];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 28,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "e025067148fe1ff5be056472da2102cdfbc5343847962ea0470e01bebf43b4aa",
+        "nonce": "572bff799c4a1b6b74784cdf46fadc73",
+        "payload": {
+          "hint": "Someone was asking about Greenwich Village just now.",
+          "intent": "truth",
+          "model": "none",
+          "move": "W",
+          "position": [
+            3,
+            1
+          ],
+          "response_seconds": 0.126,
+          "state": "grid=7x7;self=[3, 1];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 29,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "f28f14c673fb784d99c9fb3bd3cafd674a84318f1a311493fbe0618c2a3e4f58",
+        "nonce": "ed29609077f57f05a222ba7a3b1f47b3",
+        "payload": {
+          "hint": "All roads seem to lead to Hell's Kitchen.",
+          "intent": "truth",
+          "model": "none",
+          "move": "W",
+          "position": [
+            3,
+            0
+          ],
+          "response_seconds": 0.066,
+          "state": "grid=7x7;self=[3, 0];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 30,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "a09ef77a4413faaa86f45c21378a636c3582e101c9e326d40ab72fa410bb4a22",
+        "nonce": "50b1f3bc7e13880319e8486f4ed95d5b",
+        "payload": {
+          "hint": "They say the crowds near Battery Park hide anyone.",
+          "intent": "truth",
+          "model": "none",
+          "move": "S",
+          "position": [
+            4,
+            0
+          ],
+          "response_seconds": 0.06,
+          "state": "grid=7x7;self=[4, 0];barriers=[[0, 0], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 31,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "2bfd8489522cbda40114ea48a3fea3d1b42041f00561e6a3042699d2ad818a84",
+        "nonce": "f4fc9c5c425f5d4e535d796ff272f2c3",
+        "payload": {
+          "hint": "I heard sirens somewhere around Battery Park.",
+          "intent": "truth",
+          "model": "none",
+          "move": "STAY",
+          "position": [
+            4,
+            0
+          ],
+          "response_seconds": 0.031,
+          "state": "grid=7x7;self=[4, 0];barriers=[[0, 0], [3, 2], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 32,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "def1d3eeea1c7939766afb22db43a94d470b10ab3c4b3f5211deaf77b393b710",
+        "nonce": "d6a412ce0dee486078845685c6698044",
+        "payload": {
+          "hint": "The shadows by Battery Park feel busy tonight.",
+          "intent": "truth",
+          "model": "none",
+          "move": "STAY",
+          "position": [
+            4,
+            0
+          ],
+          "response_seconds": 0.014,
+          "state": "grid=7x7;self=[4, 0];barriers=[[0, 0], [3, 0], [3, 2], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 33,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "d20923d9d1626dcdab881d84acf8d813ba4fd31a432564abf26e5fedc08b6e28",
+        "nonce": "fef06502244999d2dc5542d497b72bf4",
+        "payload": {
+          "hint": "Word is, keep an eye on Battery Park.",
+          "intent": "truth",
+          "model": "none",
+          "move": "S",
+          "position": [
+            5,
+            0
+          ],
+          "response_seconds": 0.01,
+          "state": "grid=7x7;self=[5, 0];barriers=[[0, 0], [3, 0], [3, 1], [3, 2], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 34,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      },
+      {
+        "commit": "594ca807348ea80ef34f2f35fb1269ab8d86c4514509a1c7b0382aa72d77e732",
+        "nonce": "8576003246dd506386d12fe30a392575",
+        "payload": {
+          "hint": "Someone was asking about Battery Park just now.",
+          "intent": "truth",
+          "model": "none",
+          "move": "STAY",
+          "position": [
+            5,
+            0
+          ],
+          "response_seconds": 0.003,
+          "state": "grid=7x7;self=[5, 0];barriers=[[0, 0], [3, 0], [3, 1], [3, 2], [3, 4], [4, 3], [4, 5], [5, 4], [6, 4]]",
+          "step": 35,
+          "tokens_step": 0,
+          "tokens_total": 0
+        }
+      }
+    ]
+  },
+  "roles": {
+    "bestteam": "police",
+    "imreeyal": "thief"
+  },
+  "step_count": {
+    "bestteam": 34,
+    "imreeyal": 36
+  },
+  "sub_game": 5
+}

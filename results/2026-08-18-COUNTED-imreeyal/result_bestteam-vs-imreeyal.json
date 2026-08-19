@@ -1,0 +1,253 @@
+{
+  "_schema": "Final series result (book section 9.3.3). Email the compact canonical bytes, not this pretty-print.",
+  "schema_version": "1.1",
+  "report_type": "final_game_result",
+  "game_id": "bestteam-vs-imreeyal",
+  "game_uid": "ffad01a2-4965-be0b-c708-3cdbedd7373a",
+  "links": {
+    "declaration": "declaration_bestteam-vs-imreeyal.json",
+    "config": "config_bestteam-vs-imreeyal_g<NN>.json",
+    "log": "log_bestteam-vs-imreeyal_g<NN>.json",
+    "result": "result_bestteam-vs-imreeyal.json",
+    "github": {
+      "bestteam": {
+        "cop": "https://github.com/Diana-Koroblov/bestteam-cop",
+        "thief": "https://github.com/Diana-Koroblov/bestteam-thief"
+      },
+      "imreeyal": {
+        "cop": "https://github.com/Imreec/copthief-p2p-cop",
+        "thief": "https://github.com/Imreec/copthief-p2p-thief"
+      }
+    }
+  },
+  "timezone": "Asia/Jerusalem",
+  "groups": [
+    "bestteam",
+    "imreeyal"
+  ],
+  "num_sub_games": 6,
+  "sub_games": [
+    {
+      "sub_game_number": 1,
+      "roles": {
+        "bestteam": "police",
+        "imreeyal": "thief"
+      },
+      "started_at": "2026-08-18T16:44:46+00:00",
+      "ended_at": "2026-08-18T16:54:58+00:00",
+      "result": "survival",
+      "winner_group": "imreeyal",
+      "tie": false,
+      "github_commit": {
+        "bestteam": "22e4137970478a4d9890e9fd2f3798b0f95a3b0c",
+        "imreeyal": "c9ae097220e0c7a95816f9eb12514139841372b0"
+      },
+      "tokens": {
+        "bestteam": 0,
+        "imreeyal": 0
+      },
+      "score": {
+        "bestteam": 5,
+        "imreeyal": 10
+      },
+      "log_files": {
+        "bestteam": "log_bestteam-vs-imreeyal_g01.json",
+        "imreeyal": "log_bestteam-vs-imreeyal_g01.json"
+      },
+      "audit": {
+        "log_verified": true,
+        "tampered": false
+      }
+    },
+    {
+      "sub_game_number": 2,
+      "roles": {
+        "bestteam": "thief",
+        "imreeyal": "police"
+      },
+      "started_at": "2026-08-18T16:44:57+00:00",
+      "ended_at": "2026-08-18T16:56:36+00:00",
+      "result": "capture",
+      "winner_group": "imreeyal",
+      "tie": false,
+      "github_commit": {
+        "bestteam": "67e859b66c227de3af7e50bc1013faeffa2a6d35",
+        "imreeyal": "c9ae097220e0c7a95816f9eb12514139841372b0"
+      },
+      "tokens": {
+        "bestteam": 0,
+        "imreeyal": 0
+      },
+      "score": {
+        "bestteam": 5,
+        "imreeyal": 20
+      },
+      "log_files": {
+        "bestteam": "log_bestteam-vs-imreeyal_g02.json",
+        "imreeyal": "log_bestteam-vs-imreeyal_g02.json"
+      },
+      "audit": {
+        "log_verified": true,
+        "tampered": false
+      }
+    },
+    {
+      "sub_game_number": 3,
+      "roles": {
+        "bestteam": "police",
+        "imreeyal": "thief"
+      },
+      "started_at": "2026-08-18T16:54:58+00:00",
+      "ended_at": "2026-08-18T16:59:32+00:00",
+      "result": "survival",
+      "winner_group": "imreeyal",
+      "tie": false,
+      "github_commit": {
+        "bestteam": "22e4137970478a4d9890e9fd2f3798b0f95a3b0c",
+        "imreeyal": "c9ae097220e0c7a95816f9eb12514139841372b0"
+      },
+      "tokens": {
+        "bestteam": 0,
+        "imreeyal": 0
+      },
+      "score": {
+        "bestteam": 5,
+        "imreeyal": 10
+      },
+      "log_files": {
+        "bestteam": "log_bestteam-vs-imreeyal_g03.json",
+        "imreeyal": "log_bestteam-vs-imreeyal_g03.json"
+      },
+      "audit": {
+        "log_verified": true,
+        "tampered": false
+      }
+    },
+    {
+      "sub_game_number": 4,
+      "roles": {
+        "bestteam": "thief",
+        "imreeyal": "police"
+      },
+      "started_at": "2026-08-18T16:56:36+00:00",
+      "ended_at": "2026-08-18T17:01:30+00:00",
+      "result": "survival",
+      "winner_group": "bestteam",
+      "tie": false,
+      "github_commit": {
+        "bestteam": "67e859b66c227de3af7e50bc1013faeffa2a6d35",
+        "imreeyal": "c9ae097220e0c7a95816f9eb12514139841372b0"
+      },
+      "tokens": {
+        "bestteam": 0,
+        "imreeyal": 0
+      },
+      "score": {
+        "bestteam": 10,
+        "imreeyal": 5
+      },
+      "log_files": {
+        "bestteam": "log_bestteam-vs-imreeyal_g04.json",
+        "imreeyal": "log_bestteam-vs-imreeyal_g04.json"
+      },
+      "audit": {
+        "log_verified": true,
+        "tampered": false
+      }
+    },
+    {
+      "sub_game_number": 5,
+      "roles": {
+        "bestteam": "police",
+        "imreeyal": "thief"
+      },
+      "started_at": "2026-08-18T16:59:32+00:00",
+      "ended_at": "2026-08-18T17:04:27+00:00",
+      "result": "survival",
+      "winner_group": "imreeyal",
+      "tie": false,
+      "github_commit": {
+        "bestteam": "22e4137970478a4d9890e9fd2f3798b0f95a3b0c",
+        "imreeyal": "c9ae097220e0c7a95816f9eb12514139841372b0"
+      },
+      "tokens": {
+        "bestteam": 0,
+        "imreeyal": 0
+      },
+      "score": {
+        "bestteam": 5,
+        "imreeyal": 10
+      },
+      "log_files": {
+        "bestteam": "log_bestteam-vs-imreeyal_g05.json",
+        "imreeyal": "log_bestteam-vs-imreeyal_g05.json"
+      },
+      "audit": {
+        "log_verified": true,
+        "tampered": false
+      }
+    },
+    {
+      "sub_game_number": 6,
+      "roles": {
+        "bestteam": "thief",
+        "imreeyal": "police"
+      },
+      "started_at": "2026-08-18T17:01:30+00:00",
+      "ended_at": "2026-08-18T17:06:26+00:00",
+      "result": "survival",
+      "winner_group": "bestteam",
+      "tie": false,
+      "github_commit": {
+        "bestteam": "67e859b66c227de3af7e50bc1013faeffa2a6d35",
+        "imreeyal": "c9ae097220e0c7a95816f9eb12514139841372b0"
+      },
+      "tokens": {
+        "bestteam": 0,
+        "imreeyal": 0
+      },
+      "score": {
+        "bestteam": 10,
+        "imreeyal": 5
+      },
+      "log_files": {
+        "bestteam": "log_bestteam-vs-imreeyal_g06.json",
+        "imreeyal": "log_bestteam-vs-imreeyal_g06.json"
+      },
+      "audit": {
+        "log_verified": true,
+        "tampered": false
+      }
+    }
+  ],
+  "final_result": {
+    "total_score": {
+      "bestteam": 40,
+      "imreeyal": 60
+    },
+    "sub_games_won": {
+      "bestteam": 2,
+      "imreeyal": 4
+    },
+    "ties": 0,
+    "winner_group": "imreeyal",
+    "series_tie": false,
+    "tokens_total_series": {
+      "bestteam": 0,
+      "imreeyal": 0
+    },
+    "games_played_including_this": {
+      "bestteam": 1,
+      "imreeyal": 7
+    },
+    "first_meeting_between_groups": true,
+    "diversity_reward_applied": {
+      "bestteam": false,
+      "imreeyal": true
+    }
+  },
+  "mutual_agreement": {
+    "sha256": "ff77bb1d6e31751adbb219ea2372e72379f2eccf2fd099b2692e14710b10bdc9",
+    "confirmed": true
+  }
+}
