@@ -1,0 +1,485 @@
+{
+  "code_version": "1.00",
+  "config_sha256": "d16427a258a6cecaebd4b6f85463aa6d2daa22d1c24c06725140ea1a7b153618",
+  "created_utc": "2026-08-18T22:19:58+00:00",
+  "game_id": "bestteam-vs-vibecode",
+  "live_commits": {
+    "vibecode": {
+      "1": "4c5207ff02352fd4925dce0bc436c34f67d1be1c1bb0b2387089100e820c1b42",
+      "10": "a75d0ce65c371dd715def31f8613ab4fc250f747640c4edec7033426b29e8a87",
+      "11": "9ef7d1b9372036ab0a68b61894b99d378a965b1ae2fb3097d91a736164c30489",
+      "12": "2191b1a7ae7037bf452471a7e63fff6ac00a0b121aa4afaea1f1a5716a409e74",
+      "13": "c34424d69d79a6cf6f8401d2c7ff037aee335620c1be856dac5a363aab730025",
+      "2": "7e80b12ff153cc9cd824043cad65c5c7307e1406d6617a7133ddbffec9a53717",
+      "3": "c71b9324f6f9555862849be85472f28d23f6f0651b58de21085c858f2ae46864",
+      "4": "652ea4ac34740538fa2cb9d9702b252483957b5fbb9e3364101563f3117f42f0",
+      "5": "5dd77f7d29b86ae04eed157dae33a6952ae3121ee2303672f9eca4d27e62a98b",
+      "6": "6881733c576154ecc0e23619fa9b773bc36ab66a2cbb68c0ed096f2fbe21c4ac",
+      "7": "bb41bfef562f16500f27963df1893059076ee669df9eca7363e2ec5df8be522f",
+      "8": "aef2bb91975d2be853340893c8bb6587c40f51e4fbb5fc84fec1a3cb84aaf596",
+      "9": "203ac59ab28dd0714c41a6ed342432c162d4e9f0c1b571c26e4861564e97f31b"
+    }
+  },
+  "outcome": "capture",
+  "protocol": "reference",
+  "records": {
+    "bestteam": [
+      {
+        "commit": "01988dd2b687b5c966115811ef4f933e29ea6824d8c100145bb2b31a99f75001",
+        "nonce": "a4a0d46e6078f3ce5c1b8c6661a7cffb",
+        "payload": {
+          "github_commit": "a671fe05a0a4afb47562e00485443b7f22b694ef",
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "STAY",
+          "position": [
+            3,
+            3
+          ],
+          "state": "grid=7x7;self=[3, 3];barriers=[]",
+          "step": 1,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "0d11ee8ff2c72f2fed496c17567e619fb1a4f27c8774e3ffbda20267fe3621d2",
+        "nonce": "8247d5b008b45f2b0d17e6b515762194",
+        "payload": {
+          "hint": "I am somewhere you have not thought to look.",
+          "intent": "truth",
+          "move": "STAY",
+          "position": [
+            3,
+            3
+          ],
+          "state": "grid=7x7;self=[3, 3];barriers=[]",
+          "step": 2,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "5da09f34d551d378d3beacafdb651f35ba53cc4361c81e2de3bcf2464ebeeb96",
+        "nonce": "ad25d5b1336ab15d96c207e4d7ac61fa",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "E",
+          "position": [
+            3,
+            4
+          ],
+          "state": "grid=7x7;self=[3, 4];barriers=[]",
+          "step": 3,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "a29d86027a0b0fbf92705a8f3109fd894936f7db231eac6fc032db531c87cf74",
+        "nonce": "38d8bb25f8c34b8e906b59ac66939995",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "E",
+          "position": [
+            3,
+            5
+          ],
+          "state": "grid=7x7;self=[3, 5];barriers=[]",
+          "step": 4,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "b0fcc776cb5853469920f4908eaac12d76ae768be7003ba3954f149c4207c674",
+        "nonce": "a28b3d59ad8858d9fb8241d4dce2d44f",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "S",
+          "position": [
+            4,
+            5
+          ],
+          "state": "grid=7x7;self=[4, 5];barriers=[]",
+          "step": 5,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "92cd375c7001afb35de1a3d9dc5c7afe83499fee3624d71024450d7756251ea8",
+        "nonce": "f1c0ec3b8f6ce6f82b496d1324460dd0",
+        "payload": {
+          "hint": "I am somewhere you have not thought to look.",
+          "intent": "truth",
+          "move": "E",
+          "position": [
+            4,
+            6
+          ],
+          "state": "grid=7x7;self=[4, 6];barriers=[]",
+          "step": 6,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "41cc2e5612f1c5825ca5203ec64200de71391102c53568d0982c935e4d51edb1",
+        "nonce": "01ab5555ced6c1cf298cbbafa44dd603",
+        "payload": {
+          "hint": "You are chasing a rumour, not an agent.",
+          "intent": "truth",
+          "move": "STAY",
+          "position": [
+            4,
+            6
+          ],
+          "state": "grid=7x7;self=[4, 6];barriers=[]",
+          "step": 7,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "60bb5e11f03bc5c5f1832294354250832530ab4856b5330c97a03999d4784d17",
+        "nonce": "fd4ee0f6cd17863833ef030185c94367",
+        "payload": {
+          "hint": "You are chasing a rumour, not an agent.",
+          "intent": "truth",
+          "move": "S",
+          "position": [
+            5,
+            6
+          ],
+          "state": "grid=7x7;self=[5, 6];barriers=[]",
+          "step": 8,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "a6d024b640c4ccb2fe7e398a62a3fe05019095b33486a5c025682c79a5bf16a7",
+        "nonce": "09ce8346365116c975b5505af634f4b3",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "S",
+          "position": [
+            6,
+            6
+          ],
+          "state": "grid=7x7;self=[6, 6];barriers=[]",
+          "step": 9,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "7829a4e0baf3dc103f8886a6d59b17d23f37d604268121f01aed2389dd2c9b21",
+        "nonce": "973053bebfee716c56e2feca53fb4ca8",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "STAY",
+          "position": [
+            6,
+            6
+          ],
+          "state": "grid=7x7;self=[6, 6];barriers=[]",
+          "step": 10,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "e24c496be702dcdf9d3a7a3ca0c09b787130ad5312939623983ce5c996319e57",
+        "nonce": "71d6bb9db78180c822534d9a5dbc2d6f",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "STAY",
+          "position": [
+            6,
+            6
+          ],
+          "state": "grid=7x7;self=[6, 6];barriers=[]",
+          "step": 11,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "8a662cc10191b7c3db2882b27fd35ff057495b53c2003c02cc1835dd7d957a5f",
+        "nonce": "ae6e96c3cd5cb2d73d6b8f8674395424",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "STAY",
+          "position": [
+            6,
+            6
+          ],
+          "state": "grid=7x7;self=[6, 6];barriers=[[6, 5]]",
+          "step": 12,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "eac879146cb620cbaf23bdf1edc201a77f61e3d589cc2e5b4b223a0f0c2bf732",
+        "nonce": "89c16db1523b27e678504915046bb8bc",
+        "payload": {
+          "hint": "Nothing you have read this turn was worth reading.",
+          "intent": "truth",
+          "move": "N",
+          "position": [
+            5,
+            6
+          ],
+          "state": "grid=7x7;self=[5, 6];barriers=[[6, 5]]",
+          "step": 13,
+          "verdict": "truth"
+        }
+      },
+      {
+        "commit": "7830ba5318f96e5a6ceaed3711db27a8253655d8bc6bc2a9a48b513d0fa1b2fc",
+        "nonce": "f311409ec393bf68a8d3cfb814f709a3",
+        "payload": {
+          "hint": "You are chasing a rumour, not an agent.",
+          "intent": "truth",
+          "move": "N",
+          "position": [
+            4,
+            6
+          ],
+          "state": "grid=7x7;self=[4, 6];barriers=[[6, 5]]",
+          "step": 14,
+          "verdict": "truth"
+        }
+      }
+    ],
+    "vibecode": [
+      {
+        "commit": "9279ad73cf7e15180d345828cb5b68aef90490bf504243298ed5f1cc6ebf7ec5",
+        "nonce": "e06ae77f64e1ecb74d4610c10cbf7c9e",
+        "payload": {
+          "declaration_ref": "declaration_bestteam-vs-vibecode.json",
+          "github_commit": "c956604a8c4474d3dad87314797a2b1ad77aed82",
+          "group_id": "vibecode",
+          "role": "police",
+          "spec": {
+            "cpu_cores": 16,
+            "cpu_type": "Intel64 Family 6 Model 158 Stepping 13, GenuineIntel",
+            "machine": "AMD64",
+            "os": "Windows 11",
+            "python": "3.13.14",
+            "ram_gb": 34
+          },
+          "step": 0,
+          "sub_game_number": 2,
+          "type": "step_zero"
+        }
+      },
+      {
+        "commit": "4c5207ff02352fd4925dce0bc436c34f67d1be1c1bb0b2387089100e820c1b42",
+        "nonce": "a0f2d6db09716f1eace40d39820767df",
+        "payload": {
+          "intent": "truth",
+          "move": "S",
+          "position": [
+            1,
+            0
+          ],
+          "role": "police",
+          "step": 1,
+          "sub_game": 2
+        }
+      },
+      {
+        "commit": "7e80b12ff153cc9cd824043cad65c5c7307e1406d6617a7133ddbffec9a53717",
+        "nonce": "7cfd6008a11540083a97ea6991015efe",
+        "payload": {
+          "intent": "lie",
+          "move": "S",
+          "position": [
+            2,
+            0
+          ],
+          "role": "police",
+          "step": 2,
+          "sub_game": 2
+        }
+      },
+      {
+        "commit": "c71b9324f6f9555862849be85472f28d23f6f0651b58de21085c858f2ae46864",
+        "nonce": "4b19887254145571b04ec0b6989f4062",
+        "payload": {
+          "intent": "bluff",
+          "move": "S",
+          "position": [
+            3,
+            0
+          ],
+          "role": "police",
+          "step": 3,
+          "sub_game": 2
+        }
+      },
+      {
+        "commit": "652ea4ac34740538fa2cb9d9702b252483957b5fbb9e3364101563f3117f42f0",
+        "nonce": "6bba997c827e733bae00989cb4fb683d",
+        "payload": {
+          "intent": "bluff",
+          "move": "E",
+          "position": [
+            3,
+            1
+          ],
+          "role": "police",
+          "step": 4,
+          "sub_game": 2
+        }
+      },
+      {
+        "commit": "5dd77f7d29b86ae04eed157dae33a6952ae3121ee2303672f9eca4d27e62a98b",
+        "nonce": "6d5472db8ed34d4f8285b9f87295d7aa",
+        "payload": {
+          "intent": "lie",
+          "move": "E",
+          "position": [
+            3,
+            2
+          ],
+          "role": "police",
+          "step": 5,
+          "sub_game": 2
+        }
+      },
+      {
+        "commit": "6881733c576154ecc0e23619fa9b773bc36ab66a2cbb68c0ed096f2fbe21c4ac",
+        "nonce": "fddb3232efabfcee5e682c655df82af6",
+        "payload": {
+          "intent": "truth",
+          "move": "E",
+          "position": [
+            3,
+            3
+          ],
+          "role": "police",
+          "step": 6,
+          "sub_game": 2
+        }
+      },
+      {
+        "commit": "bb41bfef562f16500f27963df1893059076ee669df9eca7363e2ec5df8be522f",
+        "nonce": "adabfb72b068ee2f9df3d3d80cb3393c",
+        "payload": {
+          "intent": "truth",
+          "move": "E",
+          "position": [
+            3,
+            4
+          ],
+          "role": "police",
+          "step": 7,
+          "sub_game": 2
+        }
+      },
+      {
+        "commit": "aef2bb91975d2be853340893c8bb6587c40f51e4fbb5fc84fec1a3cb84aaf596",
+        "nonce": "0dcc9ed071758829134e372ce45dd3e0",
+        "payload": {
+          "intent": "truth",
+          "move": "S",
+          "position": [
+            4,
+            4
+          ],
+          "role": "police",
+          "step": 8,
+          "sub_game": 2
+        }
+      },
+      {
+        "commit": "203ac59ab28dd0714c41a6ed342432c162d4e9f0c1b571c26e4861564e97f31b",
+        "nonce": "9f38cca1ebdb41bb1a01b4baacf5bf22",
+        "payload": {
+          "intent": "truth",
+          "move": "S",
+          "position": [
+            5,
+            4
+          ],
+          "role": "police",
+          "step": 9,
+          "sub_game": 2
+        }
+      },
+      {
+        "commit": "a75d0ce65c371dd715def31f8613ab4fc250f747640c4edec7033426b29e8a87",
+        "nonce": "476f0f13b546ad4dd44d718691b8fa1a",
+        "payload": {
+          "intent": "truth",
+          "move": "E",
+          "position": [
+            5,
+            5
+          ],
+          "role": "police",
+          "step": 10,
+          "sub_game": 2
+        }
+      },
+      {
+        "commit": "9ef7d1b9372036ab0a68b61894b99d378a965b1ae2fb3097d91a736164c30489",
+        "nonce": "acaa01c2591d48f4e653db11a0c4d96d",
+        "payload": {
+          "barrier_placed": [
+            6,
+            5
+          ],
+          "intent": "lie",
+          "move": "PLACE_S",
+          "position": [
+            5,
+            5
+          ],
+          "role": "police",
+          "step": 11,
+          "sub_game": 2
+        }
+      },
+      {
+        "commit": "2191b1a7ae7037bf452471a7e63fff6ac00a0b121aa4afaea1f1a5716a409e74",
+        "nonce": "80ad9c669f241f1466e3b40ed5d8e3b5",
+        "payload": {
+          "intent": "truth",
+          "move": "E",
+          "position": [
+            5,
+            6
+          ],
+          "role": "police",
+          "step": 12,
+          "sub_game": 2
+        }
+      },
+      {
+        "commit": "c34424d69d79a6cf6f8401d2c7ff037aee335620c1be856dac5a363aab730025",
+        "nonce": "0b872cc8fe417c67b3aed85b2e070579",
+        "payload": {
+          "intent": "truth",
+          "move": "STAY",
+          "position": [
+            5,
+            6
+          ],
+          "role": "police",
+          "step": 13,
+          "sub_game": 2
+        }
+      }
+    ]
+  },
+  "roles": {
+    "bestteam": "thief",
+    "vibecode": "police"
+  },
+  "step_count": {
+    "bestteam": 14,
+    "vibecode": 14
+  },
+  "sub_game": 2
+}

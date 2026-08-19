@@ -1,0 +1,93 @@
+{
+  "code_version": "1.00",
+  "created_utc": "2026-08-18T22:22:37+00:00",
+  "ended_utc": "2026-08-18T22:22:37+00:00",
+  "game_id": "bestteam-vs-vibecode",
+  "hardware": {
+    "cpu_cores": 8,
+    "cpu_mhz": 3800,
+    "cpu_model": "AMD Ryzen 7 9700X 8-Core Processor",
+    "cpu_threads": 16,
+    "gpu": "AMD Radeon RX 9070 XT; AMD Radeon(TM) Graphics",
+    "machine": "AMD64",
+    "os": "Windows 11",
+    "python": "3.13.13",
+    "ram_gb": 31.2
+  },
+  "llm_model": "template",
+  "mcp_urls": {
+    "bestteam": "",
+    "vibecode": "http://62.56.220.143:61224/mcp"
+  },
+  "repositories": {
+    "ours_cop": "https://github.com/Diana-Koroblov/bestteam-cop",
+    "ours_thief": "https://github.com/Diana-Koroblov/bestteam-thief",
+    "theirs_cop": "https://github.com/AmitKuper/vibecode-cop",
+    "theirs_thief": "https://github.com/AmitKuper/vibecode-thief"
+  },
+  "started_utc": "2026-08-18T22:17:47+00:00",
+  "step_zero": {
+    "ours": {
+      "counted_games_played": 1,
+      "github_commit": "a671fe05a0a4afb47562e00485443b7f22b694ef",
+      "group_id": "bestteam",
+      "group_name": "bestteam",
+      "llm_model": "template",
+      "members": [
+        "Itay Malich",
+        "Diana Koroblov"
+      ],
+      "repos": {
+        "cop": "https://github.com/Diana-Koroblov/bestteam-cop",
+        "thief": "https://github.com/Diana-Koroblov/bestteam-thief"
+      }
+    },
+    "theirs": {
+      "counted_games_played": 6,
+      "counted_matches_played": 6,
+      "github_commit": "c956604a8c4474d3dad87314797a2b1ad77aed82",
+      "group_id": "vibecode",
+      "group_name": "vibecode",
+      "hardware_spec": {
+        "cpu_cores": 16,
+        "cpu_type": "Intel64 Family 6 Model 158 Stepping 13, GenuineIntel",
+        "machine": "AMD64",
+        "os": "Windows 11",
+        "python": "3.13.14",
+        "ram_gb": 34
+      },
+      "llm_model": "none (template hints; pure-Python algorithmic movement)",
+      "mcp_servers": {
+        "cop": "http://62.56.220.143:61224/mcp",
+        "thief": "http://62.56.220.143:61223/mcp"
+      },
+      "members": [
+        "Ron Marom",
+        "Amit Kuperminz"
+      ],
+      "opponents_already_counted": [
+        "anrbj666",
+        "imreeyal",
+        "najamjad",
+        "nis-yar1",
+        "rstabcde",
+        "uoh-sqak"
+      ],
+      "repos": {
+        "cop": "https://github.com/AmitKuper/vibecode-cop",
+        "thief": "https://github.com/AmitKuper/vibecode-thief"
+      }
+    }
+  },
+  "teams": {
+    "bestteam": [
+      "Itay Malich",
+      "Diana Koroblov"
+    ],
+    "vibecode": [
+      "Ron Marom",
+      "Amit Kuperminz"
+    ]
+  },
+  "token_cap": 200000
+}

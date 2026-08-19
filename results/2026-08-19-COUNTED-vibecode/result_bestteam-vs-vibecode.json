@@ -1,0 +1,253 @@
+{
+  "_schema": "Final series result (book section 9.3.3). Email the compact canonical bytes, not this pretty-print.",
+  "schema_version": "1.1",
+  "report_type": "final_game_result",
+  "game_id": "bestteam-vs-vibecode",
+  "game_uid": "d570f249-ac60-ed87-efa6-f5efba7a8115",
+  "links": {
+    "declaration": "declaration_bestteam-vs-vibecode.json",
+    "config": "config_bestteam-vs-vibecode_g<NN>.json",
+    "log": "log_bestteam-vs-vibecode_g<NN>.json",
+    "result": "result_bestteam-vs-vibecode.json",
+    "github": {
+      "bestteam": {
+        "cop": "https://github.com/Diana-Koroblov/bestteam-cop",
+        "thief": "https://github.com/Diana-Koroblov/bestteam-thief"
+      },
+      "vibecode": {
+        "cop": "https://github.com/AmitKuper/vibecode-cop",
+        "thief": "https://github.com/AmitKuper/vibecode-thief"
+      }
+    }
+  },
+  "timezone": "Asia/Jerusalem",
+  "groups": [
+    "bestteam",
+    "vibecode"
+  ],
+  "num_sub_games": 6,
+  "sub_games": [
+    {
+      "sub_game_number": 1,
+      "roles": {
+        "bestteam": "police",
+        "vibecode": "thief"
+      },
+      "started_at": "2026-08-18T22:17:41+00:00",
+      "ended_at": "2026-08-18T22:19:31+00:00",
+      "result": "survival",
+      "winner_group": "vibecode",
+      "tie": false,
+      "github_commit": {
+        "bestteam": "6f5a7ed14b6f8180aa3acc08d304deb8fd2422da",
+        "vibecode": "da8d3b541ff5c3768c49ad53c254c2323145117f"
+      },
+      "tokens": {
+        "bestteam": 0,
+        "vibecode": 0
+      },
+      "score": {
+        "bestteam": 5,
+        "vibecode": 10
+      },
+      "log_files": {
+        "bestteam": "log_bestteam-vs-vibecode_g01.json",
+        "vibecode": "log_bestteam-vs-vibecode_g01.json"
+      },
+      "audit": {
+        "log_verified": true,
+        "tampered": false
+      }
+    },
+    {
+      "sub_game_number": 2,
+      "roles": {
+        "bestteam": "thief",
+        "vibecode": "police"
+      },
+      "started_at": "2026-08-18T22:17:47+00:00",
+      "ended_at": "2026-08-18T22:19:58+00:00",
+      "result": "capture",
+      "winner_group": "vibecode",
+      "tie": false,
+      "github_commit": {
+        "bestteam": "a671fe05a0a4afb47562e00485443b7f22b694ef",
+        "vibecode": "c956604a8c4474d3dad87314797a2b1ad77aed82"
+      },
+      "tokens": {
+        "bestteam": 0,
+        "vibecode": 0
+      },
+      "score": {
+        "bestteam": 5,
+        "vibecode": 20
+      },
+      "log_files": {
+        "bestteam": "log_bestteam-vs-vibecode_g02.json",
+        "vibecode": "log_bestteam-vs-vibecode_g02.json"
+      },
+      "audit": {
+        "log_verified": true,
+        "tampered": false
+      }
+    },
+    {
+      "sub_game_number": 3,
+      "roles": {
+        "bestteam": "police",
+        "vibecode": "thief"
+      },
+      "started_at": "2026-08-18T22:19:31+00:00",
+      "ended_at": "2026-08-18T22:20:38+00:00",
+      "result": "survival",
+      "winner_group": "vibecode",
+      "tie": false,
+      "github_commit": {
+        "bestteam": "6f5a7ed14b6f8180aa3acc08d304deb8fd2422da",
+        "vibecode": "da8d3b541ff5c3768c49ad53c254c2323145117f"
+      },
+      "tokens": {
+        "bestteam": 0,
+        "vibecode": 0
+      },
+      "score": {
+        "bestteam": 5,
+        "vibecode": 10
+      },
+      "log_files": {
+        "bestteam": "log_bestteam-vs-vibecode_g03.json",
+        "vibecode": "log_bestteam-vs-vibecode_g03.json"
+      },
+      "audit": {
+        "log_verified": true,
+        "tampered": false
+      }
+    },
+    {
+      "sub_game_number": 4,
+      "roles": {
+        "bestteam": "thief",
+        "vibecode": "police"
+      },
+      "started_at": "2026-08-18T22:19:58+00:00",
+      "ended_at": "2026-08-18T22:21:04+00:00",
+      "result": "capture",
+      "winner_group": "vibecode",
+      "tie": false,
+      "github_commit": {
+        "bestteam": "a671fe05a0a4afb47562e00485443b7f22b694ef",
+        "vibecode": "c956604a8c4474d3dad87314797a2b1ad77aed82"
+      },
+      "tokens": {
+        "bestteam": 0,
+        "vibecode": 0
+      },
+      "score": {
+        "bestteam": 5,
+        "vibecode": 20
+      },
+      "log_files": {
+        "bestteam": "log_bestteam-vs-vibecode_g04.json",
+        "vibecode": "log_bestteam-vs-vibecode_g04.json"
+      },
+      "audit": {
+        "log_verified": true,
+        "tampered": false
+      }
+    },
+    {
+      "sub_game_number": 5,
+      "roles": {
+        "bestteam": "police",
+        "vibecode": "thief"
+      },
+      "started_at": "2026-08-18T22:20:38+00:00",
+      "ended_at": "2026-08-18T22:21:54+00:00",
+      "result": "survival",
+      "winner_group": "vibecode",
+      "tie": false,
+      "github_commit": {
+        "bestteam": "6f5a7ed14b6f8180aa3acc08d304deb8fd2422da",
+        "vibecode": "da8d3b541ff5c3768c49ad53c254c2323145117f"
+      },
+      "tokens": {
+        "bestteam": 0,
+        "vibecode": 0
+      },
+      "score": {
+        "bestteam": 5,
+        "vibecode": 10
+      },
+      "log_files": {
+        "bestteam": "log_bestteam-vs-vibecode_g05.json",
+        "vibecode": "log_bestteam-vs-vibecode_g05.json"
+      },
+      "audit": {
+        "log_verified": true,
+        "tampered": false
+      }
+    },
+    {
+      "sub_game_number": 6,
+      "roles": {
+        "bestteam": "thief",
+        "vibecode": "police"
+      },
+      "started_at": "2026-08-18T22:21:04+00:00",
+      "ended_at": "2026-08-18T22:22:37+00:00",
+      "result": "capture",
+      "winner_group": "vibecode",
+      "tie": false,
+      "github_commit": {
+        "bestteam": "a671fe05a0a4afb47562e00485443b7f22b694ef",
+        "vibecode": "c956604a8c4474d3dad87314797a2b1ad77aed82"
+      },
+      "tokens": {
+        "bestteam": 0,
+        "vibecode": 0
+      },
+      "score": {
+        "bestteam": 5,
+        "vibecode": 20
+      },
+      "log_files": {
+        "bestteam": "log_bestteam-vs-vibecode_g06.json",
+        "vibecode": "log_bestteam-vs-vibecode_g06.json"
+      },
+      "audit": {
+        "log_verified": true,
+        "tampered": false
+      }
+    }
+  ],
+  "final_result": {
+    "total_score": {
+      "bestteam": 30,
+      "vibecode": 90
+    },
+    "sub_games_won": {
+      "bestteam": 0,
+      "vibecode": 6
+    },
+    "ties": 0,
+    "winner_group": "vibecode",
+    "series_tie": false,
+    "tokens_total_series": {
+      "bestteam": 0,
+      "vibecode": 0
+    },
+    "games_played_including_this": {
+      "bestteam": 2,
+      "vibecode": 7
+    },
+    "first_meeting_between_groups": true,
+    "diversity_reward_applied": {
+      "bestteam": false,
+      "vibecode": true
+    }
+  },
+  "mutual_agreement": {
+    "sha256": "7082f14fcaeead57184f1adbf56bb9ecee119d1a4751250b35802b90ac29b43c",
+    "confirmed": true
+  }
+}

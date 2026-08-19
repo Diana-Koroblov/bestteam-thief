@@ -22,7 +22,7 @@ declaration disqualifies the whole project (M#38).
 | # | Date | Opponent team | Our role | Sub-games | Our score | Their score | Audit | Our report sent | Theirs confirmed | Commit hash | Config file |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | 2026-08-18 | imreeyal | alternating, cop on odds | 6/6 | 40 | 60 | ☑ | ☑ | ☑ | cop 22e41379 / thief 67e859b6 | config_bestteam-vs-imreeyal_g01-06.json (cca1243e) |
-| 2 | | | | /6 | | | ☐ | ☐ | ☐ | | |
+| 2 | 2026-08-19 | vibecode | alternating, cop on odds | 6/6 | 30 | 90 | ☑ | ☑ | ☐ | cop 6f5a7ed1 / thief a671fe05 | config_bestteam-vs-vibecode_g01-06.json (d16427a2) |
 | 3 | | | | /6 | | | ☐ | ☐ | ☐ | | |
 | 4 | | | | /6 | | | ☐ | ☐ | ☐ | | |
 | 5 | | | | /6 | | | ☐ | ☐ | ☐ | | |
@@ -30,7 +30,7 @@ declaration disqualifies the whole project (M#38).
 | 7 | | | | /6 | | | ☐ | ☐ | ☐ | | |
 | 8 | | | | /6 | | | ☐ | ☐ | ☐ | | |
 
-**Counted matches so far: 1** ← this is the number declared to every new opponent (M#37)
+**Counted matches so far: 2** ← this is the number declared to every new opponent (M#37)
 
 > ⚠️ **This table is parsed, not just read.** `core/shared/league_log.py` counts the rows whose
 > **Opponent team** cell is filled and refuses to hand the handshake a number when that count
@@ -60,7 +60,7 @@ contacted.
 
 | Opponent team | Contact | Status | Agreed date | Our role | Notes |
 |---|---|---|---|---|---|
-| vibecode | agentsorch@gmail.com (Ron Marom, Amit Kuperminz) | ☑ contacted / ☑ agreed / ☐ played | friendly, hour TBD by us | cop on 1/3/5 | ALL SETTLED, nothing left to negotiate. a284082d; 81ebee59 chebyshev + merge-by-max, 0.800/0.500/0.200 on the wire; game_uid d570f249; config d16427a2 diffed key-by-key against their file — 36/36 identical, and their file produces a284082d through OUR loader. Payload re-hashed as supplied (proved their side). Public repos = counted-T precondition only. Our heads 6f5a7ed1 / a671fe05, clean and published. Open: name T; optionally verify their bundles at c956604a / da8d3b54 |
+| vibecode | agentsorch@gmail.com (Ron Marom, Amit Kuperminz) | ☑ contacted / ☑ agreed / ☑ played | 2026-08-19 | cop on 1/3/5 | COUNTED, played and filed — see row 2. Two friendlies first, both 6/6. Awaiting their message-id to tick 'Theirs confirmed' (M#35) |
 | | | ☐ contacted / ☐ agreed / ☐ played | | | |
 | | | ☐ contacted / ☐ agreed / ☐ played | | | |
 | | | ☐ contacted / ☐ agreed / ☐ played | | | |

@@ -17,15 +17,15 @@ NOT PART OF THE MESSAGE. Stripped from the .txt.
   Our prior count is parsed live: counted_matches() == 1 (imreeyal, 18/08).
 
   Heads at time of writing, both clean, both public, both resolving:
-    cop   fd4c079ccf9655db519ac5c6a10f6a69c6aa0257
-    thief 5fd1187243ed82d7bbd2051ff0f3effc81e810c8
+    cop   7ab221c60d73940d9f6aae7ba1d6605b9262eefb
+    thief 4c9a48dd00166313e562e5fd5edd274650ff0096
 
   Regenerate after any edit:
     uv run python <scratchpad>/md2txt.py docs/correspondence/reply-vibecode-counted-authorization.md
 -->
 
 Subject: Re: bestteam ↔ vibecode — authorization confirmed and quoted back, T = <T>. Prior
-count 1, parsed not typed. Heads fd4c079c / 5fd11872. One finding on the consensus hash
+count 1, parsed not typed. Heads 7ab221c6 / 4c9a48dd. One finding on the consensus hash
 
 Hi Ron, Amit —
 
@@ -79,13 +79,15 @@ own field derives the same way, our two documents should read `bestteam 2` and `
 
 ## 3. Our heads at arming
 
-**These moved since our last post, and this letter is the re-declaration.** We committed the
-two friendlies' evidence and the corrected runbook after your mail, which republished both
-clones. The pair you have filed — `6f5a7ed1…` / `a671fe05…` — is superseded by:
+**These moved since our last post, and this letter is the re-declaration.** After your mail we
+committed the two friendlies' evidence, the corrected runbook, and the fourteen artefacts of
+our earlier counted series against imreeyal, which had been sitting outside the repositories
+while our league log cited them. Each commit republished both clones. The pair you have filed
+— `6f5a7ed1…` / `a671fe05…` — is superseded by:
 
 ```
-cop     fd4c079ccf9655db519ac5c6a10f6a69c6aa0257   bestteam-cop
-thief   5fd1187243ed82d7bbd2051ff0f3effc81e810c8   bestteam-thief
+cop     7ab221c60d73940d9f6aae7ba1d6605b9262eefb   bestteam-cop
+thief   4c9a48dd00166313e562e5fd5edd274650ff0096   bestteam-thief
 ```
 
 Both clean with zero modified files, both on branch `itay`, both public and resolving. Resolve
