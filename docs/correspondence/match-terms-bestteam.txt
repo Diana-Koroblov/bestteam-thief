@@ -1,11 +1,7 @@
-Subject: bestteam - match terms and requirements. Terms hash a284082d, scent model
-subtractive 81ebee59, commit-reveal vector 4047830b - and the one question in section 3
-that decides which digest we are even comparing
-
 Group id: bestteam · Members: Itay Malich, Diana Koroblov
 Contact: itay.malich2@gmail.com
-Counted series played: 1, against one distinct opponent (imreeyal, 2026-08-18)
-Last updated: 2026-08-18
+Counted series played: 2, against two distinct opponents (imreeyal 2026-08-18, vibecode 2026-08-19)
+Last updated: 2026-08-19
 
 Send this whole document to any team that wants a series with us, and expect us to send it to
 them. It is both the opening message and the specification: what we run, what we will not move,
@@ -17,7 +13,7 @@ byte payloads over the same game*. A team that skips §3 and compares the wrong 
 we have diverged when we have not — that has happened to us in both directions now, and it
 costs a letter each time.
 
-Our counted figure is 1, and §8 explains why we make that number mechanical rather than
+Our counted figure is 2, and §8 explains why we make that number mechanical rather than
 remembered.
 
 
@@ -212,7 +208,7 @@ On our native protocol the signed contract is the nine-key nested Appendix F sha
 it includes agreed_between. That makes it opponent-dependent by construction:
 
 
-    config_sha256 (bestteam ↔ imreeyal)  = cca1243e9a4b06611f77c98077613056a7490a5b27c0da1da06fc26f33b1a513
+    config_sha256 (bestteam ↔ vibecode)  = d16427a258a6cecaebd4b6f85463aa6d2daa22d1c24c06725140ea1a7b153618
     config_sha256 (bestteam ↔ <you>)     = computed once you send your group id
 
 
@@ -476,9 +472,9 @@ OURS, IN THE SAME SHAPE
                         permanent, one hostname per process, never rotate
 
     cop repo            https://github.com/Diana-Koroblov/bestteam-cop
-    cop commit          11bfbaddb26b977a7a0143e8f29d886b2a68c671      (branch itay)
+    cop commit          da8b5cc41daccb24bdc2aad31105553cca72c7cd      (branch itay)
     thief repo          https://github.com/Diana-Koroblov/bestteam-thief
-    thief commit        e74b605e1a90c4a5ee09ffe97bbd33bac46c6472      (branch itay)
+    thief commit        fa9147d31cd1103569ae62485874c3a213ef24e1      (branch itay)
 
     terms hash          a284082dfb1572236f1b614d29295a99625539c7d33a096f7f8921bafbc3d08d
                         (reference/flat 14-key shape — the native digest needs your id, §3)
@@ -495,7 +491,7 @@ OURS, IN THE SAME SHAPE
     watchdog / retries  30 s response window, 60 s watchdog, 5 s backoff, 3 retries;
                         we wait several minutes for a peer inside its own mini-game
     step convention     step 1 is the state AFTER the first move
-    counted so far      1 — imreeyal, 2026-08-18, counted, we scored 40 to their 60
+    counted so far      2 — imreeyal 2026-08-18 (40-60), vibecode 2026-08-19 (30-90)
 
 
 On that last figure. Rule 38 judges a counted count on whether the two teams' files agree

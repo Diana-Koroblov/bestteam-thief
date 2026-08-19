@@ -1,0 +1,143 @@
+Subject: Re: bestteam ↔ nis-yar1 — sequencing fix accepted, our tunnel theory withdrawn, and we
+found the cause of your five opponent_received=false rows. It is ours
+
+Hi Nissim, Yarden —
+
+Three things, and the third is the one that matters: your opponent_received=false rows are
+almost certainly our fault, and we can show you the line of our code that makes them
+undetectable from our side.
+
+
+1. YOUR SEQUENCING FIX — ACCEPTED, AND THANK YOU FOR MAKING IT BEFORE ASKING
+
+A cross-process gate admitting 1 through 6 in order, with a window opening only after the
+previous one has completed its audit attempt, is exactly right. Observing the admission order
+1,2,3,4,5,6 in a test with both fixed-role workers is the right evidence for it too — the
+failure we hit was invisible to any single-process test.
+
+We will say plainly that this was not only your bug to fix. Our two processes drifted just as
+freely; ours simply happened to be the slower half, which is why we were the ones stranded at
+window 5. Your gate fixes it for both of us because sequencing only needs one side to enforce
+it, but we were not enforcing anything either.
+
+
+2. OUR TUNNEL HYPOTHESIS — WITHDRAWN
+
+Your ngrok agent log says it remained up through the opening of sub-game 5. That is the one
+piece of evidence we did not have and could not get, and it rules out what we proposed. We
+withdraw it, and we agree with your conclusion: the cause of sub-game 5 is not established,
+and we should not attribute it to either process or tunnel without more.
+
+Not attributing a failure is a better outcome than attributing it wrongly. If the sequential
+re-run is clean, we will both have to be content that a one-off went unexplained. If it
+recurs, we will have a second data point and a controlled variable — which is worth more than a
+theory we talked ourselves into tonight.
+
+
+3. THE AUDIT ASYMMETRY IS OURS, AND HERE IS THE LINE
+
+You wrote that your five local rows recorded opponent_received=false while our side reported
+receiving and verifying yours. We went to look at why, and found it immediately.
+
+This is our reference-path sub-game loop, verbatim:
+
+    python
+    # Best effort: the peer that just won may exit the moment it has read
+    # its inbox, killing its server mid-response — while our payload landed
+    # anyway and theirs may already be waiting for us.
+    with contextlib.suppress(PeerError):
+        await sdk.opponent.call(
+            "submit_audit", session.audit_payload(), argument="payload"
+        )
+    verdict = await session.collect_audit(...)
+    print(f"  sub-game {number} ... {'audit passed' if verdict['passed'] else 'audit FAILED'}")
+
+
+Two things follow, and both are bad:
+
+Our outbound audit failure is silent. contextlib.suppress(PeerError) discards the result.
+If the call never lands, nothing is printed, nothing is logged, and nothing is filed. We would
+have no idea.
+
+And audit passed never meant what you would reasonably read it to mean. That verdict comes
+from collect_audit — it is our verification of your records, arriving in our inbox. It
+says nothing whatsoever about whether ours reached you. So our terminal printed audit passed
+five times while, on your evidence, our payload was not arriving. Both statements are true at
+once and we had no way to notice.
+
+The suppression has a real justification — a peer that has just won may exit the moment it
+reads its inbox, killing its server mid-response, and our payload has often landed anyway. That
+is a good reason not to crash. It is not a good reason to print nothing, and we had conflated
+the two.
+
+We are fixing it so both directions are visible, which is precisely what you asked for: the
+outbound call's outcome reported separately from the inbound one, so a line reading
+audit passed can no longer hide a submit_audit that never arrived. If you want the diff we
+will send it.
+
+One thing this does not settle, and we would rather flag it than let the re-run muddy it:
+your own fix — no longer draining audits at the next window boundary — could equally explain
+five dropped audits, because under the old concurrent tracks our payload may well have arrived
+and been discarded at a boundary that came too early. So we have two candidate causes and we
+are about to change both at once. If the re-run is clean we will not know which of us it was.
+That is an acceptable price for getting a clean series tonight, but it is worth writing down so
+neither of us later claims the credit or the blame.
+
+
+4. WHAT WE WILL SHOW YOU DURING THE RE-RUN
+
+Per your request, we will keep the outbound result visible and report both directions per
+sub-game, so we can compare row by row afterwards:
+
+
+    outbound submit_audit   accepted / refused / unreachable
+    inbound  audit received yes / no
+    inbound  verification   passed / failed, with the failing steps
+
+
+If your opponent_received flag and our outbound line disagree on any row, that row is the one
+worth reading the logs over — and this time both of us will have the evidence at the time
+rather than reconstructing it from timestamps a day later.
+
+
+5. YOUR REPOSITORIES ARE STILL 404 — YES PLEASE TO THE BUNDLES
+
+Re-checked just now, unauthenticated:
+
+
+    GET https://api.github.com/repos/NisoDeri/nis-yar1-cop      404
+    GET https://api.github.com/repos/NisoDeri/nis-yar1-thief    404
+
+
+So the two new heads on itaygame — d0b3ce93… and 45066d6c… — do not resolve for us.
+Please send the bundles. They verify offline with no dependency on your account settings,
+and we would rather hold them than take the hashes on trust. Nothing about this gates a
+warm-up; we are asking because you offered and because it costs nothing now.
+
+Your launcher refusing to arm on a dirty tree or a HEAD that is not on a remote branch is the
+same check we run, and it is worth having. Ours has the identical blind spot yours had: it
+reads our own remote-tracking refs, so pushed and private looks exactly like *pushed and
+public* from inside the declaring clone. Only the peer running ls-remote catches that, which
+is why we keep running it on you and ask you to keep running it on us.
+
+
+6. THE RE-RUN
+
+Everything else is unchanged: protocol, terms a284082d, scent 81ebee59, the role sentence,
+both endpoint sets. Six windows, complete friendly, not sub-game 5 alone — agreed.
+
+Our heads, unchanged and clean:
+
+
+    cop     da8b5cc41daccb24bdc2aad31105553cca72c7cd   bestteam-cop,   branch itay
+    thief   fa9147d31cd1103569ae62485874c3a213ef24e1   bestteam-thief, branch itay
+
+
+\<HOUR\> — we will be up fifteen minutes before, post the line saying so, probe both your
+doors and let you probe ours, then arm.
+
+Name it back and we go.
+
+— bestteam
+  Itay Malich, Diana Koroblov
+  itay.malich2@gmail.com

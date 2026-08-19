@@ -39,16 +39,16 @@ back for the day.
 | Group id | `bestteam` (case sensitive, exactly as our handshake declares it) |
 | Members | Itay Malich, Diana Koroblov |
 | Contact for everything | itay.malich2@gmail.com |
-| Counted series played | **1** — see below |
+| Counted series played | **2** — see below |
 
 Two roles, two repositories, two processes, always. Nothing is shared between them at runtime
 except the wire.
 
     cop repo     https://github.com/Diana-Koroblov/bestteam-cop
-    cop commit   11bfbaddb26b977a7a0143e8f29d886b2a68c671   (branch itay)
+    cop commit   da8b5cc41daccb24bdc2aad31105553cca72c7cd   (branch itay)
 
     thief repo   https://github.com/Diana-Koroblov/bestteam-thief
-    thief commit e74b605e1a90c4a5ee09ffe97bbd33bac46c6472   (branch itay)
+    thief commit fa9147d31cd1103569ae62485874c3a213ef24e1   (branch itay)
 
 Both public, both resolving, both clones clean against `origin/itay`. **We declare published
 heads, never our development tree** — our runner refuses to start when the head it is about
@@ -58,13 +58,22 @@ and ask the same of you.
 
 ### Our counted record, declared up front
 
-**We have played one counted series: imreeyal, on 2026-08-18, six sub-games of six, which we
-lost 40 to their 60.** Roles alternated with us as cop on the odd sub-games. Both reports
-went to the lecturer, the audits settled, and the two files agree.
+**We have played two counted series, both six sub-games of six, both lost:**
 
-So unless you are imreeyal, **this would be our second counted series and our second distinct
-opponent** — a first meeting between our two groups, which is what sets the first-meeting
-flag and the diversity reward on both sides.
+    imreeyal   2026-08-18   40 - 60
+    vibecode   2026-08-19   30 - 90
+
+Roles alternated in both, with us as cop on the odd sub-games. Every audit settled, every
+report went to the lecturer, and both opponents' files agree with ours.
+
+So unless you are one of those two, **this would be our third counted series and our third
+distinct opponent** — a first meeting between our two groups, which is what sets the
+first-meeting flag and the diversity reward on both sides.
+
+We will also say the obvious thing about those two scorelines rather than let you discover it:
+we have not won a counted series yet. You are not walking into a trap. What we can promise is
+that the protocol side is thoroughly exercised — both series settled 6/6 with every commitment
+re-hashed and no dispute about a single sub-game.
 
 We state it plainly because rule 38 judges the figure on whether our two files agree about
 it, and a wrong declaration disqualifies the project rather than costing a point. Ours is not

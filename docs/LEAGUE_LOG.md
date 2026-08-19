@@ -61,7 +61,7 @@ contacted.
 | Opponent team | Contact | Status | Agreed date | Our role | Notes |
 |---|---|---|---|---|---|
 | vibecode | agentsorch@gmail.com (Ron Marom, Amit Kuperminz) | ☑ contacted / ☑ agreed / ☑ played | 2026-08-19 | cop on 1/3/5 | COUNTED, played and filed — see row 2. Two friendlies first, both 6/6. Awaiting their message-id to tick 'Theirs confirmed' (M#35) |
-| | | ☐ contacted / ☐ agreed / ☐ played | | | |
+| nis-yar1 | nissimderi123@gmail.com (Nissim Deri, Yarden Tziar) | ☑ contacted / ☑ agreed / ☐ played | WARM-UP 2026-08-19 16:30 IST | cop on 1/3/5 | All terms match and nothing is open. They raised their opponent-turn wait to 1200 s (over the 1050 s worst case); we match it with --turn-wait 1200. Role sentence locked. Their doors are rotating Cloudflare, posted after we say 'up' at 16:10. Git bundles offered at 7633fbc8 / 3f2d0216 before any counted series |
 | | | ☐ contacted / ☐ agreed / ☐ played | | | |
 | | | ☐ contacted / ☐ agreed / ☐ played | | | |
 | | | ☐ contacted / ☐ agreed / ☐ played | | | |
