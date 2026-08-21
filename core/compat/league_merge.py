@@ -8,6 +8,7 @@ rather than `sub_game`, rows keyed by group name rather than "ours"/"theirs".
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -16,12 +17,13 @@ from core.report.artefacts import ArtefactError
 __all__ = ["load_rows", "merge_rows"]
 
 
-def load_rows(path: Path, expect_uid: str = "", expect_date: str = "") -> list[dict[str, Any]]:
+def load_rows(path: Path, expect_uid: str = "", expect_started: str = "") -> list[dict[str, Any]]:
     """Return the sub-game rows already filed at *path*, or none if it is absent.
 
     Args:
         expect_uid: The ``game_uid`` of the series now being filed.
-        expect_date: The calendar date its sub-games started, ``YYYY-MM-DD``.
+        expect_started: When its sub-games began, ISO-8601. A **timestamp**,
+            not a date — see ``SERIES_WINDOW`` for the re-match this cost.
 
     Raises:
         ArtefactError: The file exists and cannot be read as a league result,
@@ -47,7 +49,7 @@ def load_rows(path: Path, expect_uid: str = "", expect_date: str = "") -> list[d
     from the negotiated terms, not from the occasion — so two series played
     under one unchanged config share it exactly. Our two imreeyal results both
     carry `ffad01a2-4965-be0b-c708-3cdbedd7373a`. It is kept as the cheap
-    second net that catches a renegotiated series; the **date** is what
+    second net that catches a renegotiated series; **when it began** is what
     separates two runs of the same contract, and both role processes of one
     series agree on it because they play it together.
     """
@@ -66,14 +68,37 @@ def load_rows(path: Path, expect_uid: str = "", expect_date: str = "") -> list[d
 
     if expect_uid and found_uid and found_uid != expect_uid:
         raise _different(path, f"it was played under other terms (game_uid {found_uid})")
-    found_date = _started_date(rows)
-    if expect_date and found_date and found_date != expect_date:
-        raise _different(path, f"its sub-games were played on {found_date}, ours on {expect_date}")
+    found_at, ours_at = _started_at(rows), _parse(expect_started)
+    if found_at and ours_at and abs(found_at - ours_at) > SERIES_WINDOW:
+        raise _different(
+            path,
+            f"its sub-games began {found_at:%Y-%m-%d %H:%M} and ours {ours_at:%Y-%m-%d %H:%M}, "
+            f"more than {SERIES_WINDOW} apart",
+        )
     return rows
 
 
-def _started_date(rows: list[dict[str, Any]]) -> str:
-    """Return the calendar date the filed sub-games began, or ``""``.
+# How far apart two rows can begin and still belong to one series. A series is
+# six sub-games, each bounded by `max_steps` x `response_timeout_sec` — under
+# two hours even at the worst pacing the terms allow. Four is generous for the
+# legitimate case and still separates two runs on one afternoon.
+#
+# This used to compare calendar DATES, which cannot tell a same-day re-match
+# from its own predecessor: the date matches, and (terms unchanged) so does
+# `game_uid` — both nets missed it, and a half-stale report was what got mailed.
+SERIES_WINDOW = timedelta(hours=4)
+
+
+def _parse(stamp: str) -> datetime | None:
+    """Return *stamp* as a datetime, or None when it is absent or malformed."""
+    try:
+        return datetime.fromisoformat(str(stamp or ""))
+    except ValueError:
+        return None
+
+
+def _started_at(rows: list[dict[str, Any]]) -> datetime | None:
+    """Return when the filed sub-games began, or None.
 
     Read from the first row that carries a parseable `started_at`. Rows filed
     by an older build, or one that never stamped a start, yield no opinion —
@@ -81,10 +106,10 @@ def _started_date(rows: list[dict[str, Any]]) -> str:
     of a legitimate series.
     """
     for row in rows:
-        stamp = str(row.get("started_at", "") or "")
-        if len(stamp) >= 10 and stamp[4] == "-" and stamp[7] == "-":
-            return stamp[:10]
-    return ""
+        found = _parse(row.get("started_at", ""))
+        if found is not None:
+            return found
+    return None
 
 
 def _different(path: Path, because: str) -> ArtefactError:

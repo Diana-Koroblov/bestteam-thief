@@ -131,11 +131,14 @@ def test_incompatible_version_raises(tmp_path: Path) -> None:
         load_config(role)
 
 
-def test_missing_version_raises(tmp_path: Path) -> None:
+def test_a_missing_version_is_accepted_not_refused(tmp_path: Path) -> None:
+    """🐛 After imreeyal's counted checklist (item 9) the agreed contract is the
+    9-key Appendix F shape, which carries no `version` at all. Refusing an
+    absent version would refuse every kit-conformant peer's contract - only a
+    *stated* incompatible version is still a claim worth refusing."""
     shared = {key: value for key, value in SHIPPED.items() if key != "version"}
     role = _write(tmp_path / "role", shared)
-    with pytest.raises(ConfigVersionError, match="<none>"):
-        load_config(role)
+    assert load_config(role).get("scoring.tie_score") == 2
 
 
 def test_same_major_version_is_accepted(tmp_path: Path) -> None:

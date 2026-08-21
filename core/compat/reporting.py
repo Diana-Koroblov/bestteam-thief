@@ -72,12 +72,13 @@ def _send(
     terms = terms_from_config(sdk.runtime.orchestrator.config)
     # Derived before the merge, not after: an earlier series against this
     # opponent claims the same filename, and these are what tell it apart from
-    # ours. See `league_merge.load_rows` for why the date carries the weight and
-    # the uid does not.
+    # ours. The **timestamp**, not the date — two series against one opponent
+    # on one afternoon share a calendar day, and merging them silently is what
+    # a date-only check would miss (`league_merge.SERIES_WINDOW`).
     uid = league_report.game_uid(terms, our_group, their_group)
-    today = str(rows[0].get("started_at", ""))[:10] if rows else ""
+    began = str(rows[0].get("started_at", "")) if rows else ""
     merged = league_merge.merge_rows(
-        league_merge.load_rows(path, uid, today), rows
+        league_merge.load_rows(path, uid, began), rows
     )
     result = league_report.build_result(
         counted=counted,

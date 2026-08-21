@@ -119,6 +119,25 @@ class TestTheArtefactsExist:
         by_kind = {path.name.split("_")[0]: json.loads(path.read_text("utf-8")) for path in written}
         assert by_kind["log"]["config_sha256"] == by_kind["config"]["config_sha256"]
 
+    def test_the_filed_snapshot_carries_the_role_split_and_scent_digest(
+        self, tmp_path: Path
+    ) -> None:
+        """🐛 Both used to file as empty strings: `close_sub_game` never passed
+        either through to `file_sub_game`, though the native path always has."""
+        rows: list[dict] = []
+        written: list[Path] = []
+        close_sub_game(
+            sdk=_SDK(), args=argparse.Namespace(out=str(tmp_path), their_commit="", role_split="1/3/5"),
+            session=_Session(), number=1, result="capture",
+            verdict={"passed": True, "received": True}, started="2026-08-17T12:00:00+00:00",
+            ended="2026-08-17T12:05:00+00:00", their_group="yanell11",
+            their_identity={"github_commit": "b" * 40}, our_identity={"github_commit": "a" * 40},
+            rows=rows, written=written,
+        )
+        config = json.loads(next(p for p in written if p.name.startswith("config_")).read_text("utf-8"))
+        assert config["role_split"] == "1/3/5"
+        assert config["scent_model_digest"] != ""
+
 
 class TestTheRowStillGoes:
     def test_the_row_is_recorded_alongside(self, tmp_path: Path) -> None:

@@ -145,6 +145,15 @@ class ReferenceSession:
         name is not yet known, rather than raising: a peer mid-rehearsal with
         only its own team in ``agreed_between`` should still be able to print
         what it would send.
+
+        **``sender`` and ``group_id`` are repeated at the top level**, beside the
+        nested ``identity`` block rather than instead of it. A peer that binds a
+        session from the message root cannot see a group id buried one level
+        down: najamjad's §9.8 documents exactly that, logging
+        ``session.unauthenticated`` and never reaching the terms comparison at
+        all. Ours is additive on purpose — the signature covers ``terms`` and
+        nothing else, so two extra keys leave the contract digest untouched and
+        cost a peer that ignores them nothing.
         """
         terms = terms_from_config(self.config)
         nonce = secrets.token_hex(16)
@@ -153,6 +162,8 @@ class ReferenceSession:
         uid = league_report.game_uid(terms, ours_id, theirs_id) if theirs_id else ""
         model = str(self.config.get("pheromones.decay_model", "multiplicative"))
         return {
+            "sender": ours_id,
+            "group_id": ours_id,
             "terms": terms,
             "nonce": nonce,
             "signature": sealing.commit_of(terms, nonce),

@@ -84,6 +84,7 @@ def close_sub_game(
             out=Path(args.out), game_identifier=game_id(sdk.team_name, group),
             session=session, sdk=sdk, number=number, outcome=result,
             our_group=sdk.team_name, their_group=group,
+            role_split=str(getattr(args, "role_split", "") or ""),
         ))
     except (OSError, ArtefactError) as error:
         return f"sub-game {number} artefacts NOT filed: {type(error).__name__}: {error}"

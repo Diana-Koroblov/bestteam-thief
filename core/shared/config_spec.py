@@ -141,11 +141,10 @@ def classify(config: dict) -> tuple[list[str], list[str]]:
     * **illegal** — a *fixed* value changed or a *minimum* lowered. Agreeing to
       one disqualifies **both** teams, so "the opponent asked for it" is not a
       defence (M#12). Never negotiable, by us or by them.
-    * **absent** — a key their proposal does not carry. Seven of the rows above
-      are **our own** additions and appear in no Appendix, so a peer sending a
-      plain Appendix F config is missing them and is entirely legal; refusing
-      would forfeit a fixture over a rule the book does not state. Each line
-      therefore says which kind it is, and a human settles it before play.
+    * **absent** — a key their proposal does not carry, and no longer includes
+      our own extensions at all (see the loop below): those are not contract
+      keys, so their absence from a peer's file is not a finding for either
+      side.
 
     For our own configuration the distinction does not arise — an absent key is
     a value we cannot play with either way — which is why `violations` still
@@ -156,8 +155,29 @@ def classify(config: dict) -> tuple[list[str], list[str]]:
     for parameter in PARAMETERS:
         value = dotted_get(config, parameter.path, None)
         if value is None:
-            source = "our extension, in no Appendix" if parameter.ours else "Appendix F"
-            absent.append(f"{parameter.path}: missing ({source})")
+            # 🔻 **Our extensions are no longer contract keys, so their absence
+            # is not a finding — for either side.** They were, until imreeyal's
+            # counted checklist settled that the FILED config artefact is the
+            # agreed 9-key Appendix F shape and that our C-00x mechanism choices
+            # bind as pairing terms agreed in the thread. Their file never
+            # carried them; ours did, and that was the whole of the canonical
+            # digest mismatch (17606f14 against cca1243e) over content that
+            # differed in no rule.
+            #
+            # `ours` already meant "do not refuse a peer for omitting this". It
+            # now means the same thing for our own contract, because our own
+            # contract is that same 9-key shape. What did NOT change: when a
+            # value IS present it is still checked below, so a lowered minimum
+            # is still illegal whoever sent it.
+            #
+            # The safety this would otherwise lose — *we* must still actually
+            # hold these values — is asserted directly against the shipped
+            # MERGED configuration in `test_config_spec.py`, which is where it
+            # belongs: the merged config is what we play, and the contract is
+            # only what we agreed.
+            if parameter.ours:
+                continue
+            absent.append(f"{parameter.path}: missing (Appendix F)")
         elif legal(parameter, value):
             continue
         elif parameter.status == FIXED:

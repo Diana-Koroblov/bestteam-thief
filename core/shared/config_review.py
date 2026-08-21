@@ -125,10 +125,18 @@ def review(theirs: dict, ours: dict) -> Review:
     """
     illegal, absent = config_spec.classify(theirs)
     illegal += config_spec.invariant_violations(theirs)
+    # ⚠️ **Absent is accepted; only a stated incompatible version is refused.**
+    # This read `if not version.is_compatible(declared)` with `""` failing, which
+    # meant a proposal carrying no `version` was listed ILLEGAL and `--review`
+    # exited non-zero on it. After imreeyal's counted checklist settled the
+    # agreed contract as the 9-key Appendix F shape — which carries no `version`
+    # at all — that gate would have refused the contract we had just agreed to,
+    # at the handshake, minutes before a match. Exactly the "refusing a legal
+    # proposal" failure this module's own docstring names first.
     declared = str(theirs.get("version", ""))
-    if not version.is_compatible(declared):
+    if declared and not version.is_compatible(declared):
         illegal.append(
-            f"version {declared or '<none>'} cannot be read by this code (version "
+            f"version {declared} cannot be read by this code (version "
             f"{version.VERSION}); a config we cannot load is one we cannot audit"
         )
     # The three labels no Appendix F row covers: two from Appendix B.3's file

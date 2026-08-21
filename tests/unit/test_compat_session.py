@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from core.compat import sealing
 from core.compat.mailbox import Inboxes
 from core.compat.session import ReferenceSession
 from core.compat.wire import TurnMessage, terms_from_config
@@ -52,6 +53,24 @@ def test_agreement_message_carries_the_new_pairing_fields() -> None:
     model = str(session.config.get("pheromones.decay_model", "multiplicative"))
     assert message["scent_model_sha256"] == SCENT_MODEL_SHA256[model]
     assert terms == terms_from_config(session.config)
+
+
+def test_agreement_message_puts_the_group_id_at_the_top_level() -> None:
+    """najamjad §9.8: a group id only inside `identity` cannot bind a session.
+
+    The peer reads the message root, logs `session.unauthenticated` and never
+    reaches the terms comparison, so the handshake fails for a reason no digest
+    can explain. Both spellings, because the two teams that documented this
+    failure name different keys, and sending both costs nothing.
+    """
+    session = _session(Role.THIEF, sub_game=1)
+    message, terms = session.agreement_message()
+    assert message["sender"] == "bestteam"
+    assert message["group_id"] == "bestteam"
+    assert message["identity"]["group_id"] == "bestteam", "the nested block stays too"
+    # Additive: the signature covers `terms` alone, so the contract digest is
+    # untouched and a peer ignoring the two new keys is unaffected.
+    assert sealing.verify(terms, message["nonce"], message["signature"])
 
 
 def test_agreement_message_derives_game_uid_from_agreed_between() -> None:
