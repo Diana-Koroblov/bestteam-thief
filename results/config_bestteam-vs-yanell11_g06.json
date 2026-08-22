@@ -1,0 +1,88 @@
+{
+  "code_version": "1.00",
+  "config_sha256": "86108a7a5d651d31039eadb5fe973a1165ea4d6c5ebe4e4dae903e7a42e6ed64",
+  "created_utc": "2026-08-22T12:36:46+00:00",
+  "game_id": "bestteam-vs-yanell11",
+  "readings": {},
+  "role": "thief",
+  "role_split": "1-1-1-1-1-1",
+  "scent_model_digest": "934c220d5bf62acaa3297c6c9d723ea954c220260b02292ca17f6d5daef9f4d9",
+  "shared_config": {
+    "agreed_between": [
+      "bestteam",
+      "yanell11"
+    ],
+    "board_and_agents": {
+      "axis_origin_corner": "top-left",
+      "axis_start_index": 0,
+      "cop_start": [
+        0,
+        0
+      ],
+      "grid_size": 7,
+      "num_agents": 2,
+      "thief_start": [
+        3,
+        3
+      ]
+    },
+    "capture": {
+      "resolution": "after_moves",
+      "stay_counts_as_move": false,
+      "swap_is_capture": false
+    },
+    "movement_and_barriers": {
+      "max_barriers": 14,
+      "max_moves": 35,
+      "move_set": [
+        "N",
+        "S",
+        "E",
+        "W",
+        "STAY"
+      ],
+      "seal_barrier_cell": true,
+      "survival_threshold": 35
+    },
+    "network_and_league": {
+      "diversity_reward": 10,
+      "max_games_per_team": 10,
+      "min_games_to_pass": 2,
+      "num_games": 6,
+      "response_timeout_sec": 30,
+      "token_budget_per_series": 200000,
+      "watchdog_timeout_sec": 400
+    },
+    "pheromones": {
+      "decay_model": "multiplicative",
+      "field_includes_current_turn": true,
+      "pheromone_center_intensity": 0.9,
+      "pheromone_decay": 0.1,
+      "pheromone_grid_size": 5,
+      "pheromone_min_center_intensity": 0.5,
+      "seal_scent_digest": true
+    },
+    "rate_limiter_gatekeeper": {
+      "concurrent_requests": 2,
+      "max_retries": 3,
+      "queue_depth": 100,
+      "requests_per_minute": 30,
+      "retry_backoff_sec": 5
+    },
+    "schema_version": "1.2",
+    "scoring": {
+      "capture_cop": 20,
+      "capture_thief": 5,
+      "survival_cop": 5,
+      "survival_thief": 10,
+      "technical_loss": 0,
+      "tie_score": 2
+    },
+    "version": "1.00",
+    "world": {
+      "hint_max_words": 15,
+      "map_area": "Haifa"
+    }
+  },
+  "sub_game": 6
+}
