@@ -154,6 +154,11 @@ class ReferenceSession:
         all. Ours is additive on purpose — the signature covers ``terms`` and
         nothing else, so two extra keys leave the contract digest untouched and
         cost a peer that ignores them nothing.
+
+        **``games_played`` is mirrored at the top level for the same reason.**
+        It lived only in ``identity.counted_games_played``; a peer reading the
+        message root the same way it reads ``sender``/``group_id`` sees ``None``
+        for a real, non-zero count (yanell11, 22/08).
         """
         terms = terms_from_config(self.config)
         nonce = secrets.token_hex(16)
@@ -164,6 +169,7 @@ class ReferenceSession:
         return {
             "sender": ours_id,
             "group_id": ours_id,
+            "games_played": self.identity.get("counted_games_played", 0),
             "terms": terms,
             "nonce": nonce,
             "signature": sealing.commit_of(terms, nonce),

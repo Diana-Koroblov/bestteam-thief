@@ -73,6 +73,15 @@ def test_agreement_message_puts_the_group_id_at_the_top_level() -> None:
     assert sealing.verify(terms, message["nonce"], message["signature"])
 
 
+def test_agreement_message_puts_games_played_at_the_top_level() -> None:
+    """yanell11, 22/08: only inside `identity` again, same class of bug as the
+    group id, and a peer reading the root saw `None` for a real count."""
+    session = _session(Role.THIEF, sub_game=1)
+    session.identity["counted_games_played"] = 3
+    message, _terms = session.agreement_message()
+    assert message["games_played"] == 3
+
+
 def test_agreement_message_derives_game_uid_from_agreed_between() -> None:
     """On the real on-disk config, agreed_between already names imreeyal — the
     uid must be non-empty and independent of which name comes first."""
