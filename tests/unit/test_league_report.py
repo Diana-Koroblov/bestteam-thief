@@ -12,6 +12,7 @@ from __future__ import annotations
 from core.compat.league_report import (
     build_result,
     build_sub_game_row,
+    consensus_envelope,
     game_id,
     game_uid,
 )
@@ -144,4 +145,15 @@ def test_a_friendly_never_claims_the_diversity_reward_even_when_won() -> None:
     assert result["league"] == {
         "authority": "book App. E rule 52 - one counted series per pairing",
         "counted": False, "reason": "friendly",
+    }
+
+
+def test_consensus_envelope_carries_no_records_and_names_its_own_claim() -> None:
+    """yanell11, 22/08: a real reveal and this envelope share one tool, so the
+    envelope must be shaped nothing like one — empty records, its own
+    `result_claim`, and the settlement hash it exists to carry."""
+    envelope = consensus_envelope("thief", "a" * 64)
+    assert envelope == {
+        "sender": "thief", "records": [],
+        "result_claim": "series_consensus", "consensus_sha": "a" * 64,
     }

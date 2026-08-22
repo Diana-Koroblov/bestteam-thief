@@ -40,6 +40,12 @@ class Inboxes:
         controls: Advisory signals. Accepted and drained so a peer that sends
             them is not met with an error, and never acted on — our series is
             driven by our own plan, not by an opponent's restart request.
+        consensus: End-of-series envelopes (``result_claim:
+            "series_consensus"``) — a peer's declared cross-check hash over the
+            whole six-row settlement, not any one sub-game's reveal. Kept apart
+            from `audits` so it can never be read as a sub-game's own reveal
+            (empty `records` would fail that reveal's own verification anyway,
+            but a bug should not depend on that as its only guard).
         held: Agreements that arrived stamped for a sub-game we had not reached
             yet, kept by that number until we do. **This object outlives the
             individual `ReferenceSession`s** — one is built per sub-game — which
@@ -47,11 +53,12 @@ class Inboxes:
     """
 
     def __init__(self) -> None:
-        """Start with four empty inboxes and nothing held."""
+        """Start with five empty inboxes and nothing held."""
         self.agreements: queue.Queue = queue.Queue()
         self.turns: queue.Queue = queue.Queue()
         self.audits: queue.Queue = queue.Queue()
         self.controls: queue.Queue = queue.Queue()
+        self.consensus: queue.Queue = queue.Queue()
         self.held: dict[int, dict] = {}
 
     def drain(self) -> None:
@@ -93,8 +100,14 @@ def build_reference_tools(inboxes: Inboxes) -> dict[str, Callable[..., Any]]:
         return {"ok": True}
 
     def submit_audit(payload: dict) -> dict:
-        """Receive the opponent's end-of-game reveal: records and nonces."""
-        inboxes.audits.put(payload)
+        """Receive the opponent's end-of-game reveal, or an end-of-series
+        consensus envelope — routed apart by `result_claim`, since a peer's
+        series-end hash carries no records at all and must never be read as
+        that sub-game's own reveal."""
+        if payload.get("result_claim") == "series_consensus":
+            inboxes.consensus.put(payload)
+        else:
+            inboxes.audits.put(payload)
         return {"ok": True}
 
     def receive_control(message: dict) -> dict:

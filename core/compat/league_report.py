@@ -21,7 +21,7 @@ from core.crypto.canonical import canonical_json
 
 __all__ = [
     "game_id", "game_uid", "build_sub_game_row", "build_result", "consensus_sha256",
-    "all_settled", "settled",
+    "consensus_envelope", "all_settled", "settled",
 ]
 
 # The symmetric hash scope (imreeyal §6; vectors/report_consensus.json in the
@@ -255,3 +255,21 @@ def consensus_sha256(result: dict[str, Any]) -> str:
     }
     spaced = json.dumps(doc, sort_keys=True, ensure_ascii=False)
     return sha256(spaced.encode("utf-8")).hexdigest()
+
+
+def consensus_envelope(role: str, consensus_sha: str) -> dict[str, Any]:
+    """Return the end-of-series envelope a peer's own audit tool expects.
+
+    Sent over the same ``submit_audit`` a sub-game's reveal uses, with
+    ``records`` deliberately empty — a consensus envelope carrying game
+    records would be indistinguishable from a reveal it is not (yanell11,
+    22/08). ``consensus_sha`` is our own `consensus_sha256`, computed once,
+    reused here rather than recomputed — the two must be one value, not two
+    computations of the same thing that could drift.
+    """
+    return {
+        "sender": role,
+        "records": [],
+        "result_claim": "series_consensus",
+        "consensus_sha": consensus_sha,
+    }

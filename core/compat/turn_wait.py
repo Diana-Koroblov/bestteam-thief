@@ -59,6 +59,7 @@ __all__ = [
     "REPUSH_SECONDS",
     "TURN_WAIT_SECONDS",
     "await_agreement",
+    "collect_consensus",
     "collect_our_agreement",
     "push_agreement",
     "push_audit",
@@ -205,6 +206,26 @@ async def push_once_more(client: Any, tool: str, payload: dict) -> None:
                 await client.aclose()
             await asyncio.sleep(delay)
             delay *= 2
+
+
+async def collect_consensus(inboxes: Any, wait: float) -> str:
+    """Return the peer's declared end-of-series ``consensus_sha``, or ``""``.
+
+    Polls `Inboxes.consensus`, never `Inboxes.audits` — a peer's series-end
+    envelope carries no game records at all (a real sub-game's reveal always
+    does), and reading the two queues interchangeably is how one gets
+    mistaken for the other. Absence is not an error: a peer that never
+    implemented this leaves us with nothing to compare against, not a fault.
+    """
+    deadline = time.monotonic() + wait
+    while time.monotonic() < deadline:
+        try:
+            envelope = inboxes.consensus.get_nowait()
+        except queue.Empty:
+            await asyncio.sleep(POLL_SECONDS)
+            continue
+        return str(envelope.get("consensus_sha", "") or "")
+    return ""
 
 
 async def collect_our_agreement(session: Any, wait: float, ours: dict) -> dict:

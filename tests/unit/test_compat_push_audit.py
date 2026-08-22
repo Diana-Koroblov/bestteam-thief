@@ -1,12 +1,14 @@
-"""Unit tests for `core.compat.turn_wait.push_audit`.
+"""Unit tests for `core.compat.turn_wait.push_audit` and `collect_consensus`.
 
 Split from `test_turn_wait.py` under the 150-line ceiling (ADR-005): that file
-covers the negotiate/agreement wait, this covers the closing audit push — two
-different functions in one module, sharing only the `_Client` test double.
+covers the negotiate/agreement wait, this covers the closing audit push and the
+end-of-series consensus read that rides the same tool — three functions, one
+module, sharing the `_Client` test double.
 """
 
 from __future__ import annotations
 
+import queue
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -76,3 +78,27 @@ async def test_push_audit_reports_when_it_never_lands() -> None:
 
     assert not landed
     assert "never landed" in notes[-1]
+
+
+class _Inboxes:
+    """Just the one queue `collect_consensus` reads."""
+
+    def __init__(self) -> None:
+        self.consensus: queue.Queue = queue.Queue()
+
+
+async def test_collect_consensus_reads_the_peers_declared_hash() -> None:
+    from core.compat.turn_wait import collect_consensus
+
+    inboxes = _Inboxes()
+    inboxes.consensus.put({"sender": "thief", "consensus_sha": "a" * 64})
+
+    assert await collect_consensus(inboxes, wait=1.0) == "a" * 64
+
+
+async def test_collect_consensus_times_out_to_an_empty_string() -> None:
+    """A peer that never implemented this leaves nothing to compare against —
+    absence, not a fault, and never confused with an empty *declared* hash."""
+    from core.compat.turn_wait import collect_consensus
+
+    assert await collect_consensus(_Inboxes(), wait=0.05) == ""

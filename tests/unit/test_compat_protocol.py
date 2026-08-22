@@ -136,6 +136,25 @@ def test_each_tool_stores_its_message_and_answers_ok() -> None:
     assert inboxes.agreements.get_nowait() == {"terms": {}}
 
 
+def test_submit_audit_routes_a_real_reveal_to_the_audit_inbox() -> None:
+    inboxes = Inboxes()
+    build_reference_tools(inboxes)["submit_audit"]({"records": [{"step": 1}]})
+    assert inboxes.audits.get_nowait() == {"records": [{"step": 1}]}
+    assert inboxes.consensus.empty()
+
+
+def test_submit_audit_routes_a_consensus_envelope_apart_from_reveals() -> None:
+    """🐛 The two must never share a queue: a consensus envelope carries no
+    records at all, and reading it as that sub-game's own reveal would corrupt
+    whichever one happened to be read first (yanell11, 22/08)."""
+    inboxes = Inboxes()
+    envelope = {"sender": "thief", "records": [], "result_claim": "series_consensus",
+                "consensus_sha": "a" * 64}
+    build_reference_tools(inboxes)["submit_audit"](envelope)
+    assert inboxes.consensus.get_nowait() == envelope
+    assert inboxes.audits.empty()
+
+
 def test_draining_clears_turns_but_leaves_agreements() -> None:
     inboxes = Inboxes()
     inboxes.turns.put({"step": 1})

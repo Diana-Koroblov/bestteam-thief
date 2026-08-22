@@ -14,7 +14,9 @@ from pathlib import Path
 from typing import Any
 
 from core.compat import league_merge, league_report
-from core.compat.wire import terms_from_config
+from core.compat.session import reconnect
+from core.compat.turn_wait import collect_consensus, push_audit
+from core.compat.wire import terms_from_config, wire_role
 from core.infra.gmail_sender import GmailSender, build_transport
 from core.report.artefacts import write
 from core.sdk.peer_sdk import PeerSDK
@@ -26,14 +28,21 @@ __all__ = ["send_league_report"]
 MANUAL = "  file it by hand once complete: both role processes must have run."
 LABEL = "league report  : "
 
+# How long to wait for the peer's own consensus envelope once ours is sent.
+# Short: by this point their last sub-game's audit has already landed, so
+# their process is right here too — this is not the multi-minute cross-process
+# wait `TURN_WAIT_SECONDS` covers.
+CONSENSUS_WAIT_SECONDS = 20.0
 
-def send_league_report(
+
+async def send_league_report(
     sdk: PeerSDK,
     args: argparse.Namespace,
     rows: list[dict[str, Any]],
     our_identity: dict[str, Any],
     their_identity: dict[str, Any],
     their_group: str,
+    inboxes: Any = None,
 ) -> str:
     """Merge, file, and — if the series is complete — send our own report.
 
@@ -51,18 +60,19 @@ def send_league_report(
     if not their_group:
         return f"{LABEL}NOT FILED - no opponent group_id was ever learned (no sub-game agreed)"
     try:
-        return _send(sdk, args, rows, our_identity, their_identity, their_group)
+        return await _send(sdk, args, rows, our_identity, their_identity, their_group, inboxes)
     except Exception as error:  # the match is over; nothing here may crash it
         return f"{LABEL}NOT FILED - {type(error).__name__}: {error}"
 
 
-def _send(
+async def _send(
     sdk: PeerSDK,
     args: argparse.Namespace,
     rows: list[dict[str, Any]],
     our_identity: dict[str, Any],
     their_identity: dict[str, Any],
     their_group: str,
+    inboxes: Any,
 ) -> str:
     our_group = sdk.team_name
     out = Path(args.out)
@@ -115,9 +125,38 @@ def _send(
             "  is not a measurement of anything and no report should be filed by either\n"
             "  side (imreeyal Stage 7). Re-run, or send by hand if you disagree.\n" + MANUAL
         )
-    if not counted:
-        return _send_friendly(sdk, args, path)
-    return _send_counted(sdk, path)
+    note = await _exchange_consensus(sdk, args, inboxes, result["mutual_agreement"]["sha256"])
+    outcome = _send_friendly(sdk, args, path) if not counted else _send_counted(sdk, path)
+    return outcome + note
+
+
+async def _exchange_consensus(
+    sdk: PeerSDK, args: argparse.Namespace, inboxes: Any, our_sha: str
+) -> str:
+    """Push our settlement hash, read theirs back, and say whether they agree.
+
+    Best-effort and silent on failure — a peer that never implemented this (or
+    one we cannot currently reach) must not cost us the report we already
+    built. ``inboxes`` is optional so existing callers that never wired one
+    through are unaffected; there is simply nothing to compare against.
+    """
+    if inboxes is None or getattr(sdk, "opponent", None) is None:
+        return ""
+    try:
+        envelope = league_report.consensus_envelope(wire_role(sdk.role.value), our_sha)
+
+        async def redial() -> Any:
+            await reconnect(sdk, str(getattr(args, "opponent", "") or ""))
+            return sdk.opponent
+
+        await push_audit(sdk.opponent, envelope, redial)
+        peer_sha = await collect_consensus(inboxes, CONSENSUS_WAIT_SECONDS)
+    except Exception:  # best-effort: the report above is already built and true
+        return "\n  peer consensus  : NOT CHECKED (exchange failed)"
+    if not peer_sha:
+        return "\n  peer consensus  : not received (peer may not send one)"
+    matched = "MATCH" if peer_sha == our_sha else "MISMATCH"
+    return f"\n  peer consensus  : {matched} (peer_sha256={peer_sha[:12]}...)"
 
 
 def _games_played(

@@ -61,9 +61,9 @@ def test_first_meeting_is_true_for_an_opponent_never_counted_before() -> None:
     assert _first_meeting("a-brand-new-opponent-nobody-has-played") is True
 
 
-def test_send_league_report_refuses_to_file_with_no_opponent_learned() -> None:
+async def test_send_league_report_refuses_to_file_with_no_opponent_learned() -> None:
     """No sub-game ever agreed, so nothing is safe to attribute to a name."""
-    message = send_league_report(
+    message = await send_league_report(
         sdk=None, args=argparse.Namespace(), rows=[], our_identity={}, their_identity={},
         their_group="",
     )
@@ -141,7 +141,7 @@ def _row(number: int, *, verified: bool) -> dict:
     }
 
 
-def test_a_series_with_an_unplayed_sub_game_is_filed_but_never_mailed(tmp_path: Path) -> None:
+async def test_a_series_with_an_unplayed_sub_game_is_filed_but_never_mailed(tmp_path: Path) -> None:
     """🐛 **Six rows is not six sub-games.**
 
     A window nobody played still produces a row — a `technical_loss` — so the
@@ -157,7 +157,7 @@ def test_a_series_with_an_unplayed_sub_game_is_filed_but_never_mailed(tmp_path: 
     rows = [_row(n, verified=n % 2 == 1) for n in range(1, 7)]
     sdk = _StubSDK(_config())
 
-    message = send_league_report(sdk, args, rows, {}, {}, "imreeyal")
+    message = await send_league_report(sdk, args, rows, {}, {}, "imreeyal")
 
     assert "NOT SENT" in message
     assert "[2, 4, 6]" in message, "the unplayed sub-games must be named, not counted"
@@ -166,19 +166,19 @@ def test_a_series_with_an_unplayed_sub_game_is_filed_but_never_mailed(tmp_path: 
     assert written["mutual_agreement"]["confirmed"] is False
 
 
-def test_a_complete_series_is_mailed(tmp_path: Path) -> None:
+async def test_a_complete_series_is_mailed(tmp_path: Path) -> None:
     """The gate above is load-bearing only if a clean series still goes out."""
     args = argparse.Namespace(out=tmp_path, counted=False, report_to="")
     rows = [_row(n, verified=True) for n in range(1, 7)]
 
-    message = send_league_report(_StubSDK(_config()), args, rows, {}, {}, "imreeyal")
+    message = await send_league_report(_StubSDK(_config()), args, rows, {}, {}, "imreeyal")
 
     assert "NOT SENT - friendly, but no --report-to given" in message, message
     written = json.loads((tmp_path / "result_bestteam-vs-imreeyal.json").read_text())
     assert written["mutual_agreement"]["confirmed"] is True
 
 
-def test_send_league_report_holds_back_an_incomplete_series(tmp_path: Path) -> None:
+async def test_send_league_report_holds_back_an_incomplete_series(tmp_path: Path) -> None:
     args = argparse.Namespace(out=tmp_path, counted=False, report_to="")
     row = {
         "sub_game_number": 1, "roles": {"bestteam": "police", "imreeyal": "thief"},
@@ -189,7 +189,7 @@ def test_send_league_report_holds_back_an_incomplete_series(tmp_path: Path) -> N
         "audit": {"log_verified": True, "tampered": False},
     }
     sdk = _StubSDK(_config())
-    message = send_league_report(sdk, args, [row], {}, {}, "imreeyal")
+    message = await send_league_report(sdk, args, [row], {}, {}, "imreeyal")
     assert "held back" in message
     assert "covers 1 of 6" in message
     # Filed even though incomplete — a partial file is what the other role

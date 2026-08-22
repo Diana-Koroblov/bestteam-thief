@@ -222,9 +222,9 @@ async def _series(
                 print(f"    ! {note}")
     print()
     if args.out:
-        for line in closing.close_series(
+        for line in await closing.close_series(
             sdk=sdk, args=args, rows=rows, written=written, our_identity=identity,
-            their_identity=their_identity, their_group=their_group, opened=opened,
+            their_identity=their_identity, their_group=their_group, opened=opened, inboxes=inboxes,
         ):
             print(line)
     else:

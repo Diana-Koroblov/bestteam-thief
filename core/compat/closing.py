@@ -91,7 +91,7 @@ def close_sub_game(
     return ""
 
 
-def close_series(
+async def close_series(
     *,
     sdk: Any,
     args: Any,
@@ -101,8 +101,14 @@ def close_series(
     their_identity: dict[str, Any],
     their_group: str,
     opened: str,
+    inboxes: Any = None,
 ) -> list[str]:
-    """File the declaration, send the report, and return the lines to print."""
+    """File the declaration, send the report, and return the lines to print.
+
+    ``inboxes`` carries the peer's end-of-series consensus envelope through to
+    ``reporting.send_league_report`` (optional — a caller with no inbox to
+    offer simply gets no cross-check).
+    """
     lines: list[str] = []
     if their_group:
         try:
@@ -116,7 +122,7 @@ def close_series(
         except (OSError, ArtefactError) as error:
             lines.append(f"declaration     : NOT FILED - {type(error).__name__}: {error}")
     lines.append(f"artefacts       : {len(written)} file(s) in {args.out}")
-    lines.append(
-        reporting.send_league_report(sdk, args, rows, our_identity, their_identity, their_group)
-    )
+    lines.append(await reporting.send_league_report(
+        sdk, args, rows, our_identity, their_identity, their_group, inboxes
+    ))
     return lines
