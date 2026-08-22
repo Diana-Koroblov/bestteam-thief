@@ -1,6 +1,6 @@
 {
   "schema_version": "1.2",
-  "agreed_between": ["bestteam", "najamjad"],
+  "agreed_between": ["bestteam", "yanell11"],
   "version": "1.00",
   "board_and_agents": {
     "grid_size": 7,
@@ -11,7 +11,7 @@
     "axis_start_index": 0
   },
   "world": {
-    "map_area": "New York",
+    "map_area": "Haifa",
     "hint_max_words": 15
   },
   "movement_and_barriers": {
@@ -34,7 +34,7 @@
     "pheromone_decay": 0.1,
     "pheromone_grid_size": 5,
     "pheromone_min_center_intensity": 0.5,
-    "decay_model": "subtractive",
+    "decay_model": "multiplicative",
     "field_includes_current_turn": true,
     "seal_scent_digest": true
   },
