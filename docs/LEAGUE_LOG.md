@@ -23,14 +23,14 @@ declaration disqualifies the whole project (M#38).
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | 2026-08-18 | imreeyal | alternating, cop on odds | 6/6 | 40 | 60 | ☑ | ☑ | ☑ | cop 22e41379 / thief 67e859b6 | config_bestteam-vs-imreeyal_g01-06.json (cca1243e) |
 | 2 | 2026-08-19 | vibecode | alternating, cop on odds | 6/6 | 30 | 90 | ☑ | ☑ | ☐ | cop 6f5a7ed1 / thief a671fe05 | config_bestteam-vs-vibecode_g01-06.json (d16427a2) |
-| 3 | | | | /6 | | | ☐ | ☐ | ☐ | | |
+| 3 | 2026-08-19 | nis-yar1 | alternating, cop on odds | 6/6 | 30 | 90 | ☑ | ☐ | ☐ | cop 1c0e06e8 / thief 5e0e673c | config_bestteam-vs-nis-yar1_g01-06.json |
 | 4 | | | | /6 | | | ☐ | ☐ | ☐ | | |
 | 5 | | | | /6 | | | ☐ | ☐ | ☐ | | |
 | 6 | | | | /6 | | | ☐ | ☐ | ☐ | | |
 | 7 | | | | /6 | | | ☐ | ☐ | ☐ | | |
 | 8 | | | | /6 | | | ☐ | ☐ | ☐ | | |
 
-**Counted matches so far: 2** ← this is the number declared to every new opponent (M#37)
+**Counted matches so far: 3** ← this is the number declared to every new opponent (M#37)
 
 > ⚠️ **This table is parsed, not just read.** `core/shared/league_log.py` counts the rows whose
 > **Opponent team** cell is filled and refuses to hand the handshake a number when that count
