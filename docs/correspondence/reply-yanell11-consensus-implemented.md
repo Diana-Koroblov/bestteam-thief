@@ -59,6 +59,12 @@ Normal if you've kept pushing, but per the same rule your own spec would apply
 to us: resend whichever commit you're actually running before we arm, and
 we'll do the same if we push again first.
 
+Fresh heads after this change:
+```
+cop repo    a5a1530a6b1841f81b066273745e2d50274b321e -> 322e82173e83b6da24b0a130e3dc343c6b3758a9
+thief repo  8c78842eb49954ee3d56f371e554d71e6572819b -> 0c76074e44810968d0b4a67b5a68cbc9da7b2faf
+```
+
 Bringing our process up now. Say go.
 
 — bestteam

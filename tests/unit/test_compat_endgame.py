@@ -93,3 +93,16 @@ def test_collect_audit_still_consumes_an_unstamped_reference_audit(
 def test_our_own_audit_payload_is_stamped_with_the_sub_game(minimal_config: Config) -> None:
     session = _session(Role.COP, minimal_config, number=5)
     assert session.audit_payload()["sub_game_number"] == 5
+
+
+def test_our_own_audit_payload_names_its_sender_in_the_wire_vocabulary(
+    minimal_config: Config,
+) -> None:
+    """🐛 This sent our raw `Role.value` ("cop"), not `wire_role`'s ("police") —
+    the same fix `TurnMessage.sender` already needed. A peer whose `submit_audit`
+    validates the sender rejects "cop" outright, which reads as the audit never
+    landing at all (yanell11, 22/08, sub-games 1 and 3)."""
+    cop = _session(Role.COP, minimal_config, number=1)
+    assert cop.audit_payload()["sender"] == "police"
+    thief = _session(Role.THIEF, minimal_config, number=2)
+    assert thief.audit_payload()["sender"] == "thief"

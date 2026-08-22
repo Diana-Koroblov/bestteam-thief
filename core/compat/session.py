@@ -280,7 +280,13 @@ class ReferenceSession:
         everything we actually sent.
         """
         payload = AuditPayload(
-            sender=self.role.value,
+            # `wire_role`, not the raw value — the same fix `TurnMessage.sender`
+            # already needed (`turns.py`). This one was missed: our vocabulary
+            # says "cop", theirs says "police", and a peer whose `submit_audit`
+            # validates the sender rejects "cop" outright — "expected an audit
+            # from 'police'" — which reads as the audit never landing at all
+            # (yanell11, 22/08, sub-games 1 and 3).
+            sender=wire_role(self.role.value),
             records=[system_spec_record(self.identity, self.sub_game_number), *self.records],
             result_claim=self.result or "timeout",
         ).to_dict()
